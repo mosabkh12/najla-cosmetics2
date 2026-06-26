@@ -10,7 +10,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Header() {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { count, setOpen } = useCart();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,6 +50,11 @@ export function Header() {
           <Link to={user ? "/profile" : "/auth"} className="hidden sm:block">
             <Button variant="ghost" size="icon" className="h-9 w-9"><UserIcon className="h-[18px] w-[18px]" /></Button>
           </Link>
+          {isAdmin && (
+            <Link to="/admin" className="hidden md:block">
+              <Button variant="outline" size="sm" className="h-9 px-3 text-[12px]">Admin</Button>
+            </Link>
+          )}
           <Link to="/services" className="hidden md:block">
             <Button size="sm" className="btn-gold h-9 px-4 text-[13px]">{t("book_appointment")}</Button>
           </Link>
