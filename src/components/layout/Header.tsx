@@ -58,7 +58,7 @@ export function Header() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden h-9 w-9"><Menu className="h-5 w-5" /></Button>
             </SheetTrigger>
-            <SheetContent side="end" className="w-[280px] p-0 bg-background">
+            <SheetContent side="right" className="w-[280px] p-0 bg-background">
               <div className="flex items-center justify-between border-b px-5 h-14">
                 <span className="font-display text-lg">Najla</span>
                 <Button variant="ghost" size="icon" onClick={() => setMenuOpen(false)}><X className="h-5 w-5" /></Button>
