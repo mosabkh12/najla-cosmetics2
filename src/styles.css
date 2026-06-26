@@ -21,6 +21,7 @@
 @import "@fontsource/cairo/600.css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant xs (@media (min-width: 360px));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
