@@ -63,7 +63,6 @@
   --color-footer: var(--footer);
   --font-display: "Playfair Display", "Frank Ruhl Libre", "Amiri", Georgia, serif;
   --font-sans: "Inter", "Heebo", "Cairo", system-ui, -apple-system, sans-serif;
-  --breakpoint-xs: 360px;
 }
 
 :root {
