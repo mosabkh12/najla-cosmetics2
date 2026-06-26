@@ -44,7 +44,7 @@ function Page() {
     const op = dlg.row?.id
       ? await supabase.from("services").update(payload).eq("id", dlg.row.id)
       : await supabase.from("services").insert(payload);
-    if (op.error) return toast.error(op.error.message);
+    if (op.error) { toast.error(op.error.message); return; }
     toast.success("Saved");
     setDlg({ open: false, row: null });
     refresh();
