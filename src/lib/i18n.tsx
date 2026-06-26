@@ -1,0 +1,264 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+export type Lang = "he" | "ar" | "en";
+export type Dir = "rtl" | "ltr";
+
+type Dict = Record<string, string>;
+
+const HE: Dict = {
+  brand: "Najla Cosmetics",
+  nav_home: "בית",
+  nav_services: "שירותים",
+  nav_products: "מוצרים",
+  nav_about: "אודות",
+  nav_location: "מיקום",
+  book_appointment: "קביעת תור",
+  shop_products: "לקנייה",
+  account: "החשבון שלי",
+  sign_in: "התחברות",
+  sign_up: "הרשמה",
+  sign_out: "התנתקות",
+  hero_title: "היופי שלך, מטופח באלגנטיות.",
+  hero_sub: "גלי טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים שיעצימו את הזוהר היומיומי שלך.",
+  services_title: "טיפולי יופי שעוצבו עבורך",
+  services_sub: "בחרי את הטיפול שמתאים לשגרת היופי שלך וקבעי את הזמן המועדף.",
+  products_title: "המוצרים המומלצים",
+  products_sub: "מוצרים נבחרים בקפידה לטיפוח ולשגרת היופי שלך.",
+  view_all_products: "כל המוצרים",
+  about_eyebrow: "אודות Najla Cosmetics",
+  about_title: "יופי הוא יותר מטיפול.",
+  about_body: "ב-Najla Cosmetics כל פרט מתוכנן כדי שתרגישי בטוחה, מטופחת ויפה במלוא מובן המילה. משירותים אישיים ועד מוצרי קוסמטיקה איכותיים — אנו מאחדים איכות, נוחות ואלגנטיות.",
+  discover_story: "גלי את הסיפור שלנו",
+  location_title: "בקרי ב-Najla Cosmetics",
+  get_directions: "קבלי הוראות הגעה",
+  whatsapp: "WhatsApp",
+  working_hours: "שעות פעילות",
+  address: "כתובת",
+  phone: "טלפון",
+  add_to_cart: "הוספה לסל",
+  out_of_stock: "אזל מהמלאי",
+  in_stock: "במלאי",
+  low_stock: "מלאי נמוך",
+  starting_at: "החל מ-",
+  duration: "משך",
+  minutes: "דקות",
+  book_now: "הזמיני עכשיו",
+  view: "צפייה",
+  category: "קטגוריה",
+  all_categories: "כל הקטגוריות",
+  search: "חיפוש",
+  sort: "מיון",
+  sort_newest: "החדש ביותר",
+  sort_price_asc: "מחיר: נמוך לגבוה",
+  sort_price_desc: "מחיר: גבוה לנמוך",
+  cart: "סל קניות",
+  empty_cart: "הסל ריק",
+  subtotal: "סכום ביניים",
+  checkout: "תשלום",
+  continue_shopping: "המשכי בקנייה",
+  remove: "הסירי",
+  quantity: "כמות",
+  full_name: "שם מלא",
+  email: "אימייל",
+  password: "סיסמה",
+  notes_optional: "הערה (אופציונלי)",
+  select_date: "בחרי תאריך",
+  select_time: "בחרי שעה",
+  confirm_booking: "אישור הזמנה",
+  booking_success: "ההזמנה אושרה! ניצור איתך קשר בקרוב.",
+  appointment: "תור",
+  appointments: "תורים",
+  orders: "הזמנות",
+  favorites: "מועדפים",
+  upcoming: "קרובים",
+  completed: "הושלמו",
+  cancelled: "בוטלו",
+  active: "פעילים",
+  status_pending: "ממתין",
+  status_confirmed: "אושר",
+  status_completed: "הושלם",
+  status_cancelled: "בוטל",
+  status_preparing: "בהכנה",
+  order_number: "מספר הזמנה",
+  total: "סך הכל",
+  copyright: "© 2026 Najla Cosmetics. כל הזכויות שמורות.",
+  footer_tagline: "טיפולי יופי ומוצרי קוסמטיקה ברמה הגבוהה ביותר.",
+  language: "שפה",
+  edit_profile: "עריכת פרופיל",
+  save: "שמירה",
+  cancel: "ביטול",
+  pay_at_store: "תשלום בחנות",
+  delivery_pickup: "איסוף עצמי",
+  place_order: "ביצוע הזמנה",
+  order_success: "ההזמנה התקבלה!",
+  no_appointments: "אין תורים להצגה",
+  no_orders: "אין הזמנות להצגה",
+  no_favorites: "אין מועדפים להצגה",
+};
+
+const AR: Dict = {
+  brand: "Najla Cosmetics",
+  nav_home: "الرئيسية",
+  nav_services: "الخدمات",
+  nav_products: "المنتجات",
+  nav_about: "من نحن",
+  nav_location: "الموقع",
+  book_appointment: "احجزي موعداً",
+  shop_products: "تسوقي الآن",
+  account: "حسابي",
+  sign_in: "تسجيل الدخول",
+  sign_up: "إنشاء حساب",
+  sign_out: "تسجيل الخروج",
+  hero_title: "جمالكِ، بعنايةٍ راقية.",
+  hero_sub: "اكتشفي خدمات تجميل احترافية ومنتجات تجميل مختارة بعناية لتعزيز إشراقتكِ اليومية.",
+  services_title: "خدمات تجميل مصممة لكِ",
+  services_sub: "اختاري الخدمة المناسبة لروتين جمالكِ واحجزي الوقت الذي يناسبكِ.",
+  products_title: "أساسيات الجمال",
+  products_sub: "منتجات مختارة بعناية لروتين العناية والجمال.",
+  view_all_products: "كل المنتجات",
+  about_eyebrow: "عن Najla Cosmetics",
+  about_title: "الجمال أكثر من مجرد خدمة.",
+  about_body: "في Najla Cosmetics، كل تفصيل مصمم لتشعري بالثقة والعناية والجمال. من الخدمات الشخصية إلى منتجات التجميل الموثوقة، نجمع بين الجودة والراحة والأناقة.",
+  discover_story: "اكتشفي قصتنا",
+  location_title: "زورينا في Najla Cosmetics",
+  get_directions: "احصلي على الاتجاهات",
+  whatsapp: "WhatsApp",
+  working_hours: "ساعات العمل",
+  address: "العنوان",
+  phone: "الهاتف",
+  add_to_cart: "أضيفي للسلة",
+  out_of_stock: "نفد المخزون",
+  in_stock: "متوفر",
+  low_stock: "كمية محدودة",
+  starting_at: "ابتداءً من ",
+  duration: "المدة",
+  minutes: "دقيقة",
+  book_now: "احجزي الآن",
+  view: "عرض",
+  category: "الفئة",
+  all_categories: "كل الفئات",
+  search: "بحث",
+  sort: "ترتيب",
+  sort_newest: "الأحدث",
+  sort_price_asc: "السعر: من الأقل للأعلى",
+  sort_price_desc: "السعر: من الأعلى للأقل",
+  cart: "سلة التسوق",
+  empty_cart: "السلة فارغة",
+  subtotal: "المجموع الفرعي",
+  checkout: "إتمام الشراء",
+  continue_shopping: "متابعة التسوق",
+  remove: "إزالة",
+  quantity: "الكمية",
+  full_name: "الاسم الكامل",
+  email: "البريد الإلكتروني",
+  password: "كلمة المرور",
+  notes_optional: "ملاحظة (اختياري)",
+  select_date: "اختاري التاريخ",
+  select_time: "اختاري الوقت",
+  confirm_booking: "تأكيد الحجز",
+  booking_success: "تم تأكيد الحجز! سنتواصل معكِ قريباً.",
+  appointment: "موعد",
+  appointments: "المواعيد",
+  orders: "الطلبات",
+  favorites: "المفضلة",
+  upcoming: "القادمة",
+  completed: "المكتملة",
+  cancelled: "الملغاة",
+  active: "النشطة",
+  status_pending: "قيد الانتظار",
+  status_confirmed: "مؤكد",
+  status_completed: "مكتمل",
+  status_cancelled: "ملغي",
+  status_preparing: "قيد التحضير",
+  order_number: "رقم الطلب",
+  total: "المجموع",
+  copyright: "© 2026 Najla Cosmetics. جميع الحقوق محفوظة.",
+  footer_tagline: "خدمات تجميل ومنتجات عناية بأعلى المعايير.",
+  language: "اللغة",
+  edit_profile: "تعديل الملف الشخصي",
+  save: "حفظ",
+  cancel: "إلغاء",
+  pay_at_store: "الدفع في المتجر",
+  delivery_pickup: "الاستلام من المتجر",
+  place_order: "إتمام الطلب",
+  order_success: "تم استلام طلبكِ!",
+  no_appointments: "لا توجد مواعيد",
+  no_orders: "لا توجد طلبات",
+  no_favorites: "لا توجد مفضلة",
+};
+
+const EN: Dict = {
+  brand: "Najla Cosmetics", nav_home: "Home", nav_services: "Services", nav_products: "Products",
+  nav_about: "About", nav_location: "Location", book_appointment: "Book Appointment",
+  shop_products: "Shop Products", account: "My Account", sign_in: "Sign In", sign_up: "Sign Up",
+  sign_out: "Sign Out", hero_title: "Your Beauty, Refined with Care.",
+  hero_sub: "Discover professional beauty services and carefully selected cosmetics made to elevate your everyday glow.",
+  services_title: "Beauty Services Designed for You",
+  services_sub: "Choose the service that fits your routine and book your preferred time.",
+  products_title: "Beauty Essentials", products_sub: "Handpicked products for your skincare and beauty routine.",
+  view_all_products: "View All Products", about_eyebrow: "About Najla Cosmetics",
+  about_title: "Beauty Is More Than a Service.",
+  about_body: "At Najla Cosmetics, every detail is designed to help you feel confident, cared for, and beautifully yourself.",
+  discover_story: "Discover Our Story", location_title: "Visit Najla Cosmetics",
+  get_directions: "Get Directions", whatsapp: "WhatsApp", working_hours: "Working Hours",
+  address: "Address", phone: "Phone", add_to_cart: "Add to Cart", out_of_stock: "Out of Stock",
+  in_stock: "In Stock", low_stock: "Low Stock", starting_at: "From ", duration: "Duration",
+  minutes: "min", book_now: "Book Now", view: "View", category: "Category",
+  all_categories: "All Categories", search: "Search", sort: "Sort", sort_newest: "Newest",
+  sort_price_asc: "Price: Low to High", sort_price_desc: "Price: High to Low", cart: "Cart",
+  empty_cart: "Your cart is empty", subtotal: "Subtotal", checkout: "Checkout",
+  continue_shopping: "Continue Shopping", remove: "Remove", quantity: "Quantity",
+  full_name: "Full Name", email: "Email", password: "Password", notes_optional: "Note (optional)",
+  select_date: "Select Date", select_time: "Select Time", confirm_booking: "Confirm Booking",
+  booking_success: "Booking confirmed! We will contact you soon.", appointment: "Appointment",
+  appointments: "Appointments", orders: "Orders", favorites: "Favorites", upcoming: "Upcoming",
+  completed: "Completed", cancelled: "Cancelled", active: "Active", status_pending: "Pending",
+  status_confirmed: "Confirmed", status_completed: "Completed", status_cancelled: "Cancelled",
+  status_preparing: "Preparing", order_number: "Order #", total: "Total",
+  copyright: "© 2026 Najla Cosmetics. All rights reserved.",
+  footer_tagline: "Premium beauty services and cosmetics.", language: "Language",
+  edit_profile: "Edit Profile", save: "Save", cancel: "Cancel", pay_at_store: "Pay at Store",
+  delivery_pickup: "Store Pickup", place_order: "Place Order", order_success: "Order received!",
+  no_appointments: "No appointments to show", no_orders: "No orders to show",
+  no_favorites: "No favorites to show",
+};
+
+const BUNDLES: Record<Lang, Dict> = { he: HE, ar: AR, en: EN };
+const DIRS: Record<Lang, Dir> = { he: "rtl", ar: "rtl", en: "ltr" };
+
+interface I18n { lang: Lang; dir: Dir; t: (k: string) => string; setLang: (l: Lang) => void; }
+const I18nCtx = createContext<I18n | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>("he");
+
+  useEffect(() => {
+    const saved = (typeof window !== "undefined" && (localStorage.getItem("najla:lang") as Lang)) || "he";
+    setLangState(saved);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = DIRS[lang];
+  }, [lang]);
+
+  const value = useMemo<I18n>(() => ({
+    lang, dir: DIRS[lang],
+    t: (k) => BUNDLES[lang][k] ?? BUNDLES.he[k] ?? k,
+    setLang: (l) => { setLangState(l); if (typeof window !== "undefined") localStorage.setItem("najla:lang", l); },
+  }), [lang]);
+
+  return <I18nCtx.Provider value={value}>{children}</I18nCtx.Provider>;
+}
+
+export function useI18n() {
+  const ctx = useContext(I18nCtx);
+  if (!ctx) throw new Error("useI18n must be used within I18nProvider");
+  return ctx;
+}
+
+export function pickLocalized(lang: Lang, base: string | null | undefined, ar: string | null | undefined) {
+  if (lang === "ar" && ar) return ar;
+  return base ?? "";
+}
