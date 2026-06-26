@@ -10,7 +10,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Header() {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { count, setOpen } = useCart();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
