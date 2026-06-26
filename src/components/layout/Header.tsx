@@ -50,6 +50,11 @@ export function Header() {
           <Link to={user ? "/profile" : "/auth"} className="hidden sm:block">
             <Button variant="ghost" size="icon" className="h-9 w-9"><UserIcon className="h-[18px] w-[18px]" /></Button>
           </Link>
+          {isAdmin && (
+            <Link to="/admin" className="hidden md:block">
+              <Button variant="outline" size="sm" className="h-9 px-3 text-[12px]">Admin</Button>
+            </Link>
+          )}
           <Link to="/services" className="hidden md:block">
             <Button size="sm" className="btn-gold h-9 px-4 text-[13px]">{t("book_appointment")}</Button>
           </Link>
