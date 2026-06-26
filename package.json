@@ -12,6 +12,12 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@fontsource/amiri": "^5.2.8",
+    "@fontsource/cairo": "^5.2.7",
+    "@fontsource/frank-ruhl-libre": "^5.2.8",
+    "@fontsource/heebo": "^5.2.8",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/playfair-display": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
