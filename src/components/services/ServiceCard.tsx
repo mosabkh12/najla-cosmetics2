@@ -28,14 +28,14 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: (s:
           {service.category}
         </span>
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
         <h3 className="font-display text-lg leading-tight text-foreground">{name}</h3>
         <p className="mt-1.5 text-[13px] leading-relaxed text-secondary-foreground line-clamp-2">{desc}</p>
-        <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="mt-3 flex items-center gap-3 text-[13px] text-muted-foreground">
           <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" />{t("starting_at")}₪{service.price}</span>
           <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{service.duration_minutes} {t("minutes")}</span>
         </div>
-        <Button onClick={() => onBook(service)} className="btn-gold mt-4 h-9 text-[13px]">{t("book_now")}</Button>
+        <Button onClick={() => onBook(service)} className="btn-gold mt-4 h-10 w-full text-[13px]">{t("book_now")}</Button>
       </div>
     </article>
   );

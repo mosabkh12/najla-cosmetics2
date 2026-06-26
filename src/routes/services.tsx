@@ -40,7 +40,7 @@ function ServicesPage() {
           </button>
         ))}
       </div>
-      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         {filtered.map((s) => <ServiceCard key={s.id} service={s} onBook={setActive} />)}
       </div>
       <BookingDialog service={active} open={!!active} onOpenChange={(b) => !b && setActive(null)} />
