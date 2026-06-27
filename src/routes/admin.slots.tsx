@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getAdminSlotServices, getAdminSlots, createSlot, toggleSlot, deleteSlot } from "@/api/slots/slots";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,43 +23,45 @@ function Page() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["admin-slots-services"],
-    queryFn: async () => {
-      const { data } = await supabase.from("services").select("id,name,name_ar").eq("is_active", true).order("name");
-      return data ?? [];
-    },
+    queryFn: () => getAdminSlotServices(),
   });
 
   const { data: slots = [] } = useQuery({
     queryKey: ["admin-slots"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointment_slots")
-        .select("*, service:services(name,name_ar)")
-        .order("slot_date", { ascending: false })
-        .order("start_time");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getAdminSlots(),
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-slots"] });
 
   const add = async () => {
     if (!form.service_id || !form.slot_date) { toast.error("Select service and date"); return; }
-    const { error } = await supabase.from("appointment_slots").insert({ ...form, is_available: true });
-    if (error) toast.error(error.message);
-    else { toast.success("Slot added"); refresh(); }
+    try {
+      await createSlot({ data: form });
+      toast.success("Slot added");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const toggle = async (s: any) => {
-    const { error } = await supabase.from("appointment_slots").update({ is_available: !s.is_available }).eq("id", s.id);
-    if (error) toast.error(error.message); else refresh();
+    try {
+      await toggleSlot({ data: { id: s.id, currentAvailable: s.is_available } });
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const del = async (id: string) => {
     if (!confirm("Delete this slot?")) return;
-    const { error } = await supabase.from("appointment_slots").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); refresh(); }
+    try {
+      await deleteSlot({ data: { id } });
+      toast.success("Deleted");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   return (

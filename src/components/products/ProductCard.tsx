@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useI18n, pickLocalized } from "@/lib/i18n";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { checkFavorite, toggleFavorite } from "@/api/favorites/favorites";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -33,16 +33,16 @@ export function ProductCard({ product }: { product: Product }) {
   const { data: fav } = useQuery({
     queryKey: ["favorite", product.id, user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("favorites").select("id").eq("user_id", user!.id).eq("product_id", product.id).maybeSingle();
-      return !!data;
-    },
+    queryFn: () => checkFavorite({ data: { productId: product.id } }),
   });
 
   const toggleFav = async () => {
     if (!user) { toast.info(t("sign_in")); return; }
-    if (fav) await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", product.id);
-    else await supabase.from("favorites").insert({ user_id: user.id, product_id: product.id });
+    try {
+      await toggleFavorite({ data: { productId: product.id } });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
     qc.invalidateQueries({ queryKey: ["favorite", product.id, user.id] });
     qc.invalidateQueries({ queryKey: ["favorites", user.id] });
   };

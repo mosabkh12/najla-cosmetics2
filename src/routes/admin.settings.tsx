@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getSettings, saveSettings } from "@/api/settings/settings";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,11 +107,7 @@ function Page() {
 
   const { data } = useQuery({
     queryKey: ["admin-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("business_settings").select("*").limit(1).maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getSettings(),
   });
 
   const [form, setForm] = useState<any>({});
@@ -139,13 +136,14 @@ function Page() {
       working_hours,
     };
 
-    const op = form.id
-      ? await supabase.from("business_settings").update(payload).eq("id", form.id)
-      : await supabase.from("business_settings").insert(payload);
-    if (op.error) { toast.error(op.error.message); return; }
-    toast.success("Saved");
-    qc.invalidateQueries({ queryKey: ["admin-settings"] });
-    qc.invalidateQueries({ queryKey: ["business_settings"] });
+    try {
+      await saveSettings({ data: { id: form.id, payload } });
+      toast.success("Saved");
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+      qc.invalidateQueries({ queryKey: ["business_settings"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const F = (key: string, label: string, type: string = "text") => (

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getSettings } from "@/api/settings/settings";
 import { Sparkles, Heart, Star, CalendarDays, ShieldCheck, Gem, Award } from "lucide-react";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 
@@ -14,7 +14,7 @@ function AboutPage() {
   const { t } = useI18n();
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
-    queryFn: async () => (await supabase.from("business_settings").select("*").maybeSingle()).data,
+    queryFn: () => getSettings(),
   });
 
   const values = [

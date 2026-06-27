@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getAdminAppointments, updateAppointmentStatus } from "@/api/appointments/appointments";
 import { useI18n } from "@/lib/i18n";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -17,21 +17,17 @@ function Page() {
 
   const { data: rows = [] } = useQuery({
     queryKey: ["admin-appointments"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("*, service:services(name,name_ar)")
-        .order("appointment_date", { ascending: false })
-        .order("appointment_time", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getAdminAppointments(),
   });
 
   const setStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("appointments").update({ status: status as any }).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin-appointments"] }); }
+    try {
+      await updateAppointmentStatus({ data: { id, status } });
+      toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-appointments"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   return (

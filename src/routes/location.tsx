@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Phone, Clock, MessageCircle, Navigation, Sparkles, CalendarDays } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSettings } from "@/api/settings/settings";
 import { useI18n } from "@/lib/i18n";
 import { Reveal } from "@/components/ScrollReveal";
 
@@ -14,7 +14,7 @@ function LocationPage() {
   const { t } = useI18n();
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
-    queryFn: async () => (await supabase.from("business_settings").select("*").maybeSingle()).data,
+    queryFn: () => getSettings(),
   });
 
   return (

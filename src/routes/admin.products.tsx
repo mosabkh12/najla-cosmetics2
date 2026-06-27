@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getAdminProducts, saveProduct, toggleProduct, deleteProduct } from "@/api/products/products";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
@@ -32,41 +32,40 @@ function Page() {
 
   const { data: products = [] } = useQuery({
     queryKey: ["admin-products"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getAdminProducts(),
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-products"] });
 
   const save = async (values: any) => {
-    const payload = {
-      ...values,
-      price: Number(values.price) || 0,
-      stock_quantity: Number(values.stock_quantity) || 0,
-      low_stock_threshold: Number(values.low_stock_threshold) || 5,
-      is_active: !!values.is_active,
-    };
-    const op = dlg.row?.id
-      ? await supabase.from("products").update(payload).eq("id", dlg.row.id)
-      : await supabase.from("products").insert(payload);
-    if (op.error) { toast.error(op.error.message); return; }
-    toast.success("Saved");
-    setDlg({ open: false, row: null });
-    refresh();
+    try {
+      await saveProduct({ data: { id: dlg.row?.id, payload: values } });
+      toast.success("Saved");
+      setDlg({ open: false, row: null });
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const toggle = async (r: any) => {
-    const { error } = await supabase.from("products").update({ is_active: !r.is_active }).eq("id", r.id);
-    if (error) toast.error(error.message); else refresh();
+    try {
+      await toggleProduct({ data: { id: r.id, currentActive: r.is_active } });
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const del = async (id: string) => {
     if (!confirm("Delete this product?")) return;
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); refresh(); }
+    try {
+      await deleteProduct({ data: { id } });
+      toast.success("Deleted");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   return (

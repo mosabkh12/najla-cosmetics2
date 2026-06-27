@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Heart, Minus, Plus, Truck, Sparkles, ShieldCheck, Award, Star, ChevronLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getProductById, getProductImages, getRelatedProducts } from "@/api/products/products";
+import { checkFavorite, toggleFavorite } from "@/api/favorites/favorites";
 import { useI18n, pickLocalized } from "@/lib/i18n";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,59 +26,33 @@ function ProductDetailPage() {
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getProductById({ data: { id } }),
   });
 
   const { data: images = [] } = useQuery({
     queryKey: ["product-images", id],
-    queryFn: async () => {
-      const { data } = await supabase.from("product_images").select("*").eq("product_id", id).order("sort_order");
-      return data ?? [];
-    },
+    queryFn: () => getProductImages({ data: { productId: id } }),
   });
 
   const { data: fav } = useQuery({
     queryKey: ["favorite", id, user?.id],
     enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("favorites").select("id").eq("user_id", user!.id).eq("product_id", id).maybeSingle();
-      return !!data;
-    },
+    queryFn: () => checkFavorite({ data: { productId: id } }),
   });
 
   const { data: relatedProducts = [] } = useQuery({
     queryKey: ["related-products", id, product?.category],
     enabled: !!product,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .eq("category", product!.category)
-        .neq("id", id)
-        .limit(4);
-      if (data && data.length < 4) {
-        const { data: more } = await supabase
-          .from("products")
-          .select("*")
-          .eq("is_active", true)
-          .neq("id", id)
-          .neq("category", product!.category)
-          .limit(4 - data.length);
-        return [...data, ...(more ?? [])] as Product[];
-      }
-      return (data ?? []) as Product[];
-    },
+    queryFn: async () => (await getRelatedProducts({ data: { id, category: product!.category } })) as Product[],
   });
 
   const toggleFav = async () => {
     if (!user) { toast.info(t("sign_in")); return; }
-    if (fav) await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id);
-    else await supabase.from("favorites").insert({ user_id: user.id, product_id: id });
+    try {
+      await toggleFavorite({ data: { productId: id } });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
     qc.invalidateQueries({ queryKey: ["favorite", id, user.id] });
     qc.invalidateQueries({ queryKey: ["favorites", user.id] });
   };

@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Heart, Edit2, LogOut, CalendarDays, ShoppingBag, Clock, Phone, Mail, User, X } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { getProfile, updateProfile } from "@/api/profiles/profiles";
+import { getUserAppointments, cancelAppointment } from "@/api/appointments/appointments";
+import { getUserOrders } from "@/api/orders/orders";
+import { getUserFavorites } from "@/api/favorites/favorites";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,38 +46,44 @@ function ProfilePage() {
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id], enabled: !!user,
-    queryFn: async () => (await supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle()).data,
+    queryFn: () => getProfile(),
   });
   useEffect(() => { if (profile) { setName(profile.full_name ?? ""); setPhone(profile.phone ?? ""); } }, [profile]);
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", user?.id], enabled: !!user,
-    queryFn: async () => (await supabase.from("appointments").select("*, services(name,name_ar,image_url)").eq("user_id", user!.id).order("appointment_date", { ascending: false })).data ?? [],
+    queryFn: () => getUserAppointments(),
   });
 
   const { data: orders = [] } = useQuery({
     queryKey: ["orders", user?.id], enabled: !!user,
-    queryFn: async () => (await supabase.from("orders").select("*, order_items(*)").eq("user_id", user!.id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: () => getUserOrders(),
   });
 
   const { data: favs = [] } = useQuery({
     queryKey: ["favorites", user?.id], enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("favorites").select("products(*)").eq("user_id", user!.id);
-      return ((data ?? []).map((r: any) => r.products).filter(Boolean)) as Product[];
-    },
+    queryFn: async () => (await getUserFavorites()) as Product[],
   });
 
   if (!user) return null;
 
   const saveProfile = async () => {
-    const { error } = await supabase.from("profiles").update({ full_name: name, phone }).eq("id", user.id);
-    if (error) toast.error(error.message);
-    else { toast.success(t("save")); setEditing(false); qc.invalidateQueries({ queryKey: ["profile", user.id] }); }
+    try {
+      await updateProfile({ data: { full_name: name, phone } });
+      toast.success(t("save"));
+      setEditing(false);
+      qc.invalidateQueries({ queryKey: ["profile", user.id] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
-  const cancelAppt = async (id: string) => {
-    await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
+  const cancelAppt = async (apptId: string) => {
+    try {
+      await cancelAppointment({ data: { id: apptId } });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
     qc.invalidateQueries({ queryKey: ["appointments", user.id] });
   };
 

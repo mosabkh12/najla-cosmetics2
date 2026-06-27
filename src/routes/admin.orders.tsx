@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getAdminOrders, getOrderItems, updateOrderStatus } from "@/api/orders/orders";
 import { useI18n } from "@/lib/i18n";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -21,29 +21,23 @@ function Page() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getAdminOrders(),
   });
 
   const { data: items = [] } = useQuery({
     queryKey: ["admin-order-items", view],
     enabled: !!view,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("order_items").select("*").eq("order_id", view!);
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => getOrderItems({ data: { orderId: view! } }),
   });
 
   const setStatus = async (id: string, status: string) => {
-    const patch: any = { status };
-    if (status === "completed") patch.completed_at = new Date().toISOString();
-    const { error } = await supabase.from("orders").update(patch).eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin-orders"] }); }
+    try {
+      await updateOrderStatus({ data: { id, status } });
+      toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   return (

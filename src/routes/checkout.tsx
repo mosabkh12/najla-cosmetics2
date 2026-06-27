@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getProfile } from "@/api/profiles/profiles";
+import { createOrder } from "@/api/orders/orders";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ function CheckoutPage() {
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [loading, user, navigate]);
   useEffect(() => {
-    if (user) supabase.from("profiles").select("full_name,phone").eq("id", user.id).maybeSingle().then(({ data }) => {
+    if (user) getProfile().then((data) => {
       if (data) { setName(data.full_name ?? ""); setPhone(data.phone ?? ""); }
     });
   }, [user]);
@@ -45,22 +46,31 @@ function CheckoutPage() {
   const placeOrder = async () => {
     if (!name || !phone) { toast.error("Required fields missing"); return; }
     setBusy(true);
-    const { data: order, error: oErr } = await supabase.from("orders").insert({
-      user_id: user.id, customer_name: name, customer_phone: phone, notes: notes || null,
-      delivery_method: delivery, payment_method: "pay_at_store",
-      subtotal, total: subtotal, status: "pending",
-    }).select().single();
-    if (oErr || !order) { setBusy(false); toast.error(oErr?.message ?? "Order failed"); return; }
-    const itemsPayload = items.map((it) => ({
-      order_id: order.id, product_id: it.product_id, product_name: it.name,
-      quantity: it.quantity, unit_price: it.price, total_price: it.price * it.quantity,
-    }));
-    const { error: iErr } = await supabase.from("order_items").insert(itemsPayload);
-    setBusy(false);
-    if (iErr) { toast.error(iErr.message); return; }
-    toast.success(t("order_success"));
-    clear();
-    navigate({ to: "/profile" });
+    try {
+      await createOrder({
+        data: {
+          customer_name: name,
+          customer_phone: phone,
+          notes: notes || null,
+          delivery_method: delivery,
+          subtotal,
+          items: items.map((it) => ({
+            product_id: it.product_id,
+            product_name: it.name,
+            quantity: it.quantity,
+            unit_price: it.price,
+            total_price: it.price * it.quantity,
+          })),
+        },
+      });
+      toast.success(t("order_success"));
+      clear();
+      navigate({ to: "/profile" });
+    } catch (e: any) {
+      toast.error(e.message ?? "Order failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

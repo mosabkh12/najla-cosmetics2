@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, MapPin, Phone, Clock, MessageCircle, Sparkles, Star, ShieldCheck, Award } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getServices } from "@/api/services/services";
+import { getFeaturedProducts } from "@/api/products/products";
+import { getSettings } from "@/api/settings/settings";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
@@ -32,26 +34,17 @@ function Home() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
-    queryFn: async () => {
-      const { data } = await supabase.from("services").select("*").eq("is_active", true).order("created_at");
-      return (data ?? []) as Service[];
-    },
+    queryFn: async () => (await getServices()) as Service[],
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products", "featured"],
-    queryFn: async () => {
-      const { data } = await supabase.from("products").select("*").eq("is_active", true).order("created_at").limit(8);
-      return (data ?? []) as Product[];
-    },
+    queryFn: async () => (await getFeaturedProducts()) as Product[],
   });
 
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
-    queryFn: async () => {
-      const { data } = await supabase.from("business_settings").select("*").maybeSingle();
-      return data;
-    },
+    queryFn: () => getSettings(),
   });
 
   return (

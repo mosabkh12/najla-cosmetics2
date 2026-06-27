@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getServices } from "@/api/services/services";
+import { getSettings } from "@/api/settings/settings";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
 import { useI18n } from "@/lib/i18n";
@@ -20,15 +21,12 @@ function ServicesPage() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["services", "all"],
-    queryFn: async () => {
-      const { data } = await supabase.from("services").select("*").eq("is_active", true).order("created_at");
-      return (data ?? []) as Service[];
-    },
+    queryFn: async () => (await getServices()) as Service[],
   });
 
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
-    queryFn: async () => (await supabase.from("business_settings").select("*").maybeSingle()).data,
+    queryFn: () => getSettings(),
   });
 
   const categories = useMemo(() => ["all", ...Array.from(new Set(services.map((s) => s.category)))], [services]);

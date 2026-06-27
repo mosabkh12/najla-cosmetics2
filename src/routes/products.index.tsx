@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getProducts } from "@/api/products/products";
+import { getSettings } from "@/api/settings/settings";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n";
@@ -22,15 +23,12 @@ function ProductsPage() {
 
   const { data: products = [] } = useQuery({
     queryKey: ["products", "all"],
-    queryFn: async () => {
-      const { data } = await supabase.from("products").select("*").eq("is_active", true);
-      return (data ?? []) as Product[];
-    },
+    queryFn: async () => (await getProducts()) as Product[],
   });
 
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
-    queryFn: async () => (await supabase.from("business_settings").select("*").maybeSingle()).data,
+    queryFn: () => getSettings(),
   });
 
   const categories = useMemo(() => ["all", ...Array.from(new Set(products.map((p) => p.category)))], [products]);

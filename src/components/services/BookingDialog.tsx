@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n, pickLocalized } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { getTakenTimes, createAppointment } from "@/api/appointments/appointments";
+import { getProfile } from "@/api/profiles/profiles";
 import type { Service } from "@/components/services/ServiceCard";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
@@ -28,14 +29,14 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
 
   useEffect(() => {
     if (!service || !date) return;
-    supabase.from("appointments").select("appointment_time").eq("service_id", service.id).eq("appointment_date", date).neq("status", "cancelled").then(({ data }) => {
-      setTaken((data ?? []).map((r) => String(r.appointment_time).slice(0, 5)));
+    getTakenTimes({ data: { serviceId: service.id, date } }).then((times) => {
+      setTaken(times);
     });
   }, [service, date]);
 
   useEffect(() => {
     if (user) {
-      supabase.from("profiles").select("full_name,phone").eq("id", user.id).maybeSingle().then(({ data }) => {
+      getProfile().then((data) => {
         if (data) { setName(data.full_name ?? ""); setPhone(data.phone ?? ""); }
       });
     }
@@ -48,19 +49,26 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
     if (!user) { toast.info(t("sign_in")); onOpenChange(false); navigate({ to: "/auth" }); return; }
     if (!date || !time || !name || !phone) { toast.error("Required fields missing"); return; }
     setBusy(true);
-    const [h, m] = time.split(":").map(Number);
-    const end = `${String(h + Math.floor((m + service.duration_minutes) / 60)).padStart(2, "0")}:${String((m + service.duration_minutes) % 60).padStart(2, "0")}`;
-    const { error } = await supabase.from("appointments").insert({
-      user_id: user.id, service_id: service.id, appointment_date: date, appointment_time: time + ":00",
-      customer_name: name, customer_phone: phone, notes: notes || null, status: "pending",
-      total_price: service.price,
-    });
-    void end;
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(t("booking_success"));
-    onOpenChange(false);
-    setTime(""); setNotes("");
+    try {
+      await createAppointment({
+        data: {
+          service_id: service.id,
+          appointment_date: date,
+          appointment_time: time + ":00",
+          customer_name: name,
+          customer_phone: phone,
+          notes: notes || null,
+          total_price: service.price,
+        },
+      });
+      toast.success(t("booking_success"));
+      onOpenChange(false);
+      setTime(""); setNotes("");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
