@@ -5,35 +5,64 @@ import { useI18n } from "@/lib/i18n";
 export function Footer() {
   const { t } = useI18n();
   return (
-    <footer className="bg-footer border-t border-border/60 mt-12">
-      <div className="container-page py-10 grid gap-8 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-lg">Najla</span>
-            <span className="text-[11px] uppercase tracking-[0.22em] text-primary">Cosmetics</span>
+    <footer className="bg-surface-3 border-t border-border/20">
+      <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-20">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          {/* Brand */}
+          <div className="md:col-span-1">
+            <span className="font-display text-[24px] italic text-foreground">Najla Cosmetics</span>
+            <p className="mt-4 text-[14px] text-muted-foreground max-w-xs leading-[1.7]">{t("footer_tagline")}</p>
+            <div className="flex gap-3 mt-6">
+              <a href="#" aria-label="Instagram" className="grid h-10 w-10 place-items-center rounded-full border border-border/40 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all">
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a href="#" aria-label="Facebook" className="grid h-10 w-10 place-items-center rounded-full border border-border/40 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all">
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a href="#" aria-label="Email" className="grid h-10 w-10 place-items-center rounded-full border border-border/40 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-all">
+                <Mail className="h-4 w-4" />
+              </a>
+            </div>
           </div>
-          <p className="mt-3 text-sm text-secondary-foreground max-w-sm leading-relaxed">{t("footer_tagline")}</p>
-        </div>
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">{t("nav_services")}</h4>
-          <ul className="space-y-2 text-sm text-secondary-foreground">
-            <li><Link to="/services" className="hover:text-primary">{t("nav_services")}</Link></li>
-            <li><Link to="/products" className="hover:text-primary">{t("nav_products")}</Link></li>
-            <li><Link to="/about" className="hover:text-primary">{t("nav_about")}</Link></li>
-            <li><Link to="/location" className="hover:text-primary">{t("nav_location")}</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">{t("language")}</h4>
-          <div className="flex gap-3 text-secondary-foreground">
-            <a href="#" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-4 w-4" /></a>
-            <a href="#" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-4 w-4" /></a>
-            <a href="#" aria-label="Email" className="hover:text-primary"><Mail className="h-4 w-4" /></a>
+
+          {/* Shop links */}
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-foreground mb-6">{t("nav_products")}</h4>
+            <ul className="space-y-3">
+              <li><Link to="/products" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">{t("nav_products")}</Link></li>
+              <li><Link to="/services" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">{t("nav_services")}</Link></li>
+              <li><Link to="/about" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">{t("nav_about")}</Link></li>
+            </ul>
+          </div>
+
+          {/* Assistance */}
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-foreground mb-6">{t("nav_location")}</h4>
+            <ul className="space-y-3">
+              <li><Link to="/location" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">{t("nav_location")}</Link></li>
+              <li><Link to="/auth" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">{t("sign_in")}</Link></li>
+              <li><Link to="/profile" className="text-[14px] text-muted-foreground hover:text-foreground transition-colors">{t("account")}</Link></li>
+            </ul>
+          </div>
+
+          {/* Studio */}
+          <div>
+            <h4 className="text-[11px] font-bold uppercase tracking-[0.15em] text-foreground mb-6">{t("address")}</h4>
+            <p className="text-[14px] text-muted-foreground leading-relaxed mb-4">Nazareth, Israel</p>
+            <Link to="/services">
+              <button className="bg-primary text-primary-foreground px-6 py-2.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
+                {t("nav_services")}
+              </button>
+            </Link>
           </div>
         </div>
       </div>
-      <div className="border-t border-border/60">
-        <div className="container-page py-4 text-xs text-muted-foreground text-center">{t("copyright")}</div>
+
+      {/* Bottom bar */}
+      <div className="border-t border-border/20">
+        <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{t("copyright")}</p>
+        </div>
       </div>
     </footer>
   );

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+import { Sparkles, Mail, Lock, User, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign In — Najla Cosmetics" }] }),
@@ -43,27 +44,83 @@ function AuthPage() {
   };
 
   return (
-    <section className="container-page py-12 flex justify-center">
-      <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-6 soft-shadow">
-        <h1 className="font-display text-2xl text-center text-foreground">Najla Cosmetics</h1>
-        <Tabs defaultValue="signin" className="mt-5">
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="signin">{t("sign_in")}</TabsTrigger>
-            <TabsTrigger value="signup">{t("sign_up")}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="signin" className="space-y-3 mt-4">
-            <div><Label className="text-xs">{t("email")}</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 h-10" /></div>
-            <div><Label className="text-xs">{t("password")}</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 h-10" /></div>
-            <Button onClick={signIn} disabled={busy} className="btn-gold w-full h-10">{t("sign_in")}</Button>
-          </TabsContent>
-          <TabsContent value="signup" className="space-y-3 mt-4">
-            <div><Label className="text-xs">{t("full_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 h-10" /></div>
-            <div><Label className="text-xs">{t("phone")}</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-10" /></div>
-            <div><Label className="text-xs">{t("email")}</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 h-10" /></div>
-            <div><Label className="text-xs">{t("password")}</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 h-10" /></div>
-            <Button onClick={signUp} disabled={busy} className="btn-gold w-full h-10">{t("sign_up")}</Button>
-          </TabsContent>
-        </Tabs>
+    <section className="min-h-[calc(100vh-160px)] flex items-center justify-center bg-gradient-to-b from-blush/50 via-background to-background px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Brand header */}
+        <div className="text-center mb-8">
+          <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-gold to-gold-muted soft-shadow">
+            <Sparkles className="h-7 w-7 text-gold-foreground" />
+          </div>
+          <h1 className="font-display text-3xl text-foreground tracking-tight">Najla Cosmetics</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t("hero_sub").slice(0, 60)}...</p>
+        </div>
+
+        {/* Auth card */}
+        <div className="rounded-2xl border border-border/40 bg-card/80 backdrop-blur-sm p-6 sm:p-8 soft-shadow">
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid grid-cols-2 w-full h-11 rounded-xl bg-surface p-1">
+              <TabsTrigger value="signin" className="rounded-lg text-sm font-medium data-[state=active]:bg-card data-[state=active]:soft-shadow">{t("sign_in")}</TabsTrigger>
+              <TabsTrigger value="signup" className="rounded-lg text-sm font-medium data-[state=active]:bg-card data-[state=active]:soft-shadow">{t("sign_up")}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="signin" className="mt-6 space-y-4">
+              <div>
+                <Label className="text-xs font-medium text-secondary-foreground">{t("email")}</Label>
+                <div className="relative mt-1.5">
+                  <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="h-11 ps-10 rounded-xl border-border/60 bg-surface/50 focus:bg-card transition-colors" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-secondary-foreground">{t("password")}</Label>
+                <div className="relative mt-1.5">
+                  <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="h-11 ps-10 rounded-xl border-border/60 bg-surface/50 focus:bg-card transition-colors" />
+                </div>
+              </div>
+              <Button onClick={signIn} disabled={busy} className="btn-gold w-full h-11 rounded-xl text-sm font-semibold mt-2">{t("sign_in")}</Button>
+            </TabsContent>
+
+            <TabsContent value="signup" className="mt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-medium text-secondary-foreground">{t("full_name")}</Label>
+                  <div className="relative mt-1.5">
+                    <User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="h-11 ps-10 rounded-xl border-border/60 bg-surface/50 focus:bg-card transition-colors" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-secondary-foreground">{t("phone")}</Label>
+                  <div className="relative mt-1.5">
+                    <Phone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-11 ps-10 rounded-xl border-border/60 bg-surface/50 focus:bg-card transition-colors" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-secondary-foreground">{t("email")}</Label>
+                <div className="relative mt-1.5">
+                  <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="h-11 ps-10 rounded-xl border-border/60 bg-surface/50 focus:bg-card transition-colors" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-secondary-foreground">{t("password")}</Label>
+                <div className="relative mt-1.5">
+                  <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="h-11 ps-10 rounded-xl border-border/60 bg-surface/50 focus:bg-card transition-colors" />
+                </div>
+              </div>
+              <Button onClick={signUp} disabled={busy} className="btn-gold w-full h-11 rounded-xl text-sm font-semibold mt-2">{t("sign_up")}</Button>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Footer note */}
+        <p className="mt-5 text-center text-[11px] text-muted-foreground">
+          © 2026 Najla Cosmetics
+        </p>
       </div>
     </section>
   );

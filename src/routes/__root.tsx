@@ -8,7 +8,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { CartDrawer } from "@/components/products/CartDrawer";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -80,9 +79,8 @@ function RootComponent() {
           <CartProvider>
             <div className="flex min-h-screen flex-col">
               <Header />
-              <main className="flex-1"><Outlet /></main>
+              <main className="flex-1 pt-20"><Outlet /></main>
               <Footer />
-              <CartDrawer />
               <Toaster position="top-center" />
             </div>
           </CartProvider>

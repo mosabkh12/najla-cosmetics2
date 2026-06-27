@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
@@ -24,25 +25,171 @@ function ServicesPage() {
     },
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ["business_settings"],
+    queryFn: async () => (await supabase.from("business_settings").select("*").maybeSingle()).data,
+  });
+
   const categories = useMemo(() => ["all", ...Array.from(new Set(services.map((s) => s.category)))], [services]);
   const filtered = cat === "all" ? services : services.filter((s) => s.category === cat);
 
   return (
-    <section className="container-page py-10">
-      <div className="text-center max-w-2xl mx-auto">
-        <h1 className="font-display text-[30px] md:text-[40px] text-foreground">{t("services_title")}</h1>
-        <p className="mt-2 text-sm text-secondary-foreground">{t("services_sub")}</p>
+    <section className="min-h-screen bg-background -mt-20">
+
+      {/* ═══════════ Hero ═══════════ */}
+      <div className="relative h-[320px] sm:h-[420px] md:h-[520px] flex items-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src={settings?.hero_image_url ?? "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=1800&q=85"}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/50 to-background" />
+        </div>
+        <div className="relative z-10 w-full px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
+          <div className="max-w-xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4">Najla Cosmetics</p>
+            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground">
+              {t("services_title")}
+            </h1>
+            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg">
+              {t("services_sub")}
+            </p>
+          </div>
+        </div>
       </div>
-      <div className="mt-6 flex flex-wrap justify-center gap-1.5">
-        {categories.map((c) => (
-          <button key={c} onClick={() => setCat(c)} className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${cat === c ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-secondary-foreground hover:border-primary"}`}>
-            {c === "all" ? t("all_categories") : c}
-          </button>
-        ))}
+
+      {/* ═══════════ Category Tabs ═══════════ */}
+      <div className="border-b border-border/30">
+        <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
+          <div className="flex items-end justify-between pt-10 pb-0 overflow-x-auto">
+            <div className="flex gap-8 sm:gap-10 min-w-max">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCat(c)}
+                  className={`pb-4 text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors whitespace-nowrap ${
+                    cat === c
+                      ? "text-foreground border-b-[2px] border-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {c === "all" ? t("all_categories") : c}
+                </button>
+              ))}
+            </div>
+            <span className="pb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hidden md:block whitespace-nowrap ps-8">
+              {filtered.length} {t("services_title").split(" ")[0]}
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="mt-8 grid grid-cols-1 gap-3 xs:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-        {filtered.map((s) => <ServiceCard key={s.id} service={s} onBook={setActive} />)}
+
+      {/* ═══════════ Service Grid ═══════════ */}
+      <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-12 sm:py-16">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
+          {filtered.map((s) => <ServiceCard key={s.id} service={s} onBook={setActive} />)}
+        </div>
+
+        {filtered.length === 0 && (
+          <div className="py-24 text-center">
+            <p className="text-[15px] text-muted-foreground">{t("no_appointments")}</p>
+          </div>
+        )}
       </div>
+
+      {/* ═══════════ First Visit Guide ═══════════ */}
+      <div className="bg-surface">
+        <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left: Steps */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">
+                {t("about_eyebrow")}
+              </p>
+              <h2 className="font-display text-[28px] sm:text-[36px] leading-[1.15] text-foreground italic">
+                {t("about_title")}
+              </h2>
+
+              <div className="mt-10 space-y-8">
+                {[
+                  {
+                    num: "1",
+                    title: "הגיעי 15 דקות מוקדם",
+                    titleEn: "Arrival Time",
+                    desc: "הגיעי 15 דקות לפני התור כדי למלא את פרופיל היופי האישי שלך.",
+                    descEn: "Please arrive 15 minutes prior to your appointment to complete your personalized aesthetic profile.",
+                  },
+                  {
+                    num: "2",
+                    title: "בחירת טיפול",
+                    titleEn: "Service Selection",
+                    desc: "לא בטוחה מה מתאים? מומלץ להתחיל עם ייעוץ אישי כדי להתאים את הטיפול למטרות שלך.",
+                    descEn: "Unsure of what you need? We recommend starting with a consultation to align your goals.",
+                  },
+                  {
+                    num: "3",
+                    title: "טיפוח עור ושיער",
+                    titleEn: "Skin & Hair Care",
+                    desc: "לאיפור או טיפולי פנים — הגיעי עם פנים נקיות. לטיפולי שיער — שתפי את היסטוריית המוצרים האחרונה שלך.",
+                    descEn: "For makeup or facials, arrive with a clean face. For hair services, please share your recent product history.",
+                  },
+                ].map((step) => (
+                  <div key={step.num} className="flex gap-5">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-[1.5px] border-primary/40 text-primary font-display text-[18px]">
+                      {step.num}
+                    </div>
+                    <div>
+                      <h3 className="font-display text-[17px] sm:text-[19px] text-foreground">{step.title}</h3>
+                      <p className="mt-1.5 text-[14px] text-muted-foreground leading-[1.7]">{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Image */}
+            <div className="relative">
+              <div className="aspect-[3/4] rounded-3xl overflow-hidden"
+                style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
+              >
+                <img
+                  src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1000&q=85"}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+                {/* Floating label */}
+                <div className="absolute bottom-6 start-6 end-6 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
+                  style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
+                >
+                  <p className="font-display text-[20px] italic text-foreground">Najla Cosmetics</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════ CTA Strip ═══════════ */}
+      <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-20 text-center">
+        <Sparkles className="h-7 w-7 mx-auto text-primary" />
+        <h2 className="mt-4 font-display text-[26px] sm:text-[34px] text-foreground">{t("hero_title")}</h2>
+        <p className="mt-3 text-[15px] text-muted-foreground max-w-md mx-auto leading-relaxed">{t("hero_sub")}</p>
+        <div className="mt-8 flex justify-center gap-4">
+          <Link to="/products">
+            <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
+              {t("shop_products")}
+            </button>
+          </Link>
+          <Link to="/location">
+            <button className="bg-card/50 border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-surface transition-colors">
+              {t("get_directions")}
+            </button>
+          </Link>
+        </div>
+      </div>
+
       <BookingDialog service={active} open={!!active} onOpenChange={(b) => !b && setActive(null)} />
     </section>
   );

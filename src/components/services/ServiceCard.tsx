@@ -1,5 +1,4 @@
 import { Clock, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useI18n, pickLocalized } from "@/lib/i18n";
 
 export interface Service {
@@ -18,24 +17,66 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: (s:
   const { t, lang } = useI18n();
   const name = pickLocalized(lang, service.name, service.name_ar);
   const desc = pickLocalized(lang, service.description, service.description_ar);
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl bg-card border border-border/60 soft-shadow transition-all hover:border-primary/40">
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface">
-        {service.image_url && (
-          <img src={service.image_url} alt={name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+    <article className="group relative flex flex-col">
+      {/* Image */}
+      <div
+        className="relative aspect-[4/5] sm:aspect-[4/5] rounded-2xl overflow-hidden cursor-pointer transition-shadow duration-500 hover:shadow-xl"
+        style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
+        onClick={() => onBook(service)}
+      >
+        {service.image_url ? (
+          <img
+            src={service.image_url}
+            alt={name}
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center bg-surface-2">
+            <Sparkles className="h-10 w-10 text-muted-foreground/10" />
+          </div>
         )}
-        <span className="absolute top-3 start-3 rounded-full bg-card/90 backdrop-blur px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+
+        {/* Category badge */}
+        <span className="absolute top-3 sm:top-4 start-3 sm:start-4 bg-card/90 backdrop-blur-md text-foreground px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.1em]">
           {service.category}
         </span>
-      </div>
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <h3 className="font-display text-lg leading-tight text-foreground">{name}</h3>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-secondary-foreground line-clamp-2">{desc}</p>
-        <div className="mt-3 flex items-center gap-3 text-[13px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3 text-primary" />{t("starting_at")}₪{service.price}</span>
-          <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{service.duration_minutes} {t("minutes")}</span>
+
+        {/* Hover overlay - Book Now */}
+        <div className="absolute bottom-4 sm:bottom-5 inset-x-3 sm:inset-x-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <button
+            onClick={(e) => { e.stopPropagation(); onBook(service); }}
+            className="flex-1 bg-foreground/90 backdrop-blur-md text-background py-2.5 sm:py-3 rounded-full text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] hover:bg-foreground transition-colors"
+          >
+            {t("book_now")}
+          </button>
         </div>
-        <Button onClick={() => onBook(service)} className="btn-gold mt-4 h-10 w-full text-[13px]">{t("book_now")}</Button>
+      </div>
+
+      {/* Content */}
+      <div className="px-0.5 sm:px-1 mt-4 sm:mt-5">
+        {/* Name */}
+        <h3 className="font-display text-[15px] sm:text-[18px] leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-1">
+          {name}
+        </h3>
+
+        {/* Description */}
+        {desc && (
+          <p className="mt-1 text-[11px] sm:text-[14px] text-muted-foreground leading-[1.6] line-clamp-2">
+            {desc}
+          </p>
+        )}
+
+        {/* Price & Duration */}
+        <div className="mt-2 sm:mt-3 flex items-center gap-3 sm:gap-4 text-[12px] sm:text-[14px]">
+          <span className="font-semibold text-foreground">₪{service.price}</span>
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            {service.duration_minutes} {t("minutes")}
+          </span>
+        </div>
       </div>
     </article>
   );
