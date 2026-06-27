@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, MapPin, Phone, Clock, MessageCircle, Sparkles, Star, ShieldCheck, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
 import { useI18n } from "@/lib/i18n";
+import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Najla Cosmetics — בית" }] }),
@@ -16,6 +17,18 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t } = useI18n();
   const [bookingService, setBookingService] = useState<Service | null>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const [heroOffset, setHeroOffset] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (heroRef.current) {
+        setHeroOffset(window.scrollY * 0.3);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const { data: services = [] } = useQuery({
     queryKey: ["services"],
@@ -43,23 +56,34 @@ function Home() {
 
   return (
     <>
-      {/* ═══════════ HERO ═══════════ */}
-      <section className="relative h-[500px] sm:h-[600px] md:h-[85vh] md:max-h-[900px] overflow-hidden -mt-20">
-        <img src={settings?.hero_image_url ?? "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=1800&q=85"} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {/* ═══════════ HERO — parallax ═══════════ */}
+      <section ref={heroRef} className="relative h-[500px] sm:h-[600px] md:h-[85vh] md:max-h-[900px] overflow-hidden -mt-20">
+        <div className="absolute inset-0 overflow-hidden">
+          <img
+            src={settings?.hero_image_url || "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=1800&q=85"}
+            alt=""
+            className="h-[120%] w-full object-cover"
+            style={{ transform: `translate3d(0, ${heroOffset}px, 0)` }}
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/40 to-background" />
         <div className="relative flex h-full items-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary mb-5">Najla Cosmetics</p>
-            <h1 className="font-display text-[34px] sm:text-[44px] md:text-[56px] leading-[1.08] tracking-tight text-foreground">{t("hero_title")}</h1>
-            <p className="mt-5 text-[15px] sm:text-[17px] text-secondary-foreground max-w-lg leading-[1.7]">{t("hero_sub")}</p>
-            <div className="mt-8 flex flex-wrap gap-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary mb-5 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
+            <h1 className="font-display text-[34px] sm:text-[44px] md:text-[56px] leading-[1.08] tracking-tight text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
+              {t("hero_title")}
+            </h1>
+            <p className="mt-5 text-[15px] sm:text-[17px] text-secondary-foreground max-w-lg leading-[1.7] animate-[fadeSlideUp_0.8s_0.6s_both]">
+              {t("hero_sub")}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4 animate-[fadeSlideUp_0.8s_0.8s_both]">
               <Link to="/services">
-                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
+                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
                   {t("book_appointment")}
                 </button>
               </Link>
               <Link to="/products">
-                <button className="bg-card/50 backdrop-blur-md border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-card transition-colors">
+                <button className="bg-card/50 backdrop-blur-md border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-card transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
                   {t("shop_products")}
                 </button>
               </Link>
@@ -70,146 +94,159 @@ function Home() {
 
       {/* ═══════════ SERVICES ═══════════ */}
       <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">{t("about_eyebrow")}</p>
-            <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">{t("services_title")}</h2>
-            <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">{t("services_sub")}</p>
+        <Reveal direction="up">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">{t("about_eyebrow")}</p>
+              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">{t("services_title")}</h2>
+              <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">{t("services_sub")}</p>
+            </div>
+            <Link to="/services" className="shrink-0">
+              <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
+                {t("nav_services")} <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" />
+              </button>
+            </Link>
           </div>
-          <Link to="/services" className="shrink-0">
-            <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all">
-              {t("nav_services")} <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" />
-            </button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
+        </Reveal>
+        <StaggerGrid className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
           {services.slice(0, 6).map((s) => <ServiceCard key={s.id} service={s} onBook={setBookingService} />)}
-        </div>
+        </StaggerGrid>
       </section>
 
       {/* ═══════════ PRODUCTS ═══════════ */}
       <section className="bg-surface">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">Najla Cosmetics</p>
-              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">{t("products_title")}</h2>
-              <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">{t("products_sub")}</p>
+          <Reveal direction="up">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">Najla Cosmetics</p>
+                <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">{t("products_title")}</h2>
+                <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">{t("products_sub")}</p>
+              </div>
+              <Link to="/products" className="shrink-0">
+                <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
+                  {t("view_all_products")} <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" />
+                </button>
+              </Link>
             </div>
-            <Link to="/products" className="shrink-0">
-              <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all">
-                {t("view_all_products")} <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" />
-              </button>
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
+          </Reveal>
+          <StaggerGrid className="grid grid-cols-2 lg:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
             {products.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
+          </StaggerGrid>
         </div>
       </section>
 
       {/* ═══════════ ABOUT ═══════════ */}
       <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
         <div className="grid gap-10 lg:gap-20 md:grid-cols-2 md:items-center">
-          <div className="relative">
-            <div className="aspect-[4/5] max-h-[600px] overflow-hidden rounded-3xl"
-              style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
-            >
-              <img src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1200&q=85"} alt="" className="h-full w-full object-cover" />
+          <Reveal direction="start">
+            <div className="relative">
+              <div className="aspect-[4/5] max-h-[600px] overflow-hidden rounded-3xl"
+                style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
+              >
+                <img src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1200&q=85"} alt="" className="h-full w-full object-cover" />
+              </div>
+              <div className="absolute -bottom-5 start-5 sm:start-8 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
+                style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
+              >
+                <p className="font-display text-[18px] italic text-foreground">Najla Cosmetics</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
+              </div>
             </div>
-            <div className="absolute -bottom-5 start-5 sm:start-8 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
-              style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
-            >
-              <p className="font-display text-[18px] italic text-foreground">Najla Cosmetics</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
-            </div>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">{t("about_eyebrow")}</p>
-            <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.12] text-foreground italic">{t("about_title")}</h2>
-            <p className="mt-5 text-[16px] text-muted-foreground leading-[1.7] max-w-lg">{t("about_body")}</p>
+          </Reveal>
+          <Reveal direction="end" delay={2}>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">{t("about_eyebrow")}</p>
+              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.12] text-foreground italic">{t("about_title")}</h2>
+              <p className="mt-5 text-[16px] text-muted-foreground leading-[1.7] max-w-lg">{t("about_body")}</p>
 
-            {/* Trust points */}
-            <div className="mt-10 grid grid-cols-2 gap-5">
-              {[
-                { icon: <Sparkles className="h-5 w-5" />, label: "Premium Quality" },
-                { icon: <Star className="h-5 w-5" />, label: "Expert Care" },
-                { icon: <ShieldCheck className="h-5 w-5" />, label: "Trusted Brands" },
-                { icon: <Award className="h-5 w-5" />, label: "Certified Professional" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center gap-3">
-                  <span className="text-primary">{item.icon}</span>
-                  <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{item.label}</span>
-                </div>
-              ))}
-            </div>
+              <div className="mt-10 grid grid-cols-2 gap-5">
+                {[
+                  { icon: <Sparkles className="h-5 w-5" />, label: "Premium Quality" },
+                  { icon: <Star className="h-5 w-5" />, label: "Expert Care" },
+                  { icon: <ShieldCheck className="h-5 w-5" />, label: "Trusted Brands" },
+                  { icon: <Award className="h-5 w-5" />, label: "Certified Professional" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <span className="text-primary">{item.icon}</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{item.label}</span>
+                  </div>
+                ))}
+              </div>
 
-            <div className="mt-10 flex gap-4">
-              <Link to="/about">
-                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
-                  {t("discover_story")}
-                </button>
-              </Link>
+              <div className="mt-10">
+                <Link to="/about">
+                  <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
+                    {t("discover_story")}
+                  </button>
+                </Link>
+              </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ═══════════ LOCATION ═══════════ */}
       <section className="bg-surface">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
-          <div className="text-center max-w-xl mx-auto mb-12">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">Najla Cosmetics</p>
-            <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] text-foreground">{t("location_title")}</h2>
-          </div>
-          <div className="grid gap-8 md:grid-cols-2 md:items-stretch">
-            <div className="overflow-hidden rounded-3xl min-h-[350px]"
-              style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
-            >
-              <iframe title="Map" src="https://www.google.com/maps?q=Nazareth&output=embed" className="h-full w-full min-h-[350px]" loading="lazy" />
+          <Reveal direction="up">
+            <div className="text-center max-w-xl mx-auto mb-12">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">Najla Cosmetics</p>
+              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] text-foreground">{t("location_title")}</h2>
             </div>
-            <div className="rounded-3xl bg-card p-8 sm:p-10 flex flex-col"
-              style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
-            >
-              <div className="space-y-6 flex-1">
-                <div className="flex items-start gap-4">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><MapPin className="h-5 w-5 text-primary" /></div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("address")}</p>
-                    <p className="text-[15px] text-foreground mt-1 leading-relaxed">{settings?.address || "Nazareth, Israel"}</p>
+          </Reveal>
+          <div className="grid gap-8 md:grid-cols-2 md:items-stretch">
+            <Reveal direction="start">
+              <div className="overflow-hidden rounded-3xl min-h-[350px] h-full"
+                style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
+              >
+                <iframe title="Map" src="https://www.google.com/maps?q=Nazareth&output=embed" className="h-full w-full min-h-[350px]" loading="lazy" />
+              </div>
+            </Reveal>
+            <Reveal direction="end" delay={2}>
+              <div className="rounded-3xl bg-card p-8 sm:p-10 flex flex-col h-full"
+                style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
+              >
+                <div className="space-y-6 flex-1">
+                  <div className="flex items-start gap-4">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><MapPin className="h-5 w-5 text-primary" /></div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("address")}</p>
+                      <p className="text-[15px] text-foreground mt-1 leading-relaxed">{settings?.address || "Nazareth, Israel"}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><Phone className="h-5 w-5 text-primary" /></div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("phone")}</p>
-                    <p className="text-[15px] text-foreground mt-1 font-medium" dir="ltr">{settings?.phone || "—"}</p>
+                  <div className="flex items-start gap-4">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><Phone className="h-5 w-5 text-primary" /></div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("phone")}</p>
+                      <p className="text-[15px] text-foreground mt-1 font-medium" dir="ltr">{settings?.phone || "—"}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><Clock className="h-5 w-5 text-primary" /></div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("working_hours")}</p>
-                    <div className="mt-1 text-[15px] text-foreground space-y-0.5">
-                      <p>Sun–Thu: <span className="font-medium">09:00–19:00</span></p>
-                      <p>Fri: <span className="font-medium">09:00–15:00</span></p>
+                  <div className="flex items-start gap-4">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><Clock className="h-5 w-5 text-primary" /></div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("working_hours")}</p>
+                      <div className="mt-1 text-[15px] text-foreground space-y-0.5">
+                        <p>Sun–Thu: <span className="font-medium">09:00–19:00</span></p>
+                        <p>Fri: <span className="font-medium">09:00–15:00</span></p>
+                      </div>
                     </div>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3 mt-8">
+                  <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                    <button className="w-full py-3.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
+                      <MessageCircle className="h-4 w-4" />WhatsApp
+                    </button>
+                  </a>
+                  <a href={settings?.google_maps_url ?? "#"} target="_blank" rel="noreferrer">
+                    <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
+                      {t("get_directions")}
+                    </button>
+                  </a>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-8">
-                <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
-                  <button className="w-full py-3.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
-                    <MessageCircle className="h-4 w-4" />WhatsApp
-                  </button>
-                </a>
-                <a href={settings?.google_maps_url ?? "#"} target="_blank" rel="noreferrer">
-                  <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
-                    {t("get_directions")}
-                  </button>
-                </a>
-              </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>

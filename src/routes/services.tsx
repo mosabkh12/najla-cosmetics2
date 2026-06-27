@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
 import { useI18n } from "@/lib/i18n";
+import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/services")({
   head: () => ({ meta: [{ title: "Services — Najla Cosmetics" }] }),
@@ -40,19 +41,19 @@ function ServicesPage() {
       <div className="relative h-[320px] sm:h-[420px] md:h-[520px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={settings?.hero_image_url ?? "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=1800&q=85"}
+            src={settings?.hero_image_url ?? "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=1800&q=85"}
             alt=""
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/50 to-background" />
         </div>
         <div className="relative z-10 w-full px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
-          <div className="max-w-xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4">Najla Cosmetics</p>
-            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground">
+          <div className="max-w-xl pt-20">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
+            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
               {t("services_title")}
             </h1>
-            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg">
+            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg animate-[fadeSlideUp_0.8s_0.6s_both]">
               {t("services_sub")}
             </p>
           </div>
@@ -87,9 +88,9 @@ function ServicesPage() {
 
       {/* ═══════════ Service Grid ═══════════ */}
       <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-12 sm:py-16">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
+        <StaggerGrid className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
           {filtered.map((s) => <ServiceCard key={s.id} service={s} onBook={setActive} />)}
-        </div>
+        </StaggerGrid>
 
         {filtered.length === 0 && (
           <div className="py-24 text-center">
@@ -102,93 +103,90 @@ function ServicesPage() {
       <div className="bg-surface">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            {/* Left: Steps */}
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">
-                {t("about_eyebrow")}
-              </p>
-              <h2 className="font-display text-[28px] sm:text-[36px] leading-[1.15] text-foreground italic">
-                {t("about_title")}
-              </h2>
+            <Reveal direction="start">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">
+                  {t("about_eyebrow")}
+                </p>
+                <h2 className="font-display text-[28px] sm:text-[36px] leading-[1.15] text-foreground italic">
+                  {t("about_title")}
+                </h2>
 
-              <div className="mt-10 space-y-8">
-                {[
-                  {
-                    num: "1",
-                    title: "הגיעי 15 דקות מוקדם",
-                    titleEn: "Arrival Time",
-                    desc: "הגיעי 15 דקות לפני התור כדי למלא את פרופיל היופי האישי שלך.",
-                    descEn: "Please arrive 15 minutes prior to your appointment to complete your personalized aesthetic profile.",
-                  },
-                  {
-                    num: "2",
-                    title: "בחירת טיפול",
-                    titleEn: "Service Selection",
-                    desc: "לא בטוחה מה מתאים? מומלץ להתחיל עם ייעוץ אישי כדי להתאים את הטיפול למטרות שלך.",
-                    descEn: "Unsure of what you need? We recommend starting with a consultation to align your goals.",
-                  },
-                  {
-                    num: "3",
-                    title: "טיפוח עור ושיער",
-                    titleEn: "Skin & Hair Care",
-                    desc: "לאיפור או טיפולי פנים — הגיעי עם פנים נקיות. לטיפולי שיער — שתפי את היסטוריית המוצרים האחרונה שלך.",
-                    descEn: "For makeup or facials, arrive with a clean face. For hair services, please share your recent product history.",
-                  },
-                ].map((step) => (
-                  <div key={step.num} className="flex gap-5">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-[1.5px] border-primary/40 text-primary font-display text-[18px]">
-                      {step.num}
+                <div className="mt-10 space-y-8">
+                  {[
+                    {
+                      num: "1",
+                      title: "הגיעי 15 דקות מוקדם",
+                      desc: "הגיעי 15 דקות לפני התור כדי למלא את פרופיל היופי האישי שלך.",
+                    },
+                    {
+                      num: "2",
+                      title: "בחירת טיפול",
+                      desc: "לא בטוחה מה מתאים? מומלץ להתחיל עם ייעוץ אישי כדי להתאים את הטיפול למטרות שלך.",
+                    },
+                    {
+                      num: "3",
+                      title: "טיפוח עור ושיער",
+                      desc: "לאיפור או טיפולי פנים — הגיעי עם פנים נקיות. לטיפולי שיער — שתפי את היסטוריית המוצרים האחרונה שלך.",
+                    },
+                  ].map((step) => (
+                    <div key={step.num} className="flex gap-5">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-[1.5px] border-primary/40 text-primary font-display text-[18px]">
+                        {step.num}
+                      </div>
+                      <div>
+                        <h3 className="font-display text-[17px] sm:text-[19px] text-foreground">{step.title}</h3>
+                        <p className="mt-1.5 text-[14px] text-muted-foreground leading-[1.7]">{step.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-display text-[17px] sm:text-[19px] text-foreground">{step.title}</h3>
-                      <p className="mt-1.5 text-[14px] text-muted-foreground leading-[1.7]">{step.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right: Image */}
-            <div className="relative">
-              <div className="aspect-[3/4] rounded-3xl overflow-hidden"
-                style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
-              >
-                <img
-                  src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1000&q=85"}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-                {/* Floating label */}
-                <div className="absolute bottom-6 start-6 end-6 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
-                  style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
-                >
-                  <p className="font-display text-[20px] italic text-foreground">Najla Cosmetics</p>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
+                  ))}
                 </div>
               </div>
-            </div>
+            </Reveal>
+
+            <Reveal direction="end" delay={2}>
+              <div className="relative">
+                <div className="aspect-[3/4] rounded-3xl overflow-hidden"
+                  style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
+                >
+                  <img
+                    src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1000&q=85"}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-6 start-6 end-6 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
+                    style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
+                  >
+                    <p className="font-display text-[20px] italic text-foreground">Najla Cosmetics</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </div>
       </div>
 
       {/* ═══════════ CTA Strip ═══════════ */}
-      <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-20 text-center">
-        <Sparkles className="h-7 w-7 mx-auto text-primary" />
-        <h2 className="mt-4 font-display text-[26px] sm:text-[34px] text-foreground">{t("hero_title")}</h2>
-        <p className="mt-3 text-[15px] text-muted-foreground max-w-md mx-auto leading-relaxed">{t("hero_sub")}</p>
-        <div className="mt-8 flex justify-center gap-4">
-          <Link to="/products">
-            <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
-              {t("shop_products")}
-            </button>
-          </Link>
-          <Link to="/location">
-            <button className="bg-card/50 border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-surface transition-colors">
-              {t("get_directions")}
-            </button>
-          </Link>
+      <Reveal direction="scale">
+        <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-20 text-center">
+          <Sparkles className="h-7 w-7 mx-auto text-primary" />
+          <h2 className="mt-4 font-display text-[26px] sm:text-[34px] text-foreground">{t("hero_title")}</h2>
+          <p className="mt-3 text-[15px] text-muted-foreground max-w-md mx-auto leading-relaxed">{t("hero_sub")}</p>
+          <div className="mt-8 flex justify-center gap-4">
+            <Link to="/products">
+              <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
+                {t("shop_products")}
+              </button>
+            </Link>
+            <Link to="/location">
+              <button className="bg-card/50 border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-surface transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
+                {t("get_directions")}
+              </button>
+            </Link>
+          </div>
         </div>
-      </div>
+      </Reveal>
 
       <BookingDialog service={active} open={!!active} onOpenChange={(b) => !b && setActive(null)} />
     </section>

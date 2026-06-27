@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n";
+import { StaggerGrid } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/products/")({
   head: () => ({ meta: [{ title: "Products — Najla Cosmetics" }] }),
@@ -56,12 +57,12 @@ function ProductsPage() {
           <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/40 to-background" />
         </div>
         <div className="relative z-10 w-full px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
-          <div className="max-w-xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4">Najla Cosmetics</p>
-            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground">
+          <div className="max-w-xl pt-20">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
+            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
               {t("products_title")}
             </h1>
-            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg">
+            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg animate-[fadeSlideUp_0.8s_0.6s_both]">
               {t("products_sub")}
             </p>
             <div className="mt-8 flex gap-4">
@@ -204,9 +205,9 @@ function ProductsPage() {
 
           {/* ─── Product Grid ─── */}
           <div className="lg:col-span-9">
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-16">
+            <StaggerGrid className="grid grid-cols-2 xl:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-16">
               {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
+            </StaggerGrid>
 
             {filtered.length === 0 && (
               <div className="py-24 text-center">

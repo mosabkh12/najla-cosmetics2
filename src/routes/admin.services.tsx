@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { RecordDialog, type Field } from "@/components/admin/RecordDialog";
+import { Reveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/admin/services")({ component: Page });
 
@@ -63,47 +64,51 @@ function Page() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl">{L("שירותים", "الخدمات", "Services")}</h1>
-        <Button className="btn-gold" onClick={() => setDlg({ open: true, row: { is_active: true, duration_minutes: 60 } })}>
-          <Plus className="h-4 w-4 me-1" />{L("חדש", "جديد", "New")}
-        </Button>
-      </div>
-
-      <div className="rounded-2xl border border-border/60 bg-card soft-shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-surface text-secondary-foreground">
-              <tr>
-                <th className="text-start p-3">{L("שם", "الاسم", "Name")}</th>
-                <th className="text-start p-3">{L("קטגוריה", "الفئة", "Category")}</th>
-                <th className="text-start p-3">{L("מחיר", "السعر", "Price")}</th>
-                <th className="text-start p-3">{L("משך", "المدة", "Duration")}</th>
-                <th className="text-start p-3">{L("פעיל", "نشط", "Active")}</th>
-                <th className="text-end p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {services.map((s: any) => (
-                <tr key={s.id} className="border-t border-border/40">
-                  <td className="p-3 font-medium">{lang === "ar" ? s.name_ar || s.name : s.name}</td>
-                  <td className="p-3 text-secondary-foreground">{s.category}</td>
-                  <td className="p-3">₪{Number(s.price).toFixed(0)}</td>
-                  <td className="p-3">{s.duration_minutes}m</td>
-                  <td className="p-3">{s.is_active ? "✓" : "—"}</td>
-                  <td className="p-3 text-end">
-                    <div className="inline-flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => toggle(s)}>{s.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
-                      <Button size="icon" variant="ghost" onClick={() => setDlg({ open: true, row: s })}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Reveal direction="up">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-[26px] sm:text-[30px]">{L("שירותים", "الخدمات", "Services")}</h1>
+          <button onClick={() => setDlg({ open: true, row: { is_active: true, duration_minutes: 60 } })} className="bg-foreground text-background px-5 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5">
+            <Plus className="h-4 w-4" />{L("חדש", "جديد", "New")}
+          </button>
         </div>
-      </div>
+      </Reveal>
+
+      <Reveal direction="up" delay={1}>
+        <div className="rounded-2xl bg-card overflow-hidden" style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.04)" }}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-surface text-muted-foreground">
+                <tr>
+                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("שם", "الاسم", "Name")}</th>
+                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("קטגוריה", "الفئة", "Category")}</th>
+                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("מחיר", "السعر", "Price")}</th>
+                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("משך", "المدة", "Duration")}</th>
+                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("פעיל", "نشط", "Active")}</th>
+                  <th className="text-end p-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {services.map((s: any) => (
+                  <tr key={s.id} className="border-t border-border/20 hover:bg-surface/50 transition-colors">
+                    <td className="p-3 font-medium">{lang === "ar" ? s.name_ar || s.name : s.name}</td>
+                    <td className="p-3 text-muted-foreground">{s.category}</td>
+                    <td className="p-3">₪{Number(s.price).toFixed(0)}</td>
+                    <td className="p-3">{s.duration_minutes}m</td>
+                    <td className="p-3">{s.is_active ? "✓" : "—"}</td>
+                    <td className="p-3 text-end">
+                      <div className="inline-flex gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => toggle(s)} className="h-8 w-8 rounded-lg">{s.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button>
+                        <Button size="icon" variant="ghost" onClick={() => setDlg({ open: true, row: s })} className="h-8 w-8 rounded-lg"><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => del(s.id)} className="h-8 w-8 rounded-lg"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Reveal>
 
       {dlg.open && (
         <RecordDialog

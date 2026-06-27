@@ -160,3 +160,52 @@
 }
 @utility container-page { max-width: 1240px; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; }
 @utility soft-shadow { box-shadow: 0 1px 2px rgb(27 28 28 / 0.04), 0 8px 24px -12px rgb(27 28 28 / 0.08); }
+
+/* ── Scroll reveal animations ── */
+html { scroll-behavior: smooth; }
+
+.reveal-base {
+  opacity: 0;
+  will-change: transform, opacity;
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-base.revealed { opacity: 1; transform: translate3d(0, 0, 0) scale(1) !important; }
+
+.reveal-up { transform: translate3d(0, 60px, 0); }
+.reveal-down { transform: translate3d(0, -40px, 0); }
+.reveal-start { transform: translate3d(80px, 0, 0); }
+[dir="ltr"] .reveal-start { transform: translate3d(-80px, 0, 0); }
+.reveal-end { transform: translate3d(-80px, 0, 0); }
+[dir="ltr"] .reveal-end { transform: translate3d(80px, 0, 0); }
+.reveal-scale { transform: scale(0.92); }
+.reveal-zoom { transform: scale(0.85); }
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* Hero parallax */
+.hero-parallax img {
+  transition: transform 0.1s linear;
+}
+
+/* Stagger children */
+.stagger-children > * {
+  opacity: 0;
+  transform: translate3d(0, 40px, 0);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stagger-children.revealed > *:nth-child(1) { transition-delay: 0.05s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(2) { transition-delay: 0.12s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(3) { transition-delay: 0.19s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(4) { transition-delay: 0.26s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(5) { transition-delay: 0.33s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(6) { transition-delay: 0.40s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(7) { transition-delay: 0.47s; opacity: 1; transform: translate3d(0, 0, 0); }
+.stagger-children.revealed > *:nth-child(8) { transition-delay: 0.54s; opacity: 1; transform: translate3d(0, 0, 0); }
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translate3d(0, 30px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}

@@ -22,7 +22,11 @@ function AdminLayout() {
   }, [user, isAdmin, loading, navigate]);
 
   if (loading || !user || !isAdmin) {
-    return <div className="container-page py-16 text-center text-sm text-secondary-foreground">…</div>;
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
   }
 
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
@@ -37,20 +41,22 @@ function AdminLayout() {
   ];
 
   return (
-    <div className="container-page py-6">
+    <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-6">
       <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-        <aside className="md:sticky md:top-20 md:self-start">
-          <div className="rounded-2xl border border-border/60 bg-card p-2 soft-shadow">
-            <div className="px-3 py-2">
-              <div className="font-display text-base text-foreground">{L("ניהול", "الإدارة", "Admin")}</div>
-              <div className="text-[11px] text-secondary-foreground">Najla Cosmetics</div>
+        <aside className="md:sticky md:top-24 md:self-start animate-[fadeSlideUp_0.6s_0.1s_both]">
+          <div className="rounded-2xl bg-card p-2"
+            style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.06)" }}
+          >
+            <div className="px-3 py-3">
+              <div className="font-display text-base italic text-foreground">{L("ניהול", "الإدارة", "Admin")}</div>
+              <div className="text-[11px] text-muted-foreground">Najla Cosmetics</div>
             </div>
             <nav className="flex flex-col gap-0.5 mt-1">
               {items.map((it) => {
                 const active = pathname === it.to || (it.to !== "/admin" && pathname.startsWith(it.to));
                 const Icon = it.icon;
                 return (
-                  <Link key={it.to} to={it.to} className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] transition-colors ${active ? "bg-surface text-primary font-medium" : "text-foreground hover:bg-surface"}`}>
+                  <Link key={it.to} to={it.to} className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] transition-all ${active ? "bg-surface text-foreground font-medium" : "text-muted-foreground hover:bg-surface/50 hover:text-foreground"}`}>
                     <Icon className="h-4 w-4" />
                     <span>{it.label}</span>
                   </Link>
@@ -59,7 +65,7 @@ function AdminLayout() {
             </nav>
           </div>
         </aside>
-        <section className="min-w-0">
+        <section className="min-w-0 animate-[fadeSlideUp_0.6s_0.2s_both]">
           <Outlet />
         </section>
       </div>
