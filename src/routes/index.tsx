@@ -53,30 +53,29 @@ function Home() {
       <section ref={heroRef} className="relative h-[500px] sm:h-[600px] md:h-[85vh] md:max-h-[900px] overflow-hidden -mt-20">
         <div className="absolute inset-0 overflow-hidden">
           <img
-            src={settings?.hero_image_url || "https://images.unsplash.com/photo-1560750588-73207b1ef5b8?w=1800&q=85"}
+            src={settings?.hero_image_url || "/images/brand/hero.png"}
             alt=""
             className="h-[120%] w-full object-cover"
             style={{ transform: `translate3d(0, ${heroOffset}px, 0)` }}
           />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/40 to-background" />
-        <div className="relative flex h-full items-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
-          <div className="max-w-xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-primary mb-5 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
-            <h1 className="font-display text-[34px] sm:text-[44px] md:text-[56px] leading-[1.08] tracking-tight text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
-              {t("hero_title")}
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative flex h-full items-center justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
+          <div className="max-w-2xl pt-20">
+            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[72px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.8s_0.3s_both]">
+              {t("hero_title").split(".")[0]}. <em className="italic">{t("hero_title").split(".")[1] || ""}</em>
             </h1>
-            <p className="mt-5 text-[15px] sm:text-[17px] text-secondary-foreground max-w-lg leading-[1.7] animate-[fadeSlideUp_0.8s_0.6s_both]">
+            <p className="mt-5 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.8s_0.6s_both]">
               {t("hero_sub")}
             </p>
-            <div className="mt-8 flex flex-wrap gap-4 animate-[fadeSlideUp_0.8s_0.8s_both]">
+            <div className="mt-8 flex flex-wrap justify-center gap-4 animate-[fadeSlideUp_0.8s_0.8s_both]">
               <Link to="/services">
                 <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
                   {t("book_appointment")}
                 </button>
               </Link>
               <Link to="/products">
-                <button className="bg-card/50 backdrop-blur-md border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-card transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
+                <button className="bg-white/10 backdrop-blur-md border border-white/30 text-white px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-white/20 transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
                   {t("shop_products")}
                 </button>
               </Link>
@@ -137,7 +136,7 @@ function Home() {
               <div className="aspect-[4/5] max-h-[600px] overflow-hidden rounded-3xl"
                 style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
               >
-                <img src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1200&q=85"} alt="" className="h-full w-full object-cover" />
+                <img src={settings?.about_image_url ?? "/images/brand/about.png"} alt="" className="h-full w-full object-cover" />
               </div>
               <div className="absolute -bottom-5 start-5 sm:start-8 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
                 style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}

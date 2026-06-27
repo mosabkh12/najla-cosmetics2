@@ -48,29 +48,29 @@ function ProductsPage() {
       <div className="relative h-[400px] sm:h-[550px] md:h-[680px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={settings?.hero_image_url ?? "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1800&q=85"}
+            src={settings?.hero_image_url ?? "/images/brand/products-hero.png"}
             alt=""
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/40 to-background" />
+          <div className="absolute inset-0 bg-black/20" />
         </div>
-        <div className="relative z-10 w-full px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
-          <div className="max-w-xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
-            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
+        <div className="relative z-10 w-full flex justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
+          <div className="max-w-2xl pt-20">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
+            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.8s_0.4s_both]">
               {t("products_title")}
             </h1>
-            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg animate-[fadeSlideUp_0.8s_0.6s_both]">
+            <p className="mt-4 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.8s_0.6s_both]">
               {t("products_sub")}
             </p>
-            <div className="mt-8 flex gap-4">
+            <div className="mt-8 flex justify-center gap-4 animate-[fadeSlideUp_0.8s_0.8s_both]">
               <Link to="/services">
-                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
+                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
                   {t("book_appointment")}
                 </button>
               </Link>
               <Link to="/products">
-                <button className="bg-card/50 backdrop-blur-md border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-card transition-colors">
+                <button className="bg-white/10 backdrop-blur-md border border-white/30 text-white px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-white/20 transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
                   {t("shop_products")}
                 </button>
               </Link>
@@ -184,7 +184,7 @@ function ProductsPage() {
               <div className="pt-2">
                 <div className="aspect-[3/4] overflow-hidden rounded-2xl mb-5">
                   <img
-                    src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=600&q=85"}
+                    src={settings?.about_image_url ?? "/images/brand/about.png"}
                     alt=""
                     className="h-full w-full object-cover"
                   />

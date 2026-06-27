@@ -74,9 +74,9 @@ function CheckoutPage() {
   };
 
   return (
-    <section className="container-page py-10 grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="rounded-2xl border border-border/60 bg-card p-5 soft-shadow space-y-4">
-        <h1 className="font-display text-2xl text-foreground">{t("checkout")}</h1>
+    <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="rounded-2xl border border-border/30 bg-card p-6 space-y-5" style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}>
+        <h1 className="font-display text-[28px] italic text-foreground">{t("checkout")}</h1>
         <div className="grid sm:grid-cols-2 gap-3">
           <div><Label className="text-xs">{t("full_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 h-10" /></div>
           <div><Label className="text-xs">{t("phone")}</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-10" /></div>
@@ -98,13 +98,13 @@ function CheckoutPage() {
           <p className="text-xs text-muted-foreground mt-1">Online payments coming soon.</p>
         </div>
       </div>
-      <div className="rounded-2xl border border-border/60 bg-card p-5 soft-shadow h-fit">
-        <h2 className="font-display text-lg text-foreground">{t("cart")}</h2>
+      <div className="rounded-2xl border border-border/30 bg-card p-6 h-fit" style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}>
+        <h2 className="font-display text-[22px] text-foreground">{t("cart")}</h2>
         <ul className="mt-3 space-y-2 text-sm">
           {items.map((i) => <li key={i.product_id} className="flex justify-between"><span className="text-secondary-foreground truncate me-2">{i.name} × {i.quantity}</span><span className="font-medium">₪{(i.price * i.quantity).toFixed(2)}</span></li>)}
         </ul>
         <div className="mt-4 pt-3 border-t flex justify-between"><span className="text-secondary-foreground">{t("total")}</span><span className="font-semibold text-foreground text-lg">₪{subtotal.toFixed(2)}</span></div>
-        <Button onClick={placeOrder} disabled={busy} className="btn-gold w-full h-11 mt-4">{t("place_order")}</Button>
+        <button onClick={placeOrder} disabled={busy} className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-4">{t("place_order")}</button>
       </div>
     </section>
   );

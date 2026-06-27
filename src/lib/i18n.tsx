@@ -94,6 +94,20 @@ const HE: Dict = {
   no_appointments: "אין תורים להצגה",
   no_orders: "אין הזמנות להצגה",
   no_favorites: "אין מועדפים להצגה",
+  auth_welcome: "ברוכה הבאה",
+  auth_welcome_back: "שמחים לראותך שוב",
+  auth_create_account: "צרי חשבון חדש",
+  err_email_required: "נא להזין כתובת אימייל",
+  err_email_invalid: "כתובת אימייל לא תקינה",
+  err_password_required: "נא להזין סיסמה",
+  err_password_short: "הסיסמה חייבת להכיל לפחות 6 תווים",
+  err_name_required: "נא להזין שם מלא",
+  err_phone_required: "נא להזין מספר טלפון",
+  err_phone_invalid: "מספר טלפון חייב להכיל 10 ספרות",
+  err_phone_taken: "מספר הטלפון כבר רשום במערכת",
+  err_email_taken: "כתובת האימייל כבר רשומה במערכת",
+  signup_success: "ההרשמה הצליחה! בדקי את האימייל לאישור.",
+  or_continue_with: "או",
 };
 
 const AR: Dict = {
@@ -185,6 +199,20 @@ const AR: Dict = {
   no_appointments: "لا توجد مواعيد",
   no_orders: "لا توجد طلبات",
   no_favorites: "لا توجد مفضلة",
+  auth_welcome: "مرحباً بكِ",
+  auth_welcome_back: "سعيدون برؤيتكِ مجدداً",
+  auth_create_account: "إنشاء حساب جديد",
+  err_email_required: "يرجى إدخال البريد الإلكتروني",
+  err_email_invalid: "البريد الإلكتروني غير صالح",
+  err_password_required: "يرجى إدخال كلمة المرور",
+  err_password_short: "كلمة المرور يجب أن تحتوي على 6 أحرف على الأقل",
+  err_name_required: "يرجى إدخال الاسم الكامل",
+  err_phone_required: "يرجى إدخال رقم الهاتف",
+  err_phone_invalid: "رقم الهاتف يجب أن يحتوي على 10 أرقام",
+  err_phone_taken: "رقم الهاتف مسجل بالفعل",
+  err_email_taken: "البريد الإلكتروني مسجل بالفعل",
+  signup_success: "تم التسجيل بنجاح! تحققي من بريدكِ الإلكتروني للتأكيد.",
+  or_continue_with: "أو",
 };
 
 const EN: Dict = {
@@ -221,6 +249,20 @@ const EN: Dict = {
   delivery_pickup: "Store Pickup", place_order: "Place Order", order_success: "Order received!",
   no_appointments: "No appointments to show", no_orders: "No orders to show",
   no_favorites: "No favorites to show",
+  auth_welcome: "Welcome",
+  auth_welcome_back: "Welcome back",
+  auth_create_account: "Create your account",
+  err_email_required: "Email is required",
+  err_email_invalid: "Invalid email address",
+  err_password_required: "Password is required",
+  err_password_short: "Password must be at least 6 characters",
+  err_name_required: "Full name is required",
+  err_phone_required: "Phone number is required",
+  err_phone_invalid: "Phone number must be exactly 10 digits",
+  err_phone_taken: "This phone number is already registered",
+  err_email_taken: "This email is already registered",
+  signup_success: "Account created! Check your email to confirm.",
+  or_continue_with: "or",
 };
 
 const BUNDLES: Record<Lang, Dict> = { he: HE, ar: AR, en: EN };

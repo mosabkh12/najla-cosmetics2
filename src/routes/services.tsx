@@ -39,19 +39,19 @@ function ServicesPage() {
       <div className="relative h-[320px] sm:h-[420px] md:h-[520px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={settings?.hero_image_url ?? "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=1800&q=85"}
+            src={settings?.hero_image_url ?? "/images/brand/services-hero.png"}
             alt=""
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-background/50 to-background" />
+          <div className="absolute inset-0 bg-black/20" />
         </div>
-        <div className="relative z-10 w-full px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
-          <div className="max-w-xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
-            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] leading-[1.1] tracking-tight text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
+        <div className="relative z-10 w-full flex justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
+          <div className="max-w-2xl pt-20">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
+            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.8s_0.4s_both]">
               {t("services_title")}
             </h1>
-            <p className="mt-4 text-[15px] sm:text-base text-secondary-foreground leading-[1.6] max-w-lg animate-[fadeSlideUp_0.8s_0.6s_both]">
+            <p className="mt-4 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.8s_0.6s_both]">
               {t("services_sub")}
             </p>
           </div>
@@ -148,7 +148,7 @@ function ServicesPage() {
                   style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
                 >
                   <img
-                    src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1000&q=85"}
+                    src={settings?.about_image_url ?? "/images/brand/serum.png"}
                     alt=""
                     className="w-full h-full object-cover"
                   />

@@ -23,12 +23,7 @@ function LocationPage() {
         {/* Header */}
         <Reveal direction="up">
           <div className="text-center max-w-xl mx-auto">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-gold/80 to-gold-muted"
-              style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.12)" }}
-            >
-              <MapPin className="h-6 w-6 text-gold-foreground" />
-            </div>
-            <h1 className="font-display text-[28px] md:text-[40px] text-foreground">{t("location_title")}</h1>
+            <h1 className="font-display text-[32px] sm:text-[40px] md:text-[48px] italic text-foreground">{t("location_title")}</h1>
             <p className="mt-2 text-[14px] text-muted-foreground">{t("footer_tagline")}</p>
           </div>
         </Reveal>
@@ -49,7 +44,7 @@ function LocationPage() {
               style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
             >
               {/* Brand strip */}
-              <div className="bg-gradient-to-l from-blush/60 via-cream/40 to-transparent px-7 py-5 border-b border-border/20 rounded-t-3xl">
+              <div className="bg-surface px-7 py-5 border-b border-border/20 rounded-t-3xl">
                 <p className="font-display text-lg italic text-foreground">Najla Cosmetics</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{t("about_eyebrow")}</p>
               </div>

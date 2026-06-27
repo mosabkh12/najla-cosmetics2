@@ -34,27 +34,20 @@ function AboutPage() {
               <div className="aspect-[4/3] sm:aspect-[3/4] md:aspect-[4/5] max-h-[420px] md:max-h-[520px] overflow-hidden rounded-3xl border border-border/40"
                 style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
               >
-                <img src={settings?.about_image_url ?? "https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=1200&q=85"} alt="" className="h-full w-full object-cover" />
+                <img src={settings?.about_image_url ?? "/images/brand/about.png"} alt="" className="h-full w-full object-cover" />
               </div>
               <div className="absolute -bottom-4 start-4 sm:start-6 rounded-2xl bg-card/95 backdrop-blur-md border border-border/20 px-5 py-3"
                 style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-gold/80 to-gold-muted">
-                    <Sparkles className="h-4 w-4 text-gold-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">Najla Cosmetics</p>
-                    <p className="text-[10px] text-muted-foreground">{t("footer_tagline")}</p>
-                  </div>
-                </div>
+                <p className="font-display text-[16px] italic text-foreground">Najla Cosmetics</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
               </div>
             </div>
           </Reveal>
 
           <Reveal direction="end" delay={2}>
             <div className="mt-4 md:mt-0">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blush/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 <Star className="h-3 w-3" />{t("about_eyebrow")}
               </span>
               <h1 className="mt-4 font-display text-[28px] sm:text-[34px] md:text-[40px] leading-[1.15] text-foreground">{t("about_title")}</h1>
@@ -84,7 +77,7 @@ function AboutPage() {
             <div key={i} className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-4 sm:p-5 text-center"
               style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.04)" }}
             >
-              <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-blush/80 text-primary">
+              <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-surface text-muted-foreground">
                 {v.icon}
               </div>
               <h3 className="mt-3 font-display text-sm sm:text-base text-foreground">{v.titleHe}</h3>

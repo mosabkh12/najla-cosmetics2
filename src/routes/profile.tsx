@@ -21,11 +21,11 @@ export const Route = createFileRoute("/profile")({
 });
 
 const STATUS_STYLE: Record<string, { bg: string; dot: string }> = {
-  pending: { bg: "bg-blush/80 text-gold-deep", dot: "bg-gold-muted" },
-  confirmed: { bg: "bg-gold-soft/60 text-gold-deep", dot: "bg-gold" },
-  completed: { bg: "bg-surface-3 text-secondary-foreground", dot: "bg-muted-foreground" },
-  cancelled: { bg: "bg-[#FFDAD6]/70 text-[#93000A]", dot: "bg-[#BA1A1A]" },
-  preparing: { bg: "bg-cream text-gold-deep", dot: "bg-gold-muted" },
+  pending: { bg: "bg-surface-2 text-foreground", dot: "bg-muted-foreground" },
+  confirmed: { bg: "bg-surface-3 text-foreground", dot: "bg-foreground" },
+  completed: { bg: "bg-surface text-muted-foreground", dot: "bg-muted-foreground" },
+  cancelled: { bg: "bg-[#FFDAD6]/50 text-[#93000A]", dot: "bg-[#BA1A1A]" },
+  preparing: { bg: "bg-surface-2 text-foreground", dot: "bg-muted-foreground" },
 };
 
 type Section = "appointments" | "orders" | "favorites";
@@ -120,7 +120,7 @@ function ProfilePage() {
             style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.06)" }}
           >
             <div className="flex items-start gap-4">
-              <div className="grid h-16 w-16 sm:h-20 sm:w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold/80 to-gold-muted text-gold-foreground font-display text-2xl sm:text-3xl">
+              <div className="grid h-16 w-16 sm:h-20 sm:w-20 shrink-0 place-items-center rounded-full bg-foreground text-background font-display text-2xl sm:text-3xl">
                 {(name || user.email || "?").charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
