@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      availability_settings: {
+        Row: {
+          id: string
+          weekly_hours: Json
+          breaks: Json
+          slot_interval: number
+          buffer_minutes: number
+          max_per_day: number | null
+          closed_dates: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          weekly_hours?: Json
+          breaks?: Json
+          slot_interval?: number
+          buffer_minutes?: number
+          max_per_day?: number | null
+          closed_dates?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          weekly_hours?: Json
+          breaks?: Json
+          slot_interval?: number
+          buffer_minutes?: number
+          max_per_day?: number | null
+          closed_dates?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointment_slots: {
         Row: {
           created_at: string
@@ -361,28 +394,61 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           email: string | null
+          email_verified: boolean
           full_name: string | null
           id: string
           phone: string | null
+          role: Database["public"]["Enums"]["app_role"]
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          email_verified?: boolean
           full_name?: string | null
           id: string
           phone?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          email_verified?: boolean
           full_name?: string | null
           id?: string
           phone?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      verification_otps: {
+        Row: {
+          id: string
+          email: string
+          otp: string
+          expires_at: string
+          used: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          otp: string
+          expires_at: string
+          used?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          otp?: string
+          expires_at?: string
+          used?: boolean
+          created_at?: string
         }
         Relationships: []
       }
@@ -428,30 +494,6 @@ export type Database = {
           name_ar?: string | null
           price?: number
           updated_at?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string
-          email: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
         }
         Relationships: []
       }

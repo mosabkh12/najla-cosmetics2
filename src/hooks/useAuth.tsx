@@ -21,8 +21,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (s?.user) {
         setTimeout(async () => {
-          const { data } = await supabase.from("user_roles").select("role").eq("user_id", s.user.id);
-          setIsAdmin(!!data?.some((r) => r.role === "admin"));
+          const { data } = await supabase.from("profiles").select("role").eq("id", s.user.id).maybeSingle();
+          setIsAdmin(data?.role === "admin");
         }, 0);
       } else setIsAdmin(false);
     });

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 export function Reveal({ children, className = "", direction = "up", delay = 0 }: {
@@ -16,11 +16,26 @@ export function Reveal({ children, className = "", direction = "up", delay = 0 }
   );
 }
 
-export function StaggerGrid({ children, className = "" }: { children: ReactNode; className?: string }) {
+function RevealItem({ children, index }: { children: ReactNode; index: number }) {
   const { ref, visible } = useScrollReveal(0.08);
+  const staggerDelay = index * 0.1;
   return (
-    <div ref={ref} className={`stagger-children ${visible ? "revealed" : ""} ${className}`}>
+    <div
+      ref={ref}
+      className={`scroll-reveal-item ${visible ? "revealed" : ""}`}
+      style={{ transitionDelay: visible ? `${staggerDelay}s` : "0s" }}
+    >
       {children}
+    </div>
+  );
+}
+
+export function StaggerGrid({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      {Children.map(children, (child, i) =>
+        child ? <RevealItem index={i}>{child}</RevealItem> : null
+      )}
     </div>
   );
 }

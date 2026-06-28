@@ -175,46 +175,62 @@ html { scroll-behavior: smooth; }
 
 .reveal-base {
   opacity: 0;
-  will-change: transform, opacity;
-  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: blur(6px);
+  will-change: transform, opacity, filter;
+  transition:
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.reveal-base.revealed { opacity: 1; transform: translate3d(0, 0, 0) scale(1) !important; }
+.reveal-base.revealed {
+  opacity: 1;
+  filter: none;
+  transform: none !important;
+  will-change: auto;
+}
 
-.reveal-up { transform: translate3d(0, 60px, 0); }
-.reveal-down { transform: translate3d(0, -40px, 0); }
-.reveal-start { transform: translate3d(80px, 0, 0); }
-[dir="ltr"] .reveal-start { transform: translate3d(-80px, 0, 0); }
-.reveal-end { transform: translate3d(-80px, 0, 0); }
-[dir="ltr"] .reveal-end { transform: translate3d(80px, 0, 0); }
-.reveal-scale { transform: scale(0.92); }
-.reveal-zoom { transform: scale(0.85); }
+.reveal-up { transform: translate3d(0, 70px, 0); }
+.reveal-down { transform: translate3d(0, -50px, 0); }
+.reveal-start { transform: translate3d(80px, 0, 0) rotate(1.5deg); }
+[dir="ltr"] .reveal-start { transform: translate3d(-80px, 0, 0) rotate(-1.5deg); }
+.reveal-end { transform: translate3d(-80px, 0, 0) rotate(-1.5deg); }
+[dir="ltr"] .reveal-end { transform: translate3d(80px, 0, 0) rotate(1.5deg); }
+.reveal-scale { transform: scale(0.88); }
+.reveal-zoom { transform: scale(0.82); }
 
-.reveal-delay-1 { transition-delay: 0.1s; }
-.reveal-delay-2 { transition-delay: 0.2s; }
-.reveal-delay-3 { transition-delay: 0.3s; }
-.reveal-delay-4 { transition-delay: 0.4s; }
+.reveal-delay-1 { transition-delay: 0.12s; }
+.reveal-delay-2 { transition-delay: 0.24s; }
+.reveal-delay-3 { transition-delay: 0.36s; }
+.reveal-delay-4 { transition-delay: 0.48s; }
 
 /* Hero parallax */
 .hero-parallax img {
   transition: transform 0.1s linear;
 }
 
-/* Stagger children */
-.stagger-children > * {
+/* Per-card scroll reveal — luxe 3D rise */
+.scroll-reveal-item {
   opacity: 0;
-  transform: translate3d(0, 40px, 0);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: blur(8px);
+  transform: perspective(1200px) translate3d(0, 80px, -30px) rotateX(4deg) scale(0.95);
+  will-change: transform, opacity, filter;
+  transition:
+    opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.1s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.stagger-children.revealed > *:nth-child(1) { transition-delay: 0.05s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(2) { transition-delay: 0.12s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(3) { transition-delay: 0.19s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(4) { transition-delay: 0.26s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(5) { transition-delay: 0.33s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(6) { transition-delay: 0.40s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(7) { transition-delay: 0.47s; opacity: 1; transform: translate3d(0, 0, 0); }
-.stagger-children.revealed > *:nth-child(8) { transition-delay: 0.54s; opacity: 1; transform: translate3d(0, 0, 0); }
+.scroll-reveal-item.revealed {
+  opacity: 1;
+  filter: none;
+  transform: none;
+  will-change: auto;
+}
 
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translate3d(0, 30px, 0); }
-  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { opacity: 0; filter: blur(4px); transform: translate3d(0, 40px, 0); }
+  to   { opacity: 1; filter: blur(0);   transform: translate3d(0, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-base, .scroll-reveal-item { transition-duration: 0.01s !important; filter: none !important; }
 }

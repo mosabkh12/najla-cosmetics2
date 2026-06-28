@@ -1,13 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { checkPhoneAvailable, checkEmailAvailable } from "@/api/profiles/profiles";
+import { sendOtp, verifyOtp, checkVerified } from "@/api/auth/otp";
+import { adminSignUp } from "@/api/auth/signup";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2, ShieldCheck, RotateCw } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign In — Najla Cosmetics" }] }),
@@ -33,10 +35,20 @@ function AuthPage() {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
 
-  useEffect(() => { if (user) navigate({ to: "/profile" }); }, [user, navigate]);
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [resending, setResending] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [pendingSignup, setPendingSignup] = useState<{
+    email: string; password: string; name: string; phone: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (user && !otpEmail) navigate({ to: "/profile" });
+  }, [user, otpEmail, navigate]);
 
   const clearErrors = () => setErrors({});
 
@@ -65,16 +77,31 @@ function AuthPage() {
     return Object.keys(e).length === 0;
   };
 
+  const triggerOtp = async (email: string) => {
+    await sendOtp({ data: { email } });
+    setOtpEmail(email);
+    setOtpDigits(["", "", "", "", "", ""]);
+    setOtpError("");
+  };
+
   const signIn = async () => {
     if (!validateSignIn()) return;
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: siEmail.trim().toLowerCase(), password: siPassword });
+    const email = siEmail.trim().toLowerCase();
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password: siPassword });
+    if (error) { setBusy(false); toast.error(error.message); return; }
+
+    try {
+      const { verified } = await checkVerified({ data: { userId: authData.user.id } });
+      if (!verified) {
+        await triggerOtp(email);
+        setBusy(false);
+        return;
+      }
+    } catch { /* proceed */ }
+
     setBusy(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      navigate({ to: "/profile" });
-    }
+    navigate({ to: "/profile" });
   };
 
   const signUp = async () => {
@@ -96,217 +123,216 @@ function AuthPage() {
         setBusy(false);
         return;
       }
-    } catch {
-      // If checks fail, proceed — Supabase will catch duplicates
-    }
+    } catch { /* proceed */ }
 
-    const { error } = await supabase.auth.signUp({
-      email: emailLower,
-      password: suPassword,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: name.trim(), phone: cleanPhone },
-      },
-    });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setPendingEmail(emailLower);
+    try {
+      setPendingSignup({ email: emailLower, password: suPassword, name: name.trim(), phone: cleanPhone });
+      await triggerOtp(emailLower);
+    } catch (e: any) {
+      setPendingSignup(null);
+      toast.error(e.message);
     }
+    setBusy(false);
   };
 
-  const resendVerification = async () => {
-    if (!pendingEmail) return;
-    setResending(true);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email: pendingEmail,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    setResending(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success(t("verify_resent"));
+  const submitOtp = async () => {
+    const code = otpDigits.join("");
+    if (code.length !== 6) { setOtpError(t("err_otp_incomplete")); return; }
+    setOtpBusy(true);
+    setOtpError("");
+    try {
+      await verifyOtp({ data: { email: otpEmail!, otp: code } });
+
+      if (pendingSignup) {
+        await adminSignUp({
+          data: {
+            email: pendingSignup.email,
+            password: pendingSignup.password,
+            full_name: pendingSignup.name,
+            phone: pendingSignup.phone,
+          },
+        });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: pendingSignup.email,
+          password: pendingSignup.password,
+        });
+        if (error) { setOtpBusy(false); toast.error(error.message); return; }
+        setPendingSignup(null);
+      }
+
+      toast.success(t("otp_verified"));
+      setOtpEmail(null);
+      navigate({ to: "/profile" });
+    } catch (e: any) {
+      setOtpError(e.message === "INVALID_OTP" ? t("err_otp_invalid") : e.message);
     }
+    setOtpBusy(false);
+  };
+
+  const resendOtpEmail = async () => {
+    if (!otpEmail) return;
+    setResending(true);
+    try {
+      await sendOtp({ data: { email: otpEmail } });
+      toast.success(t("verify_resent"));
+      setOtpDigits(["", "", "", "", "", ""]);
+      setOtpError("");
+    } catch (e: any) { toast.error(e.message); }
+    setResending(false);
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const d = [...otpDigits];
+    d[index] = value.slice(-1);
+    setOtpDigits(d);
+    setOtpError("");
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) inputRefs.current[index - 1]?.focus();
+    if (e.key === "Enter") submitOtp();
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const d = [...otpDigits];
+    for (let i = 0; i < 6; i++) d[i] = pasted[i] || "";
+    setOtpDigits(d);
+    inputRefs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      tab === "signin" ? signIn() : signUp();
-    }
+    if (e.key === "Enter") { e.preventDefault(); tab === "signin" ? signIn() : signUp(); }
   };
 
   const fieldClass = (field: string) =>
-    `h-11 ps-10 rounded-xl border transition-colors ${
-      errors[field]
-        ? "border-destructive bg-destructive/5 focus:border-destructive"
-        : "border-border/60 bg-surface/50 focus:bg-card focus:border-foreground/30"
-    }`;
+    `h-11 ps-10 rounded-xl border transition-colors ${errors[field] ? "border-destructive bg-destructive/5 focus:border-destructive" : "border-border/60 bg-surface/50 focus:bg-card focus:border-foreground/30"}`;
 
-  if (pendingEmail) {
+  // ── OTP Screen ──
+  if (otpEmail) {
     return (
       <section className="min-h-[calc(100vh-160px)] flex items-center justify-center bg-background px-4 py-12" dir={dir}>
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="font-display text-[32px] italic text-foreground tracking-tight">Najla Cosmetics</h1>
           </div>
-
-          <div className="rounded-2xl border border-border/30 bg-card p-6 sm:p-8 text-center"
-            style={{ boxShadow: "0 30px 40px -10px rgba(45, 45, 45, 0.05)" }}
-          >
-            <div className="grid h-16 w-16 mx-auto place-items-center rounded-full bg-emerald-50 mb-5">
-              <Mail className="h-7 w-7 text-emerald-600" />
+          <div className="rounded-2xl border border-border/30 bg-card p-6 sm:p-8 text-center" style={{ boxShadow: "0 30px 40px -10px rgba(45, 45, 45, 0.05)" }}>
+            <div className="grid h-16 w-16 mx-auto place-items-center rounded-full bg-cream mb-5">
+              <ShieldCheck className="h-7 w-7 text-primary" />
             </div>
+            <h2 className="font-display text-xl text-foreground">{t("otp_title")}</h2>
+            <p className="mt-2 text-[13px] text-muted-foreground">{t("otp_sent_to")}</p>
+            <p className="text-[14px] font-semibold text-foreground mt-1" dir="ltr">{otpEmail}</p>
 
-            <h2 className="font-display text-xl text-foreground">{t("verify_title")}</h2>
-
-            <p className="mt-3 text-[14px] text-muted-foreground leading-relaxed">{t("verify_body")}</p>
-            <p className="mt-1 text-[14px] font-semibold text-foreground" dir="ltr">{pendingEmail}</p>
-            <p className="mt-3 text-[13px] text-muted-foreground leading-relaxed">{t("verify_body2")}</p>
+            <div className="flex justify-center gap-2.5 mt-6" dir="ltr" onPaste={handleOtpPaste}>
+              {otpDigits.map((digit, i) => (
+                <input key={i} ref={(el) => { inputRefs.current[i] = el; }} type="text" inputMode="numeric" maxLength={1} value={digit}
+                  onChange={(e) => handleOtpChange(i, e.target.value)} onKeyDown={(e) => handleOtpKeyDown(i, e)} autoFocus={i === 0}
+                  className={`h-12 w-10 sm:h-14 sm:w-12 text-center text-xl font-bold rounded-xl border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 ${otpError ? "border-destructive bg-destructive/5" : digit ? "border-foreground/30 bg-card" : "border-border/60 bg-surface/50"}`}
+                />
+              ))}
+            </div>
+            {otpError && <p className="mt-3 text-[12px] text-destructive">{otpError}</p>}
+            <p className="mt-4 text-[11px] text-muted-foreground/70">{t("otp_expires")}</p>
 
             <div className="mt-6 space-y-3">
-              <button
-                onClick={resendVerification}
-                disabled={resending}
-                className="w-full h-[44px] rounded-full border border-border/40 text-foreground text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-surface transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                {t("verify_resend")}
+              <button onClick={submitOtp} disabled={otpBusy || otpDigits.join("").length !== 6}
+                className="w-full h-[48px] rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2">
+                {otpBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />} {t("otp_verify")}
               </button>
-
-              <button
-                onClick={() => { setPendingEmail(null); setTab("signin"); clearErrors(); }}
-                className="w-full h-[44px] rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              >
+              <button onClick={resendOtpEmail} disabled={resending}
+                className="w-full h-[40px] rounded-full border border-border/40 text-foreground text-[11px] font-semibold uppercase tracking-[0.08em] hover:bg-surface transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                {resending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />} {t("verify_resend")}
+              </button>
+              <button onClick={() => { setOtpEmail(null); setPendingSignup(null); if (!pendingSignup) supabase.auth.signOut(); }}
+                className="w-full text-[11px] text-muted-foreground hover:text-foreground transition-colors py-2">
                 {t("verify_back")}
-                <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
-
-            <p className="mt-5 text-[11px] text-muted-foreground/70">{t("verify_check_spam")}</p>
+            <p className="mt-4 text-[11px] text-muted-foreground/60">{t("verify_check_spam")}</p>
           </div>
-
-          <p className="mt-5 text-center text-[11px] text-muted-foreground">© 2026 Najla Cosmetics</p>
         </div>
       </section>
     );
   }
 
+  // ── Main Auth Screen ──
   return (
     <section className="min-h-[calc(100vh-160px)] flex items-center justify-center bg-background px-4 py-12" dir={dir}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="font-display text-[32px] italic text-foreground tracking-tight">Najla Cosmetics</h1>
-          <p className="mt-2 text-[14px] text-muted-foreground">
-            {tab === "signin" ? t("auth_welcome_back") : t("auth_create_account")}
-          </p>
+          <p className="mt-2 text-[14px] text-muted-foreground">{tab === "signin" ? t("auth_welcome_back") : t("auth_create_account")}</p>
         </div>
-
-        <div className="rounded-2xl border border-border/30 bg-card p-6 sm:p-8"
-          style={{ boxShadow: "0 30px 40px -10px rgba(45, 45, 45, 0.05)" }}
-        >
+        <div className="rounded-2xl border border-border/30 bg-card p-6 sm:p-8" style={{ boxShadow: "0 30px 40px -10px rgba(45, 45, 45, 0.05)" }}>
           <div className="grid grid-cols-2 h-11 rounded-xl bg-surface p-1 mb-6">
-            <button
-              onClick={() => { setTab("signin"); clearErrors(); }}
-              className={`rounded-lg text-[13px] font-medium transition-all ${
-                tab === "signin" ? "bg-card text-foreground soft-shadow" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >{t("sign_in")}</button>
-            <button
-              onClick={() => { setTab("signup"); clearErrors(); }}
-              className={`rounded-lg text-[13px] font-medium transition-all ${
-                tab === "signup" ? "bg-card text-foreground soft-shadow" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >{t("sign_up")}</button>
+            <button onClick={() => { setTab("signin"); clearErrors(); }} className={`rounded-lg text-[13px] font-medium transition-all ${tab === "signin" ? "bg-card text-foreground soft-shadow" : "text-muted-foreground hover:text-foreground"}`}>{t("sign_in")}</button>
+            <button onClick={() => { setTab("signup"); clearErrors(); }} className={`rounded-lg text-[13px] font-medium transition-all ${tab === "signup" ? "bg-card text-foreground soft-shadow" : "text-muted-foreground hover:text-foreground"}`}>{t("sign_up")}</button>
           </div>
-
           <div onKeyDown={handleKeyDown}>
             {tab === "signin" && (
               <div className="space-y-4">
                 <div>
                   <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-foreground">{t("email")}</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="email" value={siEmail} onChange={(e) => { setSiEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: "" })); }} placeholder="you@example.com" className={fieldClass("email")} autoComplete="username" dir="ltr" />
-                  </div>
+                  <div className="relative mt-1.5"><Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="email" value={siEmail} onChange={(e) => { setSiEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: "" })); }} placeholder="you@example.com" className={fieldClass("email")} autoComplete="username" dir="ltr" /></div>
                   {errors.email && <p className="mt-1 text-[12px] text-destructive">{errors.email}</p>}
                 </div>
                 <div>
                   <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-foreground">{t("password")}</Label>
-                  <div className="relative mt-1.5">
-                    <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="relative mt-1.5"><Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input type={showPw ? "text" : "password"} value={siPassword} onChange={(e) => { setSiPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: "" })); }} placeholder="••••••••" className={`${fieldClass("password")} pe-10`} autoComplete="current-password" />
-                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
                   {errors.password && <p className="mt-1 text-[12px] text-destructive">{errors.password}</p>}
                 </div>
                 <button onClick={signIn} disabled={busy} className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-2 flex items-center justify-center gap-2">
-                  {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {t("sign_in")}
+                  {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("sign_in")}
                 </button>
               </div>
             )}
-
             {tab === "signup" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-foreground">{t("full_name")}</Label>
-                    <div className="relative mt-1.5">
-                      <User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input value={name} onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }} className={fieldClass("name")} autoComplete="name" />
-                    </div>
+                    <div className="relative mt-1.5"><User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input value={name} onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }} className={fieldClass("name")} autoComplete="name" /></div>
                     {errors.name && <p className="mt-1 text-[12px] text-destructive">{errors.name}</p>}
                   </div>
                   <div>
                     <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-foreground">{t("phone")}</Label>
-                    <div className="relative mt-1.5">
-                      <Phone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="tel" value={phone} maxLength={10} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 10); setPhone(v); if (errors.phone) setErrors((p) => ({ ...p, phone: "" })); }} placeholder="05XXXXXXXX" className={fieldClass("phone")} autoComplete="tel" dir="ltr" />
-                    </div>
+                    <div className="relative mt-1.5"><Phone className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input type="tel" value={phone} maxLength={10} onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 10); setPhone(v); if (errors.phone) setErrors((p) => ({ ...p, phone: "" })); }} placeholder="05XXXXXXXX" className={fieldClass("phone")} autoComplete="tel" dir="ltr" /></div>
                     {errors.phone && <p className="mt-1 text-[12px] text-destructive">{errors.phone}</p>}
                   </div>
                 </div>
                 <div>
                   <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-foreground">{t("email")}</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="email" value={suEmail} onChange={(e) => { setSuEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: "" })); }} placeholder="you@example.com" className={fieldClass("email")} autoComplete="off" dir="ltr" />
-                  </div>
+                  <div className="relative mt-1.5"><Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input type="email" value={suEmail} onChange={(e) => { setSuEmail(e.target.value); if (errors.email) setErrors((p) => ({ ...p, email: "" })); }} placeholder="you@example.com" className={fieldClass("email")} autoComplete="off" dir="ltr" /></div>
                   {errors.email && <p className="mt-1 text-[12px] text-destructive">{errors.email}</p>}
                 </div>
                 <div>
                   <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-secondary-foreground">{t("password")}</Label>
-                  <div className="relative mt-1.5">
-                    <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <div className="relative mt-1.5"><Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input type={showPw ? "text" : "password"} value={suPassword} onChange={(e) => { setSuPassword(e.target.value); if (errors.password) setErrors((p) => ({ ...p, password: "" })); }} placeholder="••••••••" className={`${fieldClass("password")} pe-10`} autoComplete="new-password" />
-                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                      {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
                   {errors.password && <p className="mt-1 text-[12px] text-destructive">{errors.password}</p>}
                   {suPassword.length > 0 && suPassword.length < 6 && !errors.password && (
-                    <div className="mt-2 flex gap-1">
-                      {[1,2,3,4,5,6].map((i) => (
-                        <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${suPassword.length >= i ? "bg-foreground" : "bg-border"}`} />
-                      ))}
-                    </div>
+                    <div className="mt-2 flex gap-1">{[1,2,3,4,5,6].map((i) => (<div key={i} className={`h-1 flex-1 rounded-full transition-colors ${suPassword.length >= i ? "bg-foreground" : "bg-border"}`} />))}</div>
                   )}
                 </div>
                 <button onClick={signUp} disabled={busy} className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-2 flex items-center justify-center gap-2">
-                  {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {t("sign_up")}
+                  {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("sign_up")}
                 </button>
               </div>
             )}
           </div>
         </div>
-
         <p className="mt-5 text-center text-[11px] text-muted-foreground">© 2026 Najla Cosmetics</p>
       </div>
     </section>

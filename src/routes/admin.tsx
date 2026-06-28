@@ -39,7 +39,7 @@ function AdminLayout() {
     { to: "/admin/services", icon: Scissors, label: L("שירותים", "الخدمات", "Services") },
     { to: "/admin/products", icon: Package, label: L("מוצרים", "المنتجات", "Products") },
     { to: "/admin/appointments", icon: CalendarDays, label: L("תורים", "المواعيد", "Appointments") },
-    { to: "/admin/slots", icon: Clock, label: L("חלונות זמן", "أوقات الحجز", "Slots") },
+    { to: "/admin/slots", icon: Clock, label: L("זמינות", "التوفر", "Availability") },
     { to: "/admin/orders", icon: ShoppingCart, label: L("הזמנות", "الطلبات", "Orders") },
     { to: "/admin/settings", icon: Settings, label: L("הגדרות", "الإعدادات", "Settings") },
   ];

@@ -5,7 +5,7 @@ export const requireAdmin = createMiddleware({ type: "function" })
   .middleware([requireSupabaseAuth])
   .server(async ({ next, context }) => {
     const { supabase, userId } = context;
-    const { data } = await supabase.rpc("has_role", { _role: "admin", _user_id: userId });
-    if (!data) throw new Error("Forbidden: Admin role required");
+    const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+    if (data?.role !== "admin") throw new Error("Forbidden: Admin role required");
     return next({ context: { ...context, isAdmin: true as const } });
   });
