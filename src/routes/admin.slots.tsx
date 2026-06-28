@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Clock, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
@@ -65,66 +65,122 @@ function Page() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Header */}
       <Reveal direction="up">
-        <h1 className="font-display text-[26px] sm:text-[30px]">{L("חלונות זמן", "أوقات الحجز", "Appointment Slots")}</h1>
+        <div>
+          <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">{L("חלונות זמן", "أوقات الحجز", "Appointment Slots")}</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">{L(`${slots.length} חלונות`, `${slots.length} أوقات`, `${slots.length} slots`)}</p>
+        </div>
       </Reveal>
 
+      {/* Add slot form */}
       <Reveal direction="up" delay={1}>
-        <div className="rounded-2xl bg-card p-4" style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.04)" }}>
-          <div className="grid sm:grid-cols-5 gap-3 items-end">
-            <div className="grid gap-1.5 sm:col-span-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{L("שירות", "الخدمة", "Service")}</Label>
+        <div
+          className="rounded-2xl bg-card p-5 sm:p-6 border border-border/10"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50">
+              <Plus className="h-4 w-4 text-blue-600" />
+            </div>
+            <h2 className="text-[14px] font-semibold text-foreground">{L("הוספת חלון זמן", "إضافة وقت جديد", "Add New Slot")}</h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("שירות", "الخدمة", "Service")}</Label>
               <Select value={form.service_id} onValueChange={(v) => setForm({ ...form, service_id: v })}>
-                <SelectTrigger className="h-10 rounded-lg"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className="h-10 rounded-xl border-border/30"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {services.map((s: any) => <SelectItem key={s.id} value={s.id}>{lang === "ar" ? s.name_ar || s.name : s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-1.5">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{L("תאריך", "التاريخ", "Date")}</Label>
-              <Input type="date" value={form.slot_date} onChange={(e) => setForm({ ...form, slot_date: e.target.value })} className="h-10 rounded-lg" />
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("תאריך", "التاريخ", "Date")}</Label>
+              <Input type="date" value={form.slot_date} onChange={(e) => setForm({ ...form, slot_date: e.target.value })} className="h-10 rounded-xl border-border/30" />
             </div>
-            <div className="grid gap-1.5">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{L("התחלה", "البداية", "Start")}</Label>
-              <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} className="h-10 rounded-lg" />
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("התחלה", "البداية", "Start")}</Label>
+              <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} className="h-10 rounded-xl border-border/30" />
             </div>
-            <div className="grid gap-1.5">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{L("סיום", "النهاية", "End")}</Label>
-              <Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} className="h-10 rounded-lg" />
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("סיום", "النهاية", "End")}</Label>
+              <Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} className="h-10 rounded-xl border-border/30" />
             </div>
-            <button onClick={add} className="bg-foreground text-background px-5 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5 sm:col-span-5 sm:w-fit">
-              <Plus className="h-4 w-4" />{L("הוסף", "أضف", "Add")}
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <button
+              onClick={add}
+              className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4" />{L("הוסף חלון", "أضف وقتاً", "Add Slot")}
             </button>
           </div>
         </div>
       </Reveal>
 
+      {/* Slots table */}
       <Reveal direction="up" delay={2}>
-        <div className="rounded-2xl bg-card overflow-hidden" style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.04)" }}>
+        <div
+          className="rounded-2xl bg-card overflow-hidden border border-border/10"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-surface text-muted-foreground">
-                <tr>
-                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("שירות", "الخدمة", "Service")}</th>
-                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("תאריך", "التاريخ", "Date")}</th>
-                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("שעות", "الوقت", "Time")}</th>
-                  <th className="text-start p-3 text-[11px] font-bold uppercase tracking-[0.08em]">{L("זמין", "متاح", "Available")}</th>
-                  <th className="text-end p-3"></th>
+              <thead>
+                <tr className="bg-surface/60 border-b border-border/15">
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("שירות", "الخدمة", "Service")}</th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("תאריך", "التاريخ", "Date")}</th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("שעות", "الوقت", "Time")}</th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("זמין", "متاح", "Available")}</th>
+                  <th className="text-end p-3.5 w-[60px]"></th>
                 </tr>
               </thead>
               <tbody>
                 {slots.map((s: any) => (
-                  <tr key={s.id} className="border-t border-border/20 hover:bg-surface/50 transition-colors">
-                    <td className="p-3">{lang === "ar" ? s.service?.name_ar || s.service?.name : s.service?.name}</td>
-                    <td className="p-3">{s.slot_date}</td>
-                    <td className="p-3">{s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}</td>
-                    <td className="p-3"><Switch checked={s.is_available} onCheckedChange={() => toggle(s)} /></td>
-                    <td className="p-3 text-end"><Button size="icon" variant="ghost" onClick={() => del(s.id)} className="h-8 w-8 rounded-lg"><Trash2 className="h-4 w-4 text-destructive" /></Button></td>
+                  <tr key={s.id} className="border-t border-border/10 hover:bg-surface/30 transition-colors">
+                    <td className="p-3.5">
+                      <span className="font-medium text-foreground">{lang === "ar" ? s.service?.name_ar || s.service?.name : s.service?.name}</span>
+                    </td>
+                    <td className="p-3.5">
+                      <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground">
+                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        {s.slot_date}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
+                      <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground font-medium bg-surface px-2.5 py-1 rounded-lg">
+                        <Clock className="h-3 w-3 text-muted-foreground/60" />
+                        {s.start_time?.slice(0, 5)}–{s.end_time?.slice(0, 5)}
+                      </span>
+                    </td>
+                    <td className="p-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <Switch checked={s.is_available} onCheckedChange={() => toggle(s)} />
+                        <span className={`text-[11px] font-medium ${s.is_available ? "text-emerald-600" : "text-muted-foreground"}`}>
+                          {s.is_available ? L("זמין", "متاح", "Open") : L("סגור", "مغلق", "Closed")}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-3.5 text-end">
+                      <Button size="icon" variant="ghost" onClick={() => del(s.id)} className="h-8 w-8 rounded-lg hover:bg-red-50">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
-                {slots.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">—</td></tr>}
+                {slots.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-16 text-center">
+                      <Clock className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                      <div className="text-[14px] font-medium text-muted-foreground">{L("אין חלונות זמן", "لا أوقات حجز", "No slots configured")}</div>
+                      <div className="text-[12px] text-muted-foreground/60 mt-1">{L("הוסף חלון זמן ראשון למעלה", "أضف أول وقت أعلاه", "Add your first slot using the form above")}</div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

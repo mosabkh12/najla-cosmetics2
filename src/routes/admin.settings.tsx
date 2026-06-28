@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Building2, Phone, MapPin, Image as ImageIcon, Clock as ClockIcon, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
 
@@ -50,34 +50,28 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
   };
 
   return (
-    <div className="grid gap-2">
-      <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{label}</Label>
+    <div className="grid gap-3">
+      <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</Label>
 
-      {/* Preview */}
       {value && (
-        <div className="relative rounded-xl overflow-hidden bg-surface aspect-video max-h-[200px]">
+        <div className="relative rounded-xl overflow-hidden bg-surface aspect-video max-h-[180px] border border-border/10">
           <img src={value} alt="" className="w-full h-full object-cover" />
           <button
             onClick={() => onChange("")}
-            className="absolute top-2 end-2 grid h-7 w-7 place-items-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
+            className="absolute top-2.5 end-2.5 grid h-7 w-7 place-items-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
-      {/* Upload area */}
       <div className="flex gap-2">
         <button
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border/60 text-[12px] font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border/50 text-[12px] font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
         >
-          {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="h-4 w-4" />
-          )}
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           {uploading ? "Uploading..." : "Choose File"}
         </button>
         <Input
@@ -85,17 +79,11 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Or paste URL..."
-          className="h-10 rounded-lg text-xs flex-1"
+          className="h-10 rounded-xl text-xs flex-1 border-border/30"
         />
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,video/*"
-        className="hidden"
-        onChange={handleFile}
-      />
+      <input ref={inputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFile} />
     </div>
   );
 }
@@ -146,66 +134,120 @@ function Page() {
     }
   };
 
-  const F = (key: string, label: string, type: string = "text") => (
-    <div className="grid gap-1.5">
-      <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{label}</Label>
-      <Input type={type} value={form[key] ?? ""} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="h-10 rounded-lg" />
-    </div>
-  );
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <Reveal direction="up">
-        <h1 className="font-display text-[26px] sm:text-[30px]">{L("הגדרות העסק", "إعدادات العمل", "Business Settings")}</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">{L("הגדרות העסק", "إعدادات العمل", "Business Settings")}</h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">{L("ניהול פרטי העסק והגדרות", "إدارة بيانات العمل والإعدادات", "Manage your business details and preferences")}</p>
+          </div>
+          <button
+            onClick={save}
+            className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5"
+          >
+            <Save className="h-3.5 w-3.5" />{L("שמירה", "حفظ", "Save")}
+          </button>
+        </div>
       </Reveal>
 
+      {/* Business Info Section */}
       <Reveal direction="up" delay={1}>
-        <div className="rounded-2xl bg-card p-5 sm:p-6 space-y-5" style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.04)" }}>
-          {/* Basic info */}
-          <div className="grid sm:grid-cols-2 gap-3">
-            {F("business_name", L("שם העסק", "اسم العمل", "Business Name"))}
-            {F("phone", L("טלפון", "الهاتف", "Phone"))}
-            {F("whatsapp_number", L("WhatsApp", "واتساب", "WhatsApp"))}
-            {F("google_maps_url", L("קישור Google Maps", "رابط خرائط Google", "Google Maps URL"), "url")}
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{L("כתובת", "العنوان", "Address")}</Label>
-            <Textarea value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} className="rounded-lg" />
-          </div>
-
-          {/* Image uploads */}
-          <div className="pt-2 border-t border-border/20">
-            <div className="flex items-center gap-2 mb-4">
-              <ImageIcon className="h-4 w-4 text-primary" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-foreground">{L("תמונות", "الصور", "Images")}</span>
+        <div
+          className="rounded-2xl bg-card p-5 sm:p-6 border border-border/10"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50">
+              <Building2 className="h-4 w-4 text-blue-600" />
             </div>
-            <div className="grid sm:grid-cols-2 gap-5">
-              <ImageUpload
-                label={L("תמונת Hero", "صورة الواجهة", "Hero Image")}
-                value={form.hero_image_url ?? ""}
-                onChange={(url) => setForm({ ...form, hero_image_url: url })}
-              />
-              <ImageUpload
-                label={L("תמונת אודות", "صورة عنا", "About Image")}
-                value={form.about_image_url ?? ""}
-                onChange={(url) => setForm({ ...form, about_image_url: url })}
-              />
+            <h2 className="text-[14px] font-semibold text-foreground">{L("פרטי עסק", "بيانات العمل", "Business Information")}</h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("שם העסק", "اسم العمل", "Business Name")}</Label>
+              <Input value={form.business_name ?? ""} onChange={(e) => setForm({ ...form, business_name: e.target.value })} className="h-10 rounded-xl border-border/30" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("טלפון", "الهاتف", "Phone")}</Label>
+              <Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-10 rounded-xl border-border/30" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("WhatsApp", "واتساب", "WhatsApp")}</Label>
+              <Input value={form.whatsapp_number ?? ""} onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })} className="h-10 rounded-xl border-border/30" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("קישור Google Maps", "رابط خرائط Google", "Google Maps URL")}</Label>
+              <Input type="url" value={form.google_maps_url ?? ""} onChange={(e) => setForm({ ...form, google_maps_url: e.target.value })} className="h-10 rounded-xl border-border/30" />
             </div>
           </div>
 
-          {/* Working hours */}
-          <div className="grid gap-1.5">
-            <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">{L("שעות פעילות (JSON)", "ساعات العمل (JSON)", "Working Hours (JSON)")}</Label>
-            <Textarea value={hours} onChange={(e) => setHours(e.target.value)} rows={8} className="font-mono text-xs rounded-lg" placeholder='{"sun":"09:00-18:00","mon":"09:00-18:00"}' />
+          <div className="grid gap-2 mt-4">
+            <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("כתובת", "العنوان", "Address")}</Label>
+            <Textarea value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} className="rounded-xl border-border/30" />
           </div>
+        </div>
+      </Reveal>
 
-          {/* Save */}
-          <div className="flex justify-end">
-            <button onClick={save} className="bg-foreground text-background px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
-              {L("שמירה", "حفظ", "Save")}
-            </button>
+      {/* Images Section */}
+      <Reveal direction="up" delay={2}>
+        <div
+          className="rounded-2xl bg-card p-5 sm:p-6 border border-border/10"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50">
+              <ImageIcon className="h-4 w-4 text-purple-600" />
+            </div>
+            <h2 className="text-[14px] font-semibold text-foreground">{L("תמונות", "الصور", "Images")}</h2>
           </div>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <ImageUpload
+              label={L("תמונת Hero", "صورة الواجهة", "Hero Image")}
+              value={form.hero_image_url ?? ""}
+              onChange={(url) => setForm({ ...form, hero_image_url: url })}
+            />
+            <ImageUpload
+              label={L("תמונת אודות", "صورة عنا", "About Image")}
+              value={form.about_image_url ?? ""}
+              onChange={(url) => setForm({ ...form, about_image_url: url })}
+            />
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Working Hours Section */}
+      <Reveal direction="up" delay={3}>
+        <div
+          className="rounded-2xl bg-card p-5 sm:p-6 border border-border/10"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-50">
+              <ClockIcon className="h-4 w-4 text-emerald-600" />
+            </div>
+            <h2 className="text-[14px] font-semibold text-foreground">{L("שעות פעילות", "ساعات العمل", "Working Hours")}</h2>
+          </div>
+          <Textarea
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            rows={8}
+            className="font-mono text-xs rounded-xl border-border/30"
+            placeholder='{"sun":"09:00-18:00","mon":"09:00-18:00"}'
+          />
+        </div>
+      </Reveal>
+
+      {/* Mobile save button */}
+      <Reveal direction="up" delay={4}>
+        <div className="sm:hidden">
+          <button
+            onClick={save}
+            className="w-full bg-foreground text-background py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
+          >
+            <Save className="h-3.5 w-3.5" />{L("שמירה", "حفظ", "Save Changes")}
+          </button>
         </div>
       </Reveal>
     </div>
