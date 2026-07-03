@@ -15,18 +15,18 @@ export const Route = createFileRoute("/admin/orders")({ component: Page });
 const STATUSES = ["pending", "confirmed", "preparing", "completed", "cancelled"] as const;
 
 const statusColor: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
-  preparing: "bg-purple-50 text-purple-700 border-purple-200",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-red-50 text-red-600 border-red-200",
+  pending: "bg-gold-deep/10 text-gold-deep border-gold-deep/20",
+  confirmed: "bg-primary/10 text-primary border-primary/20",
+  preparing: "bg-terracotta-soft text-terracotta border-terracotta/20",
+  completed: "bg-sage-soft text-sage border-sage/20",
+  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 const statusDot: Record<string, string> = {
-  pending: "bg-amber-500",
-  confirmed: "bg-blue-500",
-  preparing: "bg-purple-500",
-  completed: "bg-emerald-500",
-  cancelled: "bg-red-500",
+  pending: "bg-gold-deep",
+  confirmed: "bg-primary",
+  preparing: "bg-terracotta",
+  completed: "bg-sage",
+  cancelled: "bg-destructive",
 };
 
 function Page() {

@@ -136,13 +136,13 @@ function ProductDetailPage() {
 
   return (
     <section className="min-h-screen bg-background">
-      <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto pt-6 pb-16">
+      <div key={id} className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto pt-6 pb-16">
 
         {/* ═══════════ Product Layout ═══════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16 items-start">
 
           {/* ── Left: Image Gallery ── */}
-          <div className="flex gap-4 lg:sticky lg:top-24">
+          <div className="flex gap-4 lg:sticky lg:top-24 animate-in fade-in slide-in-from-start-10 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
             {/* Thumbnail strip */}
             <div className="hidden sm:flex flex-col gap-3 w-[80px] shrink-0">
               {(allImages.length > 0 ? allImages : [null]).map((url, i) => (
@@ -188,7 +188,7 @@ function ProductDetailPage() {
           </div>
 
           {/* ── Right: Product Info ── */}
-          <div className="flex flex-col pt-0 lg:pt-2">
+          <div className="flex flex-col pt-0 lg:pt-2 animate-in fade-in slide-in-from-end-10 duration-700 delay-150 fill-mode-backwards ease-[cubic-bezier(0.22,1,0.36,1)]">
 
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">

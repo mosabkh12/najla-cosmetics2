@@ -61,6 +61,10 @@
   --color-cream: var(--cream);
   --color-warm-beige: var(--warm-beige);
   --color-footer: var(--footer);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-soft: var(--terracotta-soft);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
   --font-display: "Playfair Display", "Frank Ruhl Libre", "Amiri", Georgia, serif;
   --font-sans: "Inter", "Heebo", "Cairo", system-ui, -apple-system, sans-serif;
 }
@@ -110,6 +114,12 @@
   --blush: #fceee9;                                /* tertiary-container */
   --cream: #f5f0e6;                                /* primary-container */
   --warm-beige: #e7e2d8;                           /* primary-fixed */
+
+  /* ── Admin accent tones (warm counterparts to stock blue/purple/emerald) ── */
+  --terracotta: #b5673f;                           /* warm clay/rust accent */
+  --terracotta-soft: #f5e6da;
+  --sage: #6b7f5a;                                 /* muted warm green accent */
+  --sage-soft: #e9eee1;
 
   /* ── Status ── */
   --destructive: #ba1a1a;                          /* error */

@@ -179,8 +179,8 @@ function Page() {
       <Reveal direction="up" delay={1}>
         <div className={cardClass} style={cardShadow}>
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50">
-              <CalendarDays className="h-4 w-4 text-blue-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10">
+              <CalendarDays className="h-4 w-4 text-primary" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">
               {L("לוח שבועי", "الجدول الأسبوعي", "Weekly Schedule")}
@@ -225,8 +225,8 @@ function Page() {
       <Reveal direction="up" delay={2}>
         <div className={cardClass} style={cardShadow}>
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50">
-              <Settings className="h-4 w-4 text-purple-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-terracotta-soft">
+              <Settings className="h-4 w-4 text-terracotta" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">
               {L("הגדרות הזמנה", "إعدادات الحجز", "Booking Rules")}
@@ -294,8 +294,8 @@ function Page() {
       <Reveal direction="up" delay={3}>
         <div className={cardClass} style={cardShadow}>
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-amber-50">
-              <Coffee className="h-4 w-4 text-amber-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gold-deep/10">
+              <Coffee className="h-4 w-4 text-gold-deep" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">
               {L("הפסקות", "أوقات الراحة", "Break Times")}
@@ -312,7 +312,7 @@ function Page() {
                   </span>
                   <button
                     onClick={() => setBreaks((prev) => prev.filter((_, j) => j !== i))}
-                    className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-50 transition-colors"
+                    className="grid h-7 w-7 place-items-center rounded-lg hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </button>
@@ -346,8 +346,8 @@ function Page() {
       <Reveal direction="up" delay={4}>
         <div className={cardClass} style={cardShadow}>
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-red-50">
-              <CalendarOff className="h-4 w-4 text-red-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-destructive/10">
+              <CalendarOff className="h-4 w-4 text-destructive" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">
               {L("תאריכים סגורים", "التواريخ المغلقة", "Closed Dates")}
@@ -364,7 +364,7 @@ function Page() {
                   </span>
                   <button
                     onClick={() => setClosedDates((prev) => prev.filter((x) => x !== d))}
-                    className="grid h-7 w-7 place-items-center rounded-lg hover:bg-red-50 transition-colors"
+                    className="grid h-7 w-7 place-items-center rounded-lg hover:bg-destructive/10 transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </button>

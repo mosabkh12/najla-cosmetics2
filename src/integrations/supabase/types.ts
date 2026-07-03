@@ -156,6 +156,8 @@ export type Database = {
           google_maps_url: string | null
           hero_image_url: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           phone: string | null
           updated_at: string
           whatsapp_number: string | null
@@ -168,6 +170,8 @@ export type Database = {
           google_maps_url?: string | null
           hero_image_url?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           updated_at?: string
           whatsapp_number?: string | null
@@ -180,6 +184,8 @@ export type Database = {
           google_maps_url?: string | null
           hero_image_url?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           phone?: string | null
           updated_at?: string
           whatsapp_number?: string | null

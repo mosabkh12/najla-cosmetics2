@@ -10,18 +10,18 @@ export const Route = createFileRoute("/admin/")({
 });
 
 const statusColor: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
-  preparing: "bg-purple-50 text-purple-700 border-purple-200",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-red-50 text-red-600 border-red-200",
+  pending: "bg-gold-deep/10 text-gold-deep border-gold-deep/20",
+  confirmed: "bg-primary/10 text-primary border-primary/20",
+  preparing: "bg-terracotta-soft text-terracotta border-terracotta/20",
+  completed: "bg-sage-soft text-sage border-sage/20",
+  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
 };
 const statusDot: Record<string, string> = {
-  pending: "bg-amber-500",
-  confirmed: "bg-blue-500",
-  preparing: "bg-purple-500",
-  completed: "bg-emerald-500",
-  cancelled: "bg-red-500",
+  pending: "bg-gold-deep",
+  confirmed: "bg-primary",
+  preparing: "bg-terracotta",
+  completed: "bg-sage",
+  cancelled: "bg-destructive",
 };
 
 function Overview() {
@@ -38,36 +38,36 @@ function Overview() {
       icon: <CalendarDays className="h-5 w-5" />,
       label: L("תורים קרובים", "المواعيد القادمة", "Upcoming"),
       value: String(data?.upcomingApptCount ?? 0),
-      bg: "bg-blue-50",
-      iconBg: "bg-blue-100",
-      iconColor: "text-blue-600",
+      bg: "bg-primary/10",
+      iconBg: "bg-primary/10",
+      iconColor: "text-primary",
       link: "/admin/appointments",
     },
     {
       icon: <ShoppingCart className="h-5 w-5" />,
       label: L("הזמנות", "الطلبات", "Orders"),
       value: String(data?.orderCount ?? 0),
-      bg: "bg-purple-50",
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-600",
+      bg: "bg-terracotta-soft",
+      iconBg: "bg-terracotta-soft",
+      iconColor: "text-terracotta",
       link: "/admin/orders",
     },
     {
       icon: <DollarSign className="h-5 w-5" />,
       label: L("הכנסות", "الإيرادات", "Revenue"),
       value: `₪${(data?.revenue ?? 0).toLocaleString("en", { maximumFractionDigits: 0 })}`,
-      bg: "bg-emerald-50",
-      iconBg: "bg-emerald-100",
-      iconColor: "text-emerald-600",
+      bg: "bg-sage-soft",
+      iconBg: "bg-sage-soft",
+      iconColor: "text-sage",
       link: "/admin/orders",
     },
     {
       icon: <AlertTriangle className="h-5 w-5" />,
       label: L("מלאי נמוך", "مخزون منخفض", "Low Stock"),
       value: String(data?.lowStock.length ?? 0),
-      bg: "bg-amber-50",
-      iconBg: "bg-amber-100",
-      iconColor: "text-amber-600",
+      bg: "bg-gold-deep/10",
+      iconBg: "bg-gold-deep/10",
+      iconColor: "text-gold-deep",
       link: "/admin/products",
     },
   ];
@@ -119,8 +119,8 @@ function Overview() {
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-border/15">
               <div className="flex items-center gap-2.5">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50">
-                  <CalendarDays className="h-4 w-4 text-blue-600" />
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10">
+                  <CalendarDays className="h-4 w-4 text-primary" />
                 </div>
                 <h2 className="font-display text-[16px] text-foreground">{L("תורים קרובים", "المواعيد القادمة", "Upcoming Appointments")}</h2>
               </div>
@@ -167,8 +167,8 @@ function Overview() {
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-border/15">
               <div className="flex items-center gap-2.5">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50">
-                  <ShoppingCart className="h-4 w-4 text-purple-600" />
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-terracotta-soft">
+                  <ShoppingCart className="h-4 w-4 text-terracotta" />
                 </div>
                 <h2 className="font-display text-[16px] text-foreground">{L("הזמנות אחרונות", "أحدث الطلبات", "Recent Orders")}</h2>
               </div>
@@ -216,8 +216,8 @@ function Overview() {
         >
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/15">
             <div className="flex items-center gap-2.5">
-              <div className="grid h-8 w-8 place-items-center rounded-lg bg-amber-50">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-gold-deep/10">
+                <AlertTriangle className="h-4 w-4 text-gold-deep" />
               </div>
               <h2 className="font-display text-[16px] text-foreground">{L("מוצרים במלאי נמוך", "منتجات بمخزون منخفض", "Low Stock Products")}</h2>
             </div>
@@ -230,12 +230,12 @@ function Overview() {
               {(data?.lowStock ?? []).map((p) => (
                 <div key={p.id} className="flex items-center justify-between px-5 py-3.5 bg-card hover:bg-surface/30 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-amber-50 shrink-0">
-                      <Package className="h-3.5 w-3.5 text-amber-600" />
+                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-gold-deep/10 shrink-0">
+                      <Package className="h-3.5 w-3.5 text-gold-deep" />
                     </div>
                     <span className="text-[13px] font-medium text-foreground">{lang === "ar" ? p.name_ar || p.name : p.name}</span>
                   </div>
-                  <span className="text-[13px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">{p.stock_quantity}</span>
+                  <span className="text-[13px] font-bold text-gold-deep bg-gold-deep/10 px-2.5 py-1 rounded-lg">{p.stock_quantity}</span>
                 </div>
               ))}
             </div>

@@ -156,13 +156,13 @@ function Page() {
                       </td>
                       <td className="p-3.5 font-semibold">₪{Number(p.price).toFixed(0)}</td>
                       <td className="p-3.5">
-                        <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-lg ${low ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}`}>
+                        <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-lg ${low ? "bg-destructive/10 text-destructive" : "bg-sage-soft text-sage"}`}>
                           {p.stock_quantity}
                         </span>
                       </td>
                       <td className="p-3.5 hidden sm:table-cell">
-                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${p.is_active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-surface text-muted-foreground border-border/30"}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${p.is_active ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${p.is_active ? "bg-sage-soft text-sage border-sage/20" : "bg-surface text-muted-foreground border-border/30"}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${p.is_active ? "bg-sage" : "bg-muted-foreground/50"}`} />
                           {p.is_active ? L("פעיל", "نشط", "Active") : L("מושבת", "غير نشط", "Inactive")}
                         </span>
                       </td>
@@ -174,7 +174,7 @@ function Page() {
                           <Button size="icon" variant="ghost" onClick={() => setDlg({ open: true, row: p })} className="h-8 w-8 rounded-lg hover:bg-surface">
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
-                          <Button size="icon" variant="ghost" onClick={() => del(p.id)} className="h-8 w-8 rounded-lg hover:bg-red-50">
+                          <Button size="icon" variant="ghost" onClick={() => del(p.id)} className="h-8 w-8 rounded-lg hover:bg-destructive/10">
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
                         </div>

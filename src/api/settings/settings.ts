@@ -12,6 +12,8 @@ export const saveSettings = createServerFn({ method: "POST" })
   .validator((d: { id?: string; payload: Record<string, unknown> }) => d)
   .handler(async ({ data: { id, payload } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const lat = payload.latitude === "" || payload.latitude == null ? null : Number(payload.latitude);
+    const lng = payload.longitude === "" || payload.longitude == null ? null : Number(payload.longitude);
     const clean = {
       business_name: String(payload.business_name ?? "Najla Cosmetics"),
       address: (payload.address as string) || null,
@@ -21,6 +23,8 @@ export const saveSettings = createServerFn({ method: "POST" })
       hero_image_url: (payload.hero_image_url as string) || null,
       about_image_url: (payload.about_image_url as string) || null,
       working_hours: (payload.working_hours as any) ?? null,
+      latitude: lat != null && !isNaN(lat) ? lat : null,
+      longitude: lng != null && !isNaN(lng) ? lng : null,
     };
     const op = id
       ? await supabaseAdmin.from("business_settings").update(clean).eq("id", id)

@@ -45,7 +45,7 @@ export function RecordDialog<T extends Record<string, any>>({
               ) : f.type === "switch" ? (
                 <div className="flex items-center gap-3">
                   <Switch checked={!!values[f.name]} onCheckedChange={(v) => setValues({ ...values, [f.name]: v })} />
-                  <span className={`text-[12px] font-medium ${values[f.name] ? "text-emerald-600" : "text-muted-foreground"}`}>
+                  <span className={`text-[12px] font-medium ${values[f.name] ? "text-sage" : "text-muted-foreground"}`}>
                     {values[f.name] ? "Active" : "Inactive"}
                   </span>
                 </div>

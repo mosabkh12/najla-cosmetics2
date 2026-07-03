@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, MapPin, Phone, Clock, MessageCircle, Sparkles, Star, ShieldCheck, Award } from "lucide-react";
+import { ArrowRight, MapPin, Phone, Clock, MessageCircle, Navigation, Navigation2, Sparkles, Star, ShieldCheck, Award } from "lucide-react";
 import { getServices } from "@/api/services/services";
 import { getFeaturedProducts } from "@/api/products/products";
 import { getSettings } from "@/api/settings/settings";
@@ -10,6 +10,7 @@ import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
 import { useI18n } from "@/lib/i18n";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
+import { getMapEmbedSrc, getGoogleMapsDirectionsUrl, getWazeUrl } from "@/lib/location";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Najla Cosmetics — בית" }] }),
@@ -192,7 +193,7 @@ function Home() {
               <div className="overflow-hidden rounded-3xl min-h-[350px] h-full"
                 style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
               >
-                <iframe title="Map" src="https://www.google.com/maps?q=Nazareth&output=embed" className="h-full w-full min-h-[350px]" loading="lazy" />
+                <iframe title="Map" src={getMapEmbedSrc(settings)} className="h-full w-full min-h-[350px]" loading="lazy" />
               </div>
             </Reveal>
             <Reveal direction="end" delay={2}>
@@ -225,17 +226,24 @@ function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 mt-8">
-                  <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+                <div className="mt-8 space-y-3">
+                  <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="block">
                     <button className="w-full py-3.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
                       <MessageCircle className="h-4 w-4" />WhatsApp
                     </button>
                   </a>
-                  <a href={settings?.google_maps_url ?? "#"} target="_blank" rel="noreferrer">
-                    <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
-                      {t("get_directions")}
-                    </button>
-                  </a>
+                  <div className="grid grid-cols-2 gap-3">
+                    <a href={getGoogleMapsDirectionsUrl(settings)} target="_blank" rel="noreferrer">
+                      <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                        <Navigation className="h-4 w-4" />{t("get_directions")}
+                      </button>
+                    </a>
+                    <a href={getWazeUrl(settings)} target="_blank" rel="noreferrer">
+                      <button className="w-full py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2" style={{ backgroundColor: "#33CCFF" }}>
+                        <Navigation2 className="h-4 w-4" />{t("waze")}
+                      </button>
+                    </a>
+                  </div>
                 </div>
               </div>
             </Reveal>

@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Phone, Clock, MessageCircle, Navigation, Sparkles, CalendarDays } from "lucide-react";
+import { MapPin, Phone, Clock, MessageCircle, Navigation, Navigation2, Sparkles, CalendarDays } from "lucide-react";
 import { getSettings } from "@/api/settings/settings";
 import { useI18n } from "@/lib/i18n";
 import { Reveal } from "@/components/ScrollReveal";
+import { getMapEmbedSrc, getGoogleMapsDirectionsUrl, getWazeUrl } from "@/lib/location";
 
 export const Route = createFileRoute("/location")({
   head: () => ({ meta: [{ title: "Location — Najla Cosmetics" }] }),
@@ -34,7 +35,7 @@ function LocationPage() {
             <div className="overflow-hidden rounded-3xl min-h-[300px] md:min-h-[500px] h-full"
               style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
             >
-              <iframe title="Map" src="https://www.google.com/maps?q=Nazareth&output=embed" className="h-full w-full min-h-[300px] md:min-h-[500px]" loading="lazy" />
+              <iframe title="Map" src={getMapEmbedSrc(settings)} className="h-full w-full min-h-[300px] md:min-h-[500px]" loading="lazy" />
             </div>
           </Reveal>
 
@@ -88,17 +89,24 @@ function LocationPage() {
               </div>
 
               {/* Action buttons */}
-              <div className="px-7 pb-6 grid grid-cols-2 gap-3">
-                <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+              <div className="px-7 pb-6 space-y-3">
+                <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="block">
                   <button className="w-full py-3.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
                     <MessageCircle className="h-4 w-4" />WhatsApp
                   </button>
                 </a>
-                <a href={settings?.google_maps_url ?? "#"} target="_blank" rel="noreferrer">
-                  <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                    <Navigation className="h-4 w-4" />{t("get_directions")}
-                  </button>
-                </a>
+                <div className="grid grid-cols-2 gap-3">
+                  <a href={getGoogleMapsDirectionsUrl(settings)} target="_blank" rel="noreferrer">
+                    <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                      <Navigation className="h-4 w-4" />{t("get_directions")}
+                    </button>
+                  </a>
+                  <a href={getWazeUrl(settings)} target="_blank" rel="noreferrer">
+                    <button className="w-full py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2" style={{ backgroundColor: "#33CCFF" }}>
+                      <Navigation2 className="h-4 w-4" />{t("waze")}
+                    </button>
+                  </a>
+                </div>
               </div>
             </div>
           </Reveal>

@@ -21,6 +21,7 @@ const ERROR_MAP: Record<string, string> = {
   PAST_DATE: "booking_past_date",
   PAST_TIME: "booking_past_time",
   TIME_TAKEN: "booking_time_taken",
+  MAX_APPOINTMENTS_REACHED: "booking_max_reached",
 };
 
 function fmtDate(d: Date): string {
@@ -153,7 +154,7 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
 
         {/* ── Step 1: Date ── */}
         {step === 1 && (
-          <div className="px-5 py-4">
+          <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
               <CalendarDays className="h-3.5 w-3.5" />{t("select_date")}
             </p>
@@ -172,7 +173,7 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
 
         {/* ── Step 2: Time ── */}
         {step === 2 && (
-          <div className="px-5 py-4">
+          <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between mb-4">
               <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                 <Back className="h-3.5 w-3.5" />{t("select_date")}
@@ -213,7 +214,7 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
 
         {/* ── Step 3: Confirm ── */}
         {step === 3 && (
-          <div className="px-5 py-4 space-y-4">
+          <div className="px-5 py-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between">
               <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                 <Back className="h-3.5 w-3.5" />{t("select_time")}

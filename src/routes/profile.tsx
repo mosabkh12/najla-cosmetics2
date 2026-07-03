@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Heart, Edit2, LogOut, CalendarDays, ShoppingBag, Clock, Phone, Mail, User, X } from "lucide-react";
+import { Heart, Edit2, LogOut, CalendarDays, ShoppingBag, Clock, Phone, Mail, User, X, CalendarClock, Info, Trash2 } from "lucide-react";
 
 import { getProfile, updateProfile } from "@/api/profiles/profiles";
-import { getUserAppointments, cancelAppointment } from "@/api/appointments/appointments";
+import { getUserAppointments, cancelAppointment, deleteAppointment, clearAppointmentHistory } from "@/api/appointments/appointments";
 import { getUserOrders } from "@/api/orders/orders";
 import { getUserFavorites } from "@/api/favorites/favorites";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,6 +14,7 @@ import { useI18n, pickLocalized } from "@/lib/i18n";
 import type { Product } from "@/components/products/ProductCard";
 import { toast } from "sonner";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
+import { RescheduleDialog, type RescheduleTarget } from "@/components/services/RescheduleDialog";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "My Account — Najla Cosmetics" }] }),
@@ -41,6 +42,7 @@ function ProfilePage() {
   const [section, setSection] = useState<Section>("appointments");
   const [apptFilter, setApptFilter] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
   const [orderFilter, setOrderFilter] = useState<"all" | "active" | "completed" | "cancelled">("all");
+  const [reschedulingAppt, setReschedulingAppt] = useState<RescheduleTarget | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [loading, user, navigate]);
 
@@ -87,6 +89,28 @@ function ProfilePage() {
     qc.invalidateQueries({ queryKey: ["appointments", user.id] });
   };
 
+  const deleteAppt = async (apptId: string) => {
+    if (!confirm(t("delete_appointment_confirm"))) return;
+    try {
+      await deleteAppointment({ data: { id: apptId } });
+      toast.success(t("appointment_deleted"));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    qc.invalidateQueries({ queryKey: ["appointments", user.id] });
+  };
+
+  const clearHistory = async () => {
+    if (!confirm(t("clear_history_confirm"))) return;
+    try {
+      await clearAppointmentHistory();
+      toast.success(t("history_cleared"));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    qc.invalidateQueries({ queryKey: ["appointments", user.id] });
+  };
+
   const filteredAppts = appts.filter((a: any) => {
     if (apptFilter === "upcoming") return ["pending", "confirmed"].includes(a.status);
     if (apptFilter === "completed") return a.status === "completed";
@@ -102,6 +126,7 @@ function ProfilePage() {
   });
 
   const upcomingCount = appts.filter((a: any) => ["pending", "confirmed"].includes(a.status)).length;
+  const hasApptHistory = appts.some((a: any) => ["completed", "cancelled"].includes(a.status));
   const activeOrderCount = orders.filter((o: any) => !["completed", "cancelled"].includes(o.status)).length;
 
   const sectionItems: { key: Section; icon: React.ReactNode; label: string; count?: number }[] = [
@@ -197,17 +222,35 @@ function ProfilePage() {
         {/* ── Appointments Section ── */}
         {section === "appointments" && (
           <div className="mt-6">
-            <Reveal direction="up">
-              <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
-                {([["all", t("all_categories").replace(/כל ה.*/, "הכל").replace(/كل ال.*/, "الكل").replace("All Categories", "All")],
-                   ["upcoming", t("upcoming")], ["completed", t("completed")], ["cancelled", t("cancelled")]] as const).map(([val, label]) => (
-                  <button key={val} onClick={() => setApptFilter(val)}
-                    className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
-                      apptFilter === val ? "bg-primary text-primary-foreground" : "bg-surface text-muted-foreground hover:bg-surface-2"
-                    }`}
-                  >{label}</button>
-                ))}
+            {upcomingCount >= 2 && (
+              <Reveal direction="up">
+                <div className="mb-5 rounded-2xl bg-cream border border-primary/15 px-4 py-3 flex items-start gap-2.5">
+                  <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <p className="text-[12.5px] text-foreground leading-relaxed">{t("max_appointments_notice")}</p>
+                </div>
+              </Reveal>
+            )}
+            <Reveal direction="up" className="mb-5">
+              <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1">
+                <div className="flex gap-1.5">
+                  {([["all", t("all_categories").replace(/כל ה.*/, "הכל").replace(/كل ال.*/, "الكل").replace("All Categories", "All")],
+                     ["upcoming", t("upcoming")], ["completed", t("completed")], ["cancelled", t("cancelled")]] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => setApptFilter(val)}
+                      className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
+                        apptFilter === val ? "bg-primary text-primary-foreground" : "bg-surface text-muted-foreground hover:bg-surface-2"
+                      }`}
+                    >{label}</button>
+                  ))}
+                </div>
+                {hasApptHistory && (
+                  <button onClick={clearHistory} className="shrink-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-full transition-colors">
+                    <Trash2 className="h-3 w-3" />{t("clear_history")}
+                  </button>
+                )}
               </div>
+              {hasApptHistory && (
+                <p className="mt-2 text-[11px] text-muted-foreground">{t("appointment_auto_delete_notice")}</p>
+              )}
             </Reveal>
 
             {filteredAppts.length === 0 && (
@@ -246,9 +289,22 @@ function ProfilePage() {
                       </div>
                     </div>
                     {["pending", "confirmed"].includes(a.status) && (
-                      <div className="mt-3 pt-3 border-t border-border/20 flex justify-end">
+                      <div className="mt-3 pt-3 border-t border-border/20 flex justify-end gap-2">
+                        <button
+                          onClick={() => setReschedulingAppt({ id: a.id, service_id: a.service_id, appointment_date: a.appointment_date, appointment_time: String(a.appointment_time).slice(0, 5) })}
+                          className="text-[11px] font-semibold uppercase tracking-[0.06em] text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+                        >
+                          <CalendarClock className="h-3 w-3" />{t("reschedule")}
+                        </button>
                         <button onClick={() => cancelAppt(a.id)} className="text-[11px] font-semibold uppercase tracking-[0.06em] text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
                           <X className="h-3 w-3" />{t("cancel")}
+                        </button>
+                      </div>
+                    )}
+                    {["completed", "cancelled"].includes(a.status) && (
+                      <div className="mt-3 pt-3 border-t border-border/20 flex justify-end">
+                        <button onClick={() => deleteAppt(a.id)} className="text-[11px] font-semibold uppercase tracking-[0.06em] text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1">
+                          <Trash2 className="h-3 w-3" />{t("delete")}
                         </button>
                       </div>
                     )}
@@ -338,6 +394,13 @@ function ProfilePage() {
         )}
 
       </div>
+
+      <RescheduleDialog
+        appointment={reschedulingAppt}
+        open={!!reschedulingAppt}
+        onOpenChange={(o) => { if (!o) setReschedulingAppt(null); }}
+        onDone={() => qc.invalidateQueries({ queryKey: ["appointments", user.id] })}
+      />
     </section>
   );
 }

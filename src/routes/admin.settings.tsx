@@ -7,9 +7,10 @@ import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, Loader2, Building2, Phone, MapPin, Image as ImageIcon, Clock as ClockIcon, Save } from "lucide-react";
+import { Upload, X, Loader2, Building2, Phone, MapPin, Image as ImageIcon, Clock as ClockIcon, Save, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
+import { getMapEmbedSrc, getFindOnMapsUrl, isValidLatitude, isValidLongitude } from "@/lib/location";
 
 export const Route = createFileRoute("/admin/settings")({ component: Page });
 
@@ -100,6 +101,7 @@ function Page() {
 
   const [form, setForm] = useState<any>({});
   const [hours, setHours] = useState("");
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (data) {
@@ -108,10 +110,38 @@ function Page() {
     }
   }, [data]);
 
+  // Debounced live preview so the pin updates a beat after typing stops,
+  // instead of reloading the map iframe on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setPreviewSrc(getMapEmbedSrc({
+        latitude: form.latitude === "" || form.latitude == null ? null : Number(form.latitude),
+        longitude: form.longitude === "" || form.longitude == null ? null : Number(form.longitude),
+        address: form.address,
+        business_name: form.business_name,
+      }));
+    }, 500);
+    return () => clearTimeout(id);
+  }, [form.latitude, form.longitude, form.address, form.business_name]);
+
+  const latNum = form.latitude === "" || form.latitude == null ? null : Number(form.latitude);
+  const lngNum = form.longitude === "" || form.longitude == null ? null : Number(form.longitude);
+  const latError = latNum != null && !isValidLatitude(latNum);
+  const lngError = lngNum != null && !isValidLongitude(lngNum);
+
   const save = async () => {
     let working_hours: any = null;
     try { working_hours = hours.trim() ? JSON.parse(hours) : null; }
     catch { toast.error("Working hours must be valid JSON"); return; }
+
+    if (latError || lngError) {
+      toast.error(L(
+        "קואורדינטות לא תקינות. קו רוחב חייב להיות בין 90- ל-90, קו אורך בין 180- ל-180.",
+        "إحداثيات غير صالحة. خط العرض بين 90- و90، خط الطول بين 180- و180.",
+        "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.",
+      ));
+      return;
+    }
 
     const payload = {
       business_name: form.business_name || "Najla Cosmetics",
@@ -122,6 +152,8 @@ function Page() {
       hero_image_url: form.hero_image_url || null,
       about_image_url: form.about_image_url || null,
       working_hours,
+      latitude: latNum,
+      longitude: lngNum,
     };
 
     try {
@@ -158,8 +190,8 @@ function Page() {
           style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
         >
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-50">
-              <Building2 className="h-4 w-4 text-blue-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10">
+              <Building2 className="h-4 w-4 text-primary" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">{L("פרטי עסק", "بيانات العمل", "Business Information")}</h2>
           </div>
@@ -184,8 +216,62 @@ function Page() {
           </div>
 
           <div className="grid gap-2 mt-4">
-            <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("כתובת", "العنوان", "Address")}</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("כתובת", "العنوان", "Address")}</Label>
+              <a
+                href={getFindOnMapsUrl(form.address)}
+                target="_blank" rel="noreferrer"
+                className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+              >
+                <Search className="h-3 w-3" />{L("חיפוש ב-Google Maps", "بحث في Google Maps", "Find on Google Maps")}
+              </a>
+            </div>
             <Textarea value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} className="rounded-xl border-border/30" />
+            <p className="text-[11px] text-muted-foreground">
+              {L(
+                "כתובת זו קובעת את המיקום במפה אם לא הוזנו קואורדינטות מדויקות למטה.",
+                "يحدد هذا العنوان الموقع على الخريطة إذا لم يتم إدخال إحداثيات دقيقة أدناه.",
+                "This address sets the map location if no precise coordinates are entered below.",
+              )}
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("קו רוחב (Latitude)", "خط العرض (Latitude)", "Latitude")}</Label>
+              <Input
+                type="number" step="any" dir="ltr" placeholder="32.6996"
+                value={form.latitude ?? ""}
+                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                className={`h-10 rounded-xl ${latError ? "border-destructive focus-visible:ring-destructive/30" : "border-border/30"}`}
+              />
+              {latError && <p className="text-[11px] text-destructive">{L("חייב להיות בין 90- ל-90", "يجب أن يكون بين 90- و90", "Must be between -90 and 90")}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("קו אורך (Longitude)", "خط الطول (Longitude)", "Longitude")}</Label>
+              <Input
+                type="number" step="any" dir="ltr" placeholder="35.3035"
+                value={form.longitude ?? ""}
+                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                className={`h-10 rounded-xl ${lngError ? "border-destructive focus-visible:ring-destructive/30" : "border-border/30"}`}
+              />
+              {lngError && <p className="text-[11px] text-destructive">{L("חייב להיות בין 180- ל-180", "يجب أن يكون بين 180- و180", "Must be between -180 and 180")}</p>}
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            {L(
+              "להצגת המיקום המדויק ביותר במפה, ב-Google Maps ובוויז — פתחי את המיקום שלך ב-Google Maps, לחצי לחיצה ימנית על הנקודה המדויקת ובחרי בקואורדינטות המוצגות כדי להעתיק אותן לכאן.",
+              "لعرض الموقع الأدق على الخريطة وفي Google Maps و Waze — افتحي موقعك في Google Maps، انقري بزر الفأرة الأيمن على النقطة الدقيقة، وانسخي الإحداثيات الظاهرة إلى هنا.",
+              "For the most accurate pin on the map, Google Maps, and Waze — open your location in Google Maps, right-click the exact spot, and copy the coordinates shown into these fields.",
+            )}
+          </p>
+
+          {/* Live preview — exactly what visitors will see */}
+          <div className="grid gap-2 mt-4">
+            <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("תצוגה מקדימה של המפה", "معاينة الخريطة", "Map Preview")}</Label>
+            <div className="rounded-xl border border-border/20 overflow-hidden h-[240px] bg-surface">
+              {previewSrc && <iframe title="Map preview" src={previewSrc} className="h-full w-full" loading="lazy" />}
+            </div>
           </div>
         </div>
       </Reveal>
@@ -197,8 +283,8 @@ function Page() {
           style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
         >
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-purple-50">
-              <ImageIcon className="h-4 w-4 text-purple-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-terracotta-soft">
+              <ImageIcon className="h-4 w-4 text-terracotta" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">{L("תמונות", "الصور", "Images")}</h2>
           </div>
@@ -224,8 +310,8 @@ function Page() {
           style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
         >
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-50">
-              <ClockIcon className="h-4 w-4 text-emerald-600" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-sage-soft">
+              <ClockIcon className="h-4 w-4 text-sage" />
             </div>
             <h2 className="text-[14px] font-semibold text-foreground">{L("שעות פעילות", "ساعات العمل", "Working Hours")}</h2>
           </div>

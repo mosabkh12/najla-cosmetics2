@@ -5,6 +5,22 @@ import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
 
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const HISTORY_RETENTION_DAYS = 14;
+
+// Best-effort cleanup: permanently deletes completed/cancelled appointments
+// older than the retention window. Runs opportunistically on every read so
+// it's enforced even without a working DB-level cron (see the accompanying
+// migration for the pg_cron-based version of the same policy).
+async function purgeOldAppointments(supabaseAdmin: any) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - HISTORY_RETENTION_DAYS);
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
+  await supabaseAdmin
+    .from("appointments")
+    .delete()
+    .in("status", ["completed", "cancelled"])
+    .lt("appointment_date", cutoffStr);
+}
 
 function toMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -65,8 +81,8 @@ async function loadDaySettings(supabaseAdmin: any, date: string): Promise<Resolv
 }
 
 export const getAvailableTimes = createServerFn({ method: "GET" })
-  .validator((d: { serviceId: string; date: string }) => d)
-  .handler(async ({ data: { serviceId, date } }) => {
+  .validator((d: { serviceId: string; date: string; excludeAppointmentId?: string }) => d)
+  .handler(async ({ data: { serviceId, date, excludeAppointmentId } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: service }, settings] = await Promise.all([
@@ -85,11 +101,13 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
     }
 
     // Check ALL services for cross-service conflicts (single-operator salon)
-    const { data: appointments } = await supabaseAdmin
+    let apptQuery = supabaseAdmin
       .from("appointments")
       .select("appointment_time, services!inner(duration_minutes)")
       .eq("appointment_date", date)
       .neq("status", "cancelled");
+    if (excludeAppointmentId) apptQuery = apptQuery.neq("id", excludeAppointmentId);
+    const { data: appointments } = await apptQuery;
 
     if (settings.maxPerDay && (appointments ?? []).length >= settings.maxPerDay) return [];
 
@@ -151,6 +169,13 @@ export const createAppointment = createServerFn({ method: "POST" })
 
     const requestedStart = toMinutes(data.appointment_time);
     if (requestedStart < 0) throw new Error("Invalid time");
+
+    const { count: activeCount } = await supabaseAdmin
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", context.userId)
+      .in("status", ["pending", "confirmed"]);
+    if ((activeCount ?? 0) >= 2) throw new Error("MAX_APPOINTMENTS_REACHED");
 
     const [{ data: service }, settings] = await Promise.all([
       supabaseAdmin
@@ -252,12 +277,52 @@ export const createAppointment = createServerFn({ method: "POST" })
 export const getUserAppointments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    purgeOldAppointments(supabaseAdmin).catch(console.error);
+
     const { data } = await context.supabase
       .from("appointments")
       .select("*, services(name,name_ar,image_url)")
       .eq("user_id", context.userId)
       .order("appointment_date", { ascending: false });
     return data ?? [];
+  });
+
+export const deleteAppointment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: { id: string }) => d)
+  .handler(async ({ data: { id }, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: appt } = await supabaseAdmin
+      .from("appointments")
+      .select("status, user_id")
+      .eq("id", id)
+      .single();
+
+    if (!appt || appt.user_id !== context.userId) throw new Error("Not found");
+    if (appt.status === "pending" || appt.status === "confirmed")
+      throw new Error("Cannot delete an active appointment. Cancel it first.");
+
+    const { error } = await supabaseAdmin
+      .from("appointments")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const clearAppointmentHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("appointments")
+      .delete()
+      .eq("user_id", context.userId)
+      .in("status", ["completed", "cancelled"]);
+    if (error) throw error;
+    return { success: true };
   });
 
 export const cancelAppointment = createServerFn({ method: "POST" })
@@ -284,10 +349,135 @@ export const cancelAppointment = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+export const rescheduleAppointment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (d: { id: string; service_id: string; appointment_date: string; appointment_time: string }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: existing } = await supabaseAdmin
+      .from("appointments")
+      .select("status, user_id, customer_name, customer_phone")
+      .eq("id", data.id)
+      .single();
+    if (!existing || existing.user_id !== context.userId) throw new Error("Not found");
+    if (existing.status === "completed" || existing.status === "cancelled")
+      throw new Error("Cannot reschedule this appointment");
+
+    if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");
+    if (!DATE_RE.test(data.appointment_date)) throw new Error("Invalid date format");
+
+    const dateObj = parseDate(data.appointment_date);
+    if (!dateObj) throw new Error("Invalid date");
+
+    const requestedStart = toMinutes(data.appointment_time);
+    if (requestedStart < 0) throw new Error("Invalid time");
+
+    const [{ data: service }, settings] = await Promise.all([
+      supabaseAdmin
+        .from("services")
+        .select("name, duration_minutes, price")
+        .eq("id", data.service_id)
+        .eq("is_active", true)
+        .single(),
+      loadDaySettings(supabaseAdmin, data.appointment_date),
+    ]);
+    if (!service) throw new Error("Service not found");
+    if (!settings) throw new Error("CLOSED_DAY");
+
+    const duration = service.duration_minutes;
+    const serverPrice = Number(service.price);
+    const requestedEnd = requestedStart + duration;
+
+    if (requestedStart < settings.open || requestedEnd > settings.close)
+      throw new Error("OUTSIDE_HOURS");
+
+    const inBreak = settings.breaks.some(
+      (b) => requestedStart < b.end && requestedEnd > b.start,
+    );
+    if (inBreak) throw new Error("OUTSIDE_HOURS");
+
+    const now = new Date();
+    const isToday =
+      now.getFullYear() === dateObj.getFullYear() &&
+      now.getMonth() === dateObj.getMonth() &&
+      now.getDate() === dateObj.getDate();
+    if (dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+      throw new Error("PAST_DATE");
+    if (isToday && requestedStart < now.getHours() * 60 + now.getMinutes())
+      throw new Error("PAST_TIME");
+
+    // Check all OTHER appointments on the same date for conflicts (excluding this one)
+    const { data: allExisting } = await supabaseAdmin
+      .from("appointments")
+      .select("appointment_time, services!inner(duration_minutes)")
+      .eq("appointment_date", data.appointment_date)
+      .neq("status", "cancelled")
+      .neq("id", data.id);
+
+    if (settings.maxPerDay && (allExisting ?? []).length >= settings.maxPerDay)
+      throw new Error("TIME_TAKEN");
+
+    const buf = settings.buffer;
+    const conflict = (allExisting ?? []).some((a: any) => {
+      const aStart = toMinutes(String(a.appointment_time));
+      const aDuration = a.services?.duration_minutes ?? 30;
+      const aEnd = aStart + aDuration;
+      return (requestedStart < aEnd + buf) && (aStart < requestedEnd + buf);
+    });
+    if (conflict) throw new Error("TIME_TAKEN");
+
+    const { error } = await supabaseAdmin
+      .from("appointments")
+      .update({
+        service_id: data.service_id,
+        appointment_date: data.appointment_date,
+        appointment_time: data.appointment_time,
+        total_price: serverPrice,
+        status: "pending" as const,
+      })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) {
+      if (error.code === "23505") throw new Error("TIME_TAKEN");
+      throw error;
+    }
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    if (profile?.email) {
+      const { sendBookingConfirmation, sendAdminBookingNotification } = await import(
+        "@/api/email/appointment-emails"
+      );
+      const details = {
+        customerName: existing.customer_name,
+        customerPhone: existing.customer_phone,
+        customerEmail: profile.email,
+        serviceName: service.name,
+        date: data.appointment_date,
+        time: data.appointment_time,
+        duration,
+        price: serverPrice,
+      };
+      sendBookingConfirmation(details).catch(console.error);
+      sendAdminBookingNotification(details).catch(console.error);
+    }
+
+    return { success: true };
+  });
+
 export const getAdminAppointments = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    purgeOldAppointments(supabaseAdmin).catch(console.error);
+
     const { data, error } = await supabaseAdmin
       .from("appointments")
       .select("*, service:services(name,name_ar)")
