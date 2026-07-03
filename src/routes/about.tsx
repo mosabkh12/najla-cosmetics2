@@ -28,7 +28,7 @@ function AboutPage() {
     <section className="min-h-[calc(100vh-160px)] bg-background">
       {/* Hero section */}
       <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-10 sm:py-14">
-        <div className="grid gap-6 md:gap-10 md:grid-cols-[1fr_1.1fr] md:items-center">
+        <div className="grid gap-6 md:gap-10 md:grid-cols-[1fr_1.1fr] md:items-center overflow-x-hidden">
           <Reveal direction="start">
             <div className="relative">
               <div className="aspect-[4/3] sm:aspect-[3/4] md:aspect-[4/5] max-h-[420px] md:max-h-[520px] overflow-hidden rounded-3xl border border-border/40"

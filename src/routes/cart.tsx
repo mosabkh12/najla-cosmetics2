@@ -55,6 +55,7 @@ function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 lg:gap-16 items-start">
 
           {/* ── Cart Items ── */}
+          <div className="overflow-x-hidden">
           <Reveal direction="start">
             <div>
               {/* Table header */}
@@ -121,6 +122,7 @@ function CartPage() {
               </div>
             </div>
           </Reveal>
+          </div>
 
           {/* ── Order Summary ── */}
           <Reveal direction="end" delay={2}>

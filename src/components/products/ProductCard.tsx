@@ -4,7 +4,7 @@ import { useI18n, pickLocalized } from "@/lib/i18n";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { checkFavorite, toggleFavorite } from "@/api/favorites/favorites";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export interface Product {
@@ -36,15 +36,42 @@ export function ProductCard({ product }: { product: Product }) {
     queryFn: () => checkFavorite({ data: { productId: product.id } }),
   });
 
-  const toggleFav = async () => {
-    if (!user) { toast.info(t("sign_in")); return; }
-    try {
-      await toggleFavorite({ data: { productId: product.id } });
-    } catch (e: any) {
+  const favMutation = useMutation({
+    mutationFn: () => toggleFavorite({ data: { productId: product.id } }),
+    onMutate: async () => {
+      if (!user) return;
+      const favKey = ["favorite", product.id, user.id];
+      const listKey = ["favorites", user.id];
+      await Promise.all([qc.cancelQueries({ queryKey: favKey }), qc.cancelQueries({ queryKey: listKey })]);
+
+      const prevFav = qc.getQueryData<boolean>(favKey);
+      const prevList = qc.getQueryData<any[]>(listKey);
+      const nextFav = !prevFav;
+
+      qc.setQueryData(favKey, nextFav);
+      qc.setQueryData<any[]>(listKey, (old = []) =>
+        nextFav ? [...old, product] : old.filter((p) => p.id !== product.id),
+      );
+
+      return { prevFav, prevList, favKey, listKey };
+    },
+    onError: (e: any, _vars, ctx) => {
+      if (ctx) {
+        qc.setQueryData(ctx.favKey, ctx.prevFav);
+        qc.setQueryData(ctx.listKey, ctx.prevList);
+      }
       toast.error(e.message);
-    }
-    qc.invalidateQueries({ queryKey: ["favorite", product.id, user.id] });
-    qc.invalidateQueries({ queryKey: ["favorites", user.id] });
+    },
+    onSettled: () => {
+      if (!user) return;
+      qc.invalidateQueries({ queryKey: ["favorite", product.id, user.id] });
+      qc.invalidateQueries({ queryKey: ["favorites", user.id] });
+    },
+  });
+
+  const toggleFav = () => {
+    if (!user) { toast.info(t("sign_in")); return; }
+    favMutation.mutate();
   };
 
   const addToCart = () => {

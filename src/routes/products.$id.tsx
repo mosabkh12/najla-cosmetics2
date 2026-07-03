@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Heart, Minus, Plus, Truck, Sparkles, ShieldCheck, Award, Star, ChevronLeft } from "lucide-react";
 import { getProductById, getProductImages, getRelatedProducts } from "@/api/products/products";
@@ -46,15 +46,44 @@ function ProductDetailPage() {
     queryFn: async () => (await getRelatedProducts({ data: { id, category: product!.category } })) as Product[],
   });
 
-  const toggleFav = async () => {
-    if (!user) { toast.info(t("sign_in")); return; }
-    try {
-      await toggleFavorite({ data: { productId: id } });
-    } catch (e: any) {
+  const favMutation = useMutation({
+    mutationFn: () => toggleFavorite({ data: { productId: id } }),
+    onMutate: async () => {
+      if (!user) return;
+      const favKey = ["favorite", id, user.id];
+      const listKey = ["favorites", user.id];
+      await Promise.all([qc.cancelQueries({ queryKey: favKey }), qc.cancelQueries({ queryKey: listKey })]);
+
+      const prevFav = qc.getQueryData<boolean>(favKey);
+      const prevList = qc.getQueryData<any[]>(listKey);
+      const nextFav = !prevFav;
+
+      qc.setQueryData(favKey, nextFav);
+      if (product) {
+        qc.setQueryData<any[]>(listKey, (old = []) =>
+          nextFav ? [...old, product] : old.filter((p) => p.id !== id),
+        );
+      }
+
+      return { prevFav, prevList, favKey, listKey };
+    },
+    onError: (e: any, _vars, ctx) => {
+      if (ctx) {
+        qc.setQueryData(ctx.favKey, ctx.prevFav);
+        qc.setQueryData(ctx.listKey, ctx.prevList);
+      }
       toast.error(e.message);
-    }
-    qc.invalidateQueries({ queryKey: ["favorite", id, user.id] });
-    qc.invalidateQueries({ queryKey: ["favorites", user.id] });
+    },
+    onSettled: () => {
+      if (!user) return;
+      qc.invalidateQueries({ queryKey: ["favorite", id, user.id] });
+      qc.invalidateQueries({ queryKey: ["favorites", user.id] });
+    },
+  });
+
+  const toggleFav = () => {
+    if (!user) { toast.info(t("sign_in")); return; }
+    favMutation.mutate();
   };
 
   if (isLoading) {

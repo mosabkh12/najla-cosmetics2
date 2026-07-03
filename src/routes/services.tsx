@@ -100,7 +100,7 @@ function ServicesPage() {
       {/* ═══════════ First Visit Guide ═══════════ */}
       <div className="bg-surface">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-24">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center overflow-x-hidden">
             <Reveal direction="start">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">

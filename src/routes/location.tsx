@@ -28,7 +28,7 @@ function LocationPage() {
           </div>
         </Reveal>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2 md:items-stretch">
+        <div className="mt-10 grid gap-6 md:grid-cols-2 md:items-stretch overflow-x-hidden">
           {/* Map */}
           <Reveal direction="start">
             <div className="overflow-hidden rounded-3xl min-h-[300px] md:min-h-[500px] h-full"

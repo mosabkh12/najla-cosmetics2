@@ -139,7 +139,7 @@ function AdminLayout() {
 
       {/* Mobile sheet */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side={lang === "ar" ? "right" : "left"} className="w-[280px] p-0">
+        <SheetContent side={lang === "en" ? "left" : "right"} className="w-[280px] p-0">
           <SheetTitle className="sr-only">{L("תפריט ניהול", "قائمة الإدارة", "Admin Menu")}</SheetTitle>
           <NavContent onNavigate={() => setMobileOpen(false)} />
         </SheetContent>

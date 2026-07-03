@@ -71,6 +71,8 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
     ] as any[];
   }, [settings, todayDate]);
 
+  const [fetchKey, setFetchKey] = useState(0);
+
   useEffect(() => {
     if (!service || !dateStr) return;
     setTime("");
@@ -79,7 +81,7 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
       .then(setAvailable)
       .catch(() => setAvailable([]))
       .finally(() => setLoadingTimes(false));
-  }, [service, dateStr]);
+  }, [service, dateStr, fetchKey]);
 
   useEffect(() => {
     if (user) {
@@ -90,7 +92,7 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
   }, [user]);
 
   useEffect(() => {
-    if (open) setStep(1);
+    if (open) { setStep(1); setFetchKey((k) => k + 1); }
   }, [open]);
 
   const handleDateSelect = useCallback((d: Date | undefined) => {

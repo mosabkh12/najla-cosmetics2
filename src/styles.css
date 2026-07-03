@@ -171,7 +171,24 @@
 ::-webkit-scrollbar-thumb { background: #615e57; border-radius: 10px; }
 
 /* ── Scroll reveal animations ── */
-html { scroll-behavior: smooth; }
+html, body { scroll-behavior: smooth; scrollbar-gutter: stable; }
+
+/* Safari fallback: keep scrollbar space reserved so opening a Select/Dialog
+   (which hides the scrollbar to lock scrolling) never shifts the page width */
+@supports not (scrollbar-gutter: stable) {
+  html { overflow-y: scroll; }
+}
+
+/* Radix (Select/Dialog) locks scroll by injecting margin/padding on <body>
+   to compensate for the scrollbar it hides. That compensation is redundant
+   now that scrollbar-gutter reserves the space permanently, and it's what
+   was shifting fixed-position elements (e.g. the navbar) on open/close. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  padding-top: 0 !important;
+}
 
 .reveal-base {
   opacity: 0;

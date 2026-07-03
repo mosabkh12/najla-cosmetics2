@@ -56,11 +56,17 @@ function Page() {
   };
 
   const toggle = async (r: any) => {
+    const key = ["admin-services"];
+    await qc.cancelQueries({ queryKey: key });
+    const prev = qc.getQueryData<any[]>(key);
+    qc.setQueryData<any[]>(key, (old = []) => old.map((s) => (s.id === r.id ? { ...s, is_active: !s.is_active } : s)));
     try {
       await toggleService({ data: { id: r.id, currentActive: r.is_active } });
-      refresh();
     } catch (e: any) {
+      qc.setQueryData(key, prev);
       toast.error(e.message);
+    } finally {
+      refresh();
     }
   };
 

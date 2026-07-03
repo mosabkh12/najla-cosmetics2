@@ -3,8 +3,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "../admin/middleware";
 import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
 
+const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 function toMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
+  if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return -1;
   return h * 60 + m;
 }
 
@@ -12,9 +16,12 @@ function fromMinutes(m: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
 
-function parseDate(date: string) {
+function parseDate(date: string): Date | null {
+  if (!DATE_RE.test(date)) return null;
   const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  const obj = new Date(y, m - 1, d);
+  if (obj.getFullYear() !== y || obj.getMonth() !== m - 1 || obj.getDate() !== d) return null;
+  return obj;
 }
 
 interface ResolvedDay {
@@ -34,7 +41,9 @@ async function loadDaySettings(supabaseAdmin: any, date: string): Promise<Resolv
     .maybeSingle();
 
   const weekly = (data?.weekly_hours ?? DEFAULT_WEEKLY) as Record<string, DayHours>;
-  const dayOfWeek = parseDate(date).getDay();
+  const dateObj = parseDate(date);
+  if (!dateObj) return null;
+  const dayOfWeek = dateObj.getDay();
   const day = weekly[String(dayOfWeek)];
 
   if (!day?.enabled) return null;
@@ -75,18 +84,20 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
       if (!inBreak) slots.push(fromMinutes(m));
     }
 
+    // Check ALL services for cross-service conflicts (single-operator salon)
     const { data: appointments } = await supabaseAdmin
       .from("appointments")
-      .select("appointment_time")
-      .eq("service_id", serviceId)
+      .select("appointment_time, services!inner(duration_minutes)")
       .eq("appointment_date", date)
       .neq("status", "cancelled");
 
     if (settings.maxPerDay && (appointments ?? []).length >= settings.maxPerDay) return [];
 
-    const taken = (appointments ?? []).map((a) => {
+    const buf = settings.buffer;
+    const taken = (appointments ?? []).map((a: any) => {
       const start = toMinutes(String(a.appointment_time));
-      return { start: start - settings.buffer, end: start + duration + settings.buffer };
+      const aDuration = a.services?.duration_minutes ?? 30;
+      return { start: start - buf, end: start + aDuration + buf };
     });
 
     let available = slots.filter((slot) => {
@@ -97,13 +108,15 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
 
     const now = new Date();
     const dateObj = parseDate(date);
-    const isToday =
-      now.getFullYear() === dateObj.getFullYear() &&
-      now.getMonth() === dateObj.getMonth() &&
-      now.getDate() === dateObj.getDate();
-    if (isToday) {
-      const cutoff = now.getHours() * 60 + now.getMinutes() + 30;
-      available = available.filter((slot) => toMinutes(slot) >= cutoff);
+    if (dateObj) {
+      const isToday =
+        now.getFullYear() === dateObj.getFullYear() &&
+        now.getMonth() === dateObj.getMonth() &&
+        now.getDate() === dateObj.getDate();
+      if (isToday) {
+        const cutoff = now.getHours() * 60 + now.getMinutes() + 30;
+        available = available.filter((slot) => toMinutes(slot) >= cutoff);
+      }
     }
 
     return available;
@@ -128,10 +141,21 @@ export const createAppointment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    if (!data.customer_name.trim()) throw new Error("Name is required");
+    if (!data.customer_phone.trim()) throw new Error("Phone is required");
+    if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");
+    if (!DATE_RE.test(data.appointment_date)) throw new Error("Invalid date format");
+
+    const dateObj = parseDate(data.appointment_date);
+    if (!dateObj) throw new Error("Invalid date");
+
+    const requestedStart = toMinutes(data.appointment_time);
+    if (requestedStart < 0) throw new Error("Invalid time");
+
     const [{ data: service }, settings] = await Promise.all([
       supabaseAdmin
         .from("services")
-        .select("name, duration_minutes")
+        .select("name, duration_minutes, price")
         .eq("id", data.service_id)
         .eq("is_active", true)
         .single(),
@@ -141,7 +165,7 @@ export const createAppointment = createServerFn({ method: "POST" })
     if (!settings) throw new Error("CLOSED_DAY");
 
     const duration = service.duration_minutes;
-    const requestedStart = toMinutes(data.appointment_time);
+    const serverPrice = Number(service.price);
     const requestedEnd = requestedStart + duration;
 
     if (requestedStart < settings.open || requestedEnd > settings.close)
@@ -152,7 +176,6 @@ export const createAppointment = createServerFn({ method: "POST" })
     );
     if (inBreak) throw new Error("OUTSIDE_HOURS");
 
-    const dateObj = parseDate(data.appointment_date);
     const now = new Date();
     const isToday =
       now.getFullYear() === dateObj.getFullYear() &&
@@ -163,35 +186,41 @@ export const createAppointment = createServerFn({ method: "POST" })
     if (isToday && requestedStart < now.getHours() * 60 + now.getMinutes())
       throw new Error("PAST_TIME");
 
-    const { data: existing } = await supabaseAdmin
+    // Check ALL services on the same date for cross-service conflicts (single-operator salon)
+    const { data: allExisting } = await supabaseAdmin
       .from("appointments")
-      .select("appointment_time")
-      .eq("service_id", data.service_id)
+      .select("appointment_time, services!inner(duration_minutes)")
       .eq("appointment_date", data.appointment_date)
       .neq("status", "cancelled");
 
-    if (settings.maxPerDay && (existing ?? []).length >= settings.maxPerDay)
+    if (settings.maxPerDay && (allExisting ?? []).length >= settings.maxPerDay)
       throw new Error("TIME_TAKEN");
 
-    const conflict = (existing ?? []).some((a) => {
+    const buf = settings.buffer;
+    const conflict = (allExisting ?? []).some((a: any) => {
       const aStart = toMinutes(String(a.appointment_time));
-      return requestedStart < aStart + duration + settings.buffer &&
-             aStart < requestedEnd + settings.buffer;
+      const aDuration = a.services?.duration_minutes ?? 30;
+      const aEnd = aStart + aDuration;
+      return (requestedStart < aEnd + buf) && (aStart < requestedEnd + buf);
     });
     if (conflict) throw new Error("TIME_TAKEN");
 
-    const { error } = await context.supabase.from("appointments").insert({
+    // Insert via supabaseAdmin to avoid RLS mismatch and ensure atomicity
+    const { error } = await supabaseAdmin.from("appointments").insert({
       user_id: context.userId,
       service_id: data.service_id,
       appointment_date: data.appointment_date,
       appointment_time: data.appointment_time,
-      customer_name: data.customer_name,
-      customer_phone: data.customer_phone,
-      notes: data.notes,
+      customer_name: data.customer_name.trim(),
+      customer_phone: data.customer_phone.trim(),
+      notes: data.notes?.trim() || null,
       status: "pending",
-      total_price: data.total_price,
+      total_price: serverPrice,
     });
-    if (error) throw error;
+    if (error) {
+      if (error.code === "23505") throw new Error("TIME_TAKEN");
+      throw error;
+    }
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -204,14 +233,14 @@ export const createAppointment = createServerFn({ method: "POST" })
         "@/api/email/appointment-emails"
       );
       const details = {
-        customerName: data.customer_name,
-        customerPhone: data.customer_phone,
+        customerName: data.customer_name.trim(),
+        customerPhone: data.customer_phone.trim(),
         customerEmail: profile.email,
         serviceName: service.name,
         date: data.appointment_date,
         time: data.appointment_time,
         duration,
-        price: data.total_price,
+        price: serverPrice,
       };
       sendBookingConfirmation(details).catch(console.error);
       sendAdminBookingNotification(details).catch(console.error);
@@ -235,9 +264,20 @@ export const cancelAppointment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: { id: string }) => d)
   .handler(async ({ data: { id }, context }) => {
-    const { error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: appt } = await supabaseAdmin
       .from("appointments")
-      .update({ status: "cancelled" })
+      .select("status, user_id")
+      .eq("id", id)
+      .single();
+
+    if (!appt || appt.user_id !== context.userId) throw new Error("Not found");
+    if (appt.status === "completed" || appt.status === "cancelled")
+      throw new Error("Cannot cancel this appointment");
+
+    const { error } = await supabaseAdmin
+      .from("appointments")
+      .update({ status: "cancelled" as const })
       .eq("id", id)
       .eq("user_id", context.userId);
     if (error) throw error;

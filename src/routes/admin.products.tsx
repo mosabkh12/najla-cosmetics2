@@ -57,11 +57,17 @@ function Page() {
   };
 
   const toggle = async (r: any) => {
+    const key = ["admin-products"];
+    await qc.cancelQueries({ queryKey: key });
+    const prev = qc.getQueryData<any[]>(key);
+    qc.setQueryData<any[]>(key, (old = []) => old.map((p) => (p.id === r.id ? { ...p, is_active: !p.is_active } : p)));
     try {
       await toggleProduct({ data: { id: r.id, currentActive: r.is_active } });
-      refresh();
     } catch (e: any) {
+      qc.setQueryData(key, prev);
       toast.error(e.message);
+    } finally {
+      refresh();
     }
   };
 

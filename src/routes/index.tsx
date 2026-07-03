@@ -130,7 +130,7 @@ function Home() {
 
       {/* ═══════════ ABOUT ═══════════ */}
       <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
-        <div className="grid gap-10 lg:gap-20 md:grid-cols-2 md:items-center">
+        <div className="grid gap-10 lg:gap-20 md:grid-cols-2 md:items-center overflow-x-hidden">
           <Reveal direction="start">
             <div className="relative">
               <div className="aspect-[4/5] max-h-[600px] overflow-hidden rounded-3xl"
@@ -187,7 +187,7 @@ function Home() {
               <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] text-foreground">{t("location_title")}</h2>
             </div>
           </Reveal>
-          <div className="grid gap-8 md:grid-cols-2 md:items-stretch">
+          <div className="grid gap-8 md:grid-cols-2 md:items-stretch overflow-x-hidden">
             <Reveal direction="start">
               <div className="overflow-hidden rounded-3xl min-h-[350px] h-full"
                 style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
