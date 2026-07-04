@@ -435,25 +435,55 @@ export type Database = {
         Row: {
           id: string
           email: string
-          otp: string
+          otp_hash: string
+          attempt_count: number
           expires_at: string
-          used: boolean
+          used_at: string | null
           created_at: string
         }
         Insert: {
           id?: string
           email: string
-          otp: string
+          otp_hash: string
+          attempt_count?: number
           expires_at: string
-          used?: boolean
+          used_at?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           email?: string
-          otp?: string
+          otp_hash?: string
+          attempt_count?: number
           expires_at?: string
-          used?: boolean
+          used_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      signup_verification_tokens: {
+        Row: {
+          id: string
+          email: string
+          token_hash: string
+          expires_at: string
+          used_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          email: string
+          token_hash: string
+          expires_at: string
+          used_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          token_hash?: string
+          expires_at?: string
+          used_at?: string | null
           created_at?: string
         }
         Relationships: []
@@ -514,6 +544,39 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      create_order: {
+        Args: {
+          p_user_id: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_notes: string | null
+          p_delivery_method: string
+          p_items: Json
+        }
+        Returns: string
+      }
+      create_appointment: {
+        Args: {
+          p_user_id: string
+          p_service_id: string
+          p_appointment_date: string
+          p_appointment_time: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_notes: string | null
+        }
+        Returns: string
+      }
+      reschedule_appointment: {
+        Args: {
+          p_user_id: string
+          p_appointment_id: string
+          p_service_id: string
+          p_appointment_date: string
+          p_appointment_time: string
+        }
+        Returns: string
       }
     }
     Enums: {

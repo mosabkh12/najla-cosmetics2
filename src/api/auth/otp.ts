@@ -1,21 +1,44 @@
 import { createServerFn } from "@tanstack/react-start";
 import { randomInt } from "crypto";
 
+const OTP_TTL_MS = 10 * 60 * 1000;
+const TOKEN_TTL_MS = 10 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const MAX_SENDS_PER_HOUR = 5;
+const MAX_FAILED_ATTEMPTS = 5;
+
 export const sendOtp = createServerFn({ method: "POST" })
   .validator((d: { email: string }) => d)
   .handler(async ({ data: { email } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sendMail } = await import("@/api/email/mailer");
+    const { hashOtp } = await import("@/api/auth/crypto.server");
+
+    const emailLower = (email ?? "").toLowerCase().trim();
+    if (!emailLower) throw new Error("VERIFICATION_FAILED");
+
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recent } = await supabaseAdmin
+      .from("verification_otps")
+      .select("created_at")
+      .eq("email", emailLower)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false });
+
+    if (recent && recent.length > 0) {
+      const lastSentMs = new Date(recent[0].created_at).getTime();
+      if (Date.now() - lastSentMs < RESEND_COOLDOWN_MS) throw new Error("OTP_COOLDOWN");
+      if (recent.length >= MAX_SENDS_PER_HOUR) throw new Error("OTP_RATE_LIMITED");
+    }
 
     const otp = String(randomInt(100000, 999999));
-    const expires_at = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-    const emailLower = email.toLowerCase().trim();
+    const expires_at = new Date(Date.now() + OTP_TTL_MS).toISOString();
+    const otp_hash = hashOtp(emailLower, otp);
 
-    const { error: delError } = await supabaseAdmin.from("verification_otps").delete().eq("email", emailLower);
-    if (delError) throw new Error("Failed to prepare verification");
-
-    const { error: insError } = await supabaseAdmin.from("verification_otps").insert({ email: emailLower, otp, expires_at });
-    if (insError) throw new Error("Failed to create verification code");
+    const { error: insError } = await supabaseAdmin
+      .from("verification_otps")
+      .insert({ email: emailLower, otp_hash, expires_at });
+    if (insError) throw new Error("VERIFICATION_FAILED");
 
     await sendMail(
       emailLower,
@@ -34,35 +57,83 @@ export const sendOtp = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// Proves OTP possession server-side, then issues a short-lived,
+// single-use signup verification token. Nothing about "verified" is
+// ever trusted from the browser — every check here is against
+// database state keyed by the email the OTP was actually issued to.
 export const verifyOtp = createServerFn({ method: "POST" })
   .validator((d: { email: string; otp: string }) => d)
   .handler(async ({ data: { email, otp } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const emailLower = email.toLowerCase().trim();
+    const { hashOtp, hashToken, generateToken } = await import("@/api/auth/crypto.server");
 
-    const { data, error } = await supabaseAdmin
+    const emailLower = (email ?? "").toLowerCase().trim();
+    const otpTrimmed = (otp ?? "").trim();
+    if (!emailLower || !/^\d{6}$/.test(otpTrimmed)) throw new Error("INVALID_OTP");
+
+    const otpHash = hashOtp(emailLower, otpTrimmed);
+
+    const { data: candidate } = await supabaseAdmin
       .from("verification_otps")
-      .select("*")
+      .select("id, otp_hash, attempt_count")
       .eq("email", emailLower)
-      .eq("otp", otp)
-      .eq("used", false)
-      .gte("expires_at", new Date().toISOString())
+      .is("used_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    if (error || !data) throw new Error("INVALID_OTP");
-
-    await supabaseAdmin.from("verification_otps").update({ used: true }).eq("id", data.id);
-
-    const { data: userData } = await supabaseAdmin.auth.admin.listUsers();
-    const user = userData?.users?.find((u) => u.email?.toLowerCase() === emailLower);
-    if (user) {
-      await supabaseAdmin
-        .from("profiles")
-        .update({ email_verified: true, email: emailLower })
-        .eq("id", user.id);
+    if (!candidate || candidate.attempt_count >= MAX_FAILED_ATTEMPTS) {
+      throw new Error("INVALID_OTP");
     }
 
-    return { success: true };
+    if (candidate.otp_hash !== otpHash) {
+      await supabaseAdmin
+        .from("verification_otps")
+        .update({ attempt_count: candidate.attempt_count + 1 })
+        .eq("id", candidate.id);
+      throw new Error("INVALID_OTP");
+    }
+
+    // Atomic claim: the WHERE used_at IS NULL condition means only one
+    // concurrent request can ever successfully mark this row used,
+    // even if two requests race with the same valid code.
+    const { data: claimed } = await supabaseAdmin
+      .from("verification_otps")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", candidate.id)
+      .is("used_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (!claimed) throw new Error("INVALID_OTP");
+
+    // Existing account re-verifying its email during login (not a new
+    // signup) — mark it verified directly; no signup token is needed
+    // for this path since adminSignUp is never called.
+    const { data: existingProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", emailLower)
+      .maybeSingle();
+
+    if (existingProfile) {
+      await supabaseAdmin.from("profiles").update({ email_verified: true }).eq("id", existingProfile.id);
+    }
+
+    // Issue the one-time signup verification token. Only its hash is
+    // stored; the raw value is returned to the browser exactly once,
+    // for immediate, single use by adminSignUp.
+    const token = generateToken();
+    const tokenHash = hashToken(token);
+    const tokenExpiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString();
+
+    const { error: tokenError } = await supabaseAdmin
+      .from("signup_verification_tokens")
+      .insert({ email: emailLower, token_hash: tokenHash, expires_at: tokenExpiresAt });
+    if (tokenError) throw new Error("VERIFICATION_FAILED");
+
+    return { success: true, verificationToken: token };
   });
 
 export const checkVerified = createServerFn({ method: "GET" })

@@ -21,6 +21,14 @@ export const saveService = createServerFn({ method: "POST" })
   .validator((d: { id?: string; payload: Record<string, unknown> }) => d)
   .handler(async ({ data: { id, payload } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
+
+    let previousImageUrl: string | null = null;
+    if (id) {
+      const { data } = await supabaseAdmin.from("services").select("image_url").eq("id", id).maybeSingle();
+      previousImageUrl = data?.image_url ?? null;
+    }
+
     const clean = {
       name: String(payload.name ?? ""),
       category: String(payload.category ?? ""),
@@ -36,6 +44,11 @@ export const saveService = createServerFn({ method: "POST" })
       ? await supabaseAdmin.from("services").update(clean).eq("id", id)
       : await supabaseAdmin.from("services").insert(clean);
     if (op.error) throw op.error;
+
+    if (previousImageUrl && previousImageUrl !== clean.image_url) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, previousImageUrl);
+    }
+
     return { success: true };
   });
 
@@ -54,7 +67,16 @@ export const deleteService = createServerFn({ method: "POST" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data: { id } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
+
+    const { data: existing } = await supabaseAdmin.from("services").select("image_url").eq("id", id).maybeSingle();
+
     const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
     if (error) throw error;
+
+    if (existing?.image_url) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, existing.image_url);
+    }
+
     return { success: true };
   });

@@ -20,6 +20,15 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ISRAELI_PHONE_RE = /^05\d{8}$/;
 const HAS_LETTER = /[\p{L}]/u;
 
+const OTP_ERROR_MAP: Record<string, string> = {
+  INVALID_OTP: "err_otp_invalid",
+  OTP_COOLDOWN: "err_otp_cooldown",
+  OTP_RATE_LIMITED: "err_otp_rate_limited",
+  VERIFICATION_REQUIRED: "err_verification_required",
+  SIGNUP_FAILED: "err_signup_failed",
+  VERIFICATION_FAILED: "err_verification_failed",
+};
+
 function AuthPage() {
   const { t, dir } = useI18n();
   const { user } = useAuth();
@@ -94,7 +103,19 @@ function AuthPage() {
     try {
       const { verified } = await checkVerified({ data: { userId: authData.user.id } });
       if (!verified) {
-        await triggerOtp(email);
+        try {
+          await triggerOtp(email);
+        } catch (otpErr: any) {
+          // A code may already be pending (cooldown) — the existing
+          // code is still valid, so show the entry screen anyway.
+          if (otpErr.message === "OTP_COOLDOWN") {
+            setOtpEmail(email);
+            setOtpDigits(["", "", "", "", "", ""]);
+            setOtpError("");
+          } else {
+            toast.error(t(OTP_ERROR_MAP[otpErr.message] ?? "err_verification_failed"));
+          }
+        }
         setBusy(false);
         return;
       }
@@ -130,7 +151,7 @@ function AuthPage() {
       await triggerOtp(emailLower);
     } catch (e: any) {
       setPendingSignup(null);
-      toast.error(e.message);
+      toast.error(t(OTP_ERROR_MAP[e.message] ?? "err_verification_failed"));
     }
     setBusy(false);
   };
@@ -141,7 +162,7 @@ function AuthPage() {
     setOtpBusy(true);
     setOtpError("");
     try {
-      await verifyOtp({ data: { email: otpEmail!, otp: code } });
+      const { verificationToken } = await verifyOtp({ data: { email: otpEmail!, otp: code } });
 
       if (pendingSignup) {
         await adminSignUp({
@@ -150,6 +171,7 @@ function AuthPage() {
             password: pendingSignup.password,
             full_name: pendingSignup.name,
             phone: pendingSignup.phone,
+            verification_token: verificationToken,
           },
         });
         const { error } = await supabase.auth.signInWithPassword({
@@ -164,7 +186,7 @@ function AuthPage() {
       setOtpEmail(null);
       navigate({ to: "/profile" });
     } catch (e: any) {
-      setOtpError(e.message === "INVALID_OTP" ? t("err_otp_invalid") : e.message);
+      setOtpError(t(OTP_ERROR_MAP[e.message] ?? "err_verification_failed"));
     }
     setOtpBusy(false);
   };
@@ -177,7 +199,7 @@ function AuthPage() {
       toast.success(t("verify_resent"));
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError("");
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(t(OTP_ERROR_MAP[e.message] ?? "err_verification_failed")); }
     setResending(false);
   };
 

@@ -17,6 +17,13 @@ export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
 });
 
+const ORDER_ERROR_MAP: Record<string, string> = {
+  OUT_OF_STOCK: "out_of_stock",
+  PRODUCT_NOT_AVAILABLE: "order_product_unavailable",
+  INVALID_ORDER: "order_invalid",
+  ORDER_CREATION_FAILED: "order_creation_failed",
+};
+
 function CheckoutPage() {
   const { t } = useI18n();
   const { user, loading } = useAuth();
@@ -53,13 +60,9 @@ function CheckoutPage() {
           customer_phone: phone,
           notes: notes || null,
           delivery_method: delivery,
-          subtotal,
           items: items.map((it) => ({
             product_id: it.product_id,
-            product_name: it.name,
             quantity: it.quantity,
-            unit_price: it.price,
-            total_price: it.price * it.quantity,
           })),
         },
       });
@@ -67,7 +70,8 @@ function CheckoutPage() {
       clear();
       navigate({ to: "/profile" });
     } catch (e: any) {
-      toast.error(e.message ?? "Order failed");
+      const key = ORDER_ERROR_MAP[e.message];
+      toast.error(key ? t(key) : t("order_creation_failed"));
     } finally {
       setBusy(false);
     }

@@ -16,6 +16,11 @@ const ERROR_MAP: Record<string, string> = {
   PAST_DATE: "booking_past_date",
   PAST_TIME: "booking_past_time",
   TIME_TAKEN: "booking_time_taken",
+  SERVICE_NOT_AVAILABLE: "booking_service_unavailable",
+  INVALID_SLOT_TIME: "booking_invalid_slot",
+  NOT_FOUND: "reschedule_not_eligible",
+  NOT_RESCHEDULABLE: "reschedule_not_eligible",
+  RESCHEDULE_FAILED: "reschedule_failed",
 };
 
 function fmtDate(d: Date): string {

@@ -1,14 +1,23 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { DirectionProvider } from "@radix-ui/react-direction";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/sonner";
+
+// Radix UI primitives (Select, RadioGroup, Dialog, etc.) don't inherit the
+// document's dir="rtl" automatically — without this, they silently render
+// LTR internals (item order, animations) regardless of the page language.
+function RadixDirectionSync({ children }: { children: ReactNode }) {
+  const { dir } = useI18n();
+  return <DirectionProvider dir={dir}>{children}</DirectionProvider>;
+}
 
 function NotFoundComponent() {
   return (
@@ -75,16 +84,18 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <AuthProvider>
-          <CartProvider>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1 pt-20"><Outlet /></main>
-              <Footer />
-              <Toaster position="top-center" />
-            </div>
-          </CartProvider>
-        </AuthProvider>
+        <RadixDirectionSync>
+          <AuthProvider>
+            <CartProvider>
+              <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1 pt-20"><Outlet /></main>
+                <Footer />
+                <Toaster position="top-center" />
+              </div>
+            </CartProvider>
+          </AuthProvider>
+        </RadixDirectionSync>
       </I18nProvider>
     </QueryClientProvider>
   );

@@ -22,6 +22,10 @@ const ERROR_MAP: Record<string, string> = {
   PAST_TIME: "booking_past_time",
   TIME_TAKEN: "booking_time_taken",
   MAX_APPOINTMENTS_REACHED: "booking_max_reached",
+  SERVICE_NOT_AVAILABLE: "booking_service_unavailable",
+  INVALID_SLOT_TIME: "booking_invalid_slot",
+  INVALID_INPUT: "booking_fields_required",
+  BOOKING_FAILED: "booking_failed",
 };
 
 function fmtDate(d: Date): string {
@@ -117,7 +121,6 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
           customer_name: name.trim(),
           customer_phone: phone.trim(),
           notes: notes.trim() || null,
-          total_price: service.price,
         },
       });
       toast.success(t("booking_success"));

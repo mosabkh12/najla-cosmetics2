@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { getSettings, saveSettings } from "@/api/settings/settings";
+import { uploadAdminImage } from "@/api/storage/storage";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,16 +14,45 @@ import { getMapEmbedSrc, getFindOnMapsUrl, isValidLatitude, isValidLongitude } f
 
 export const Route = createFileRoute("/admin/settings")({ component: Page });
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const UPLOAD_ERROR_MAP: Record<string, string> = {
+  INVALID_FILE_TYPE: "Please select a JPEG, PNG, or WEBP image",
+  FILE_TOO_LARGE: "Image must be under 5MB",
+  INVALID_FOLDER: "Upload failed",
+  INVALID_FILE: "Please select a valid image file",
+  UPLOAD_FAILED: "Upload failed, please try again",
+};
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Uploads go through the requireAdmin-protected uploadAdminImage server
+// function — the browser never writes to Supabase Storage directly.
 async function uploadFile(file: File, folder: string): Promise<string | null> {
-  const ext = file.name.split(".").pop() || "jpg";
-  const name = `${folder}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("images").upload(name, file, { upsert: true });
-  if (error) {
-    toast.error(error.message);
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    toast.error(UPLOAD_ERROR_MAP.INVALID_FILE_TYPE);
     return null;
   }
-  const { data } = supabase.storage.from("images").getPublicUrl(name);
-  return data.publicUrl;
+  if (file.size > MAX_FILE_SIZE) {
+    toast.error(UPLOAD_ERROR_MAP.FILE_TOO_LARGE);
+    return null;
+  }
+  try {
+    const base64 = await fileToBase64(file);
+    const { publicUrl } = await uploadAdminImage({ data: { folder, contentType: file.type, base64 } });
+    return publicUrl;
+  } catch (e: any) {
+    toast.error(UPLOAD_ERROR_MAP[e.message] ?? "Upload failed, please try again");
+    return null;
+  }
 }
 
 function ImageUpload({ label, value, onChange }: { label: string; value: string; onChange: (url: string) => void }) {
@@ -34,8 +63,8 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      toast.error("Please select an image or video file");
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error(UPLOAD_ERROR_MAP.INVALID_FILE_TYPE);
       return;
     }
 
@@ -84,7 +113,7 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
         />
       </div>
 
-      <input ref={inputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
     </div>
   );
 }

@@ -7,6 +7,22 @@ const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const HISTORY_RETENTION_DAYS = 14;
 
+// Prefixes the create_appointment()/reschedule_appointment() RPCs
+// raise on validation failure — mapped to clean, translatable codes so
+// raw Postgres error text never reaches the browser.
+const APPOINTMENT_ERROR_CODES = [
+  "MAX_APPOINTMENTS_REACHED",
+  "SERVICE_NOT_AVAILABLE",
+  "CLOSED_DAY",
+  "OUTSIDE_HOURS",
+  "PAST_DATE",
+  "PAST_TIME",
+  "TIME_TAKEN",
+  "INVALID_SLOT_TIME",
+  "INVALID_INPUT",
+];
+const RESCHEDULE_ERROR_CODES = [...APPOINTMENT_ERROR_CODES, "NOT_FOUND", "NOT_RESCHEDULABLE"];
+
 // Best-effort cleanup: permanently deletes completed/cancelled appointments
 // older than the retention window. Runs opportunistically on every read so
 // it's enforced even without a working DB-level cron (see the accompanying
@@ -38,6 +54,27 @@ function parseDate(date: string): Date | null {
   const obj = new Date(y, m - 1, d);
   if (obj.getFullYear() !== y || obj.getMonth() !== m - 1 || obj.getDate() !== d) return null;
   return obj;
+}
+
+// Israel-local "now", used for presentation-sensitive checks (e.g. which
+// slots still look bookable today). Authoritative past-date/time
+// enforcement happens inside the create_appointment/reschedule_appointment
+// RPCs themselves, using the same Asia/Jerusalem timezone.
+function nowInJerusalem(): { dateStr: string; minutes: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)!.value;
+  return {
+    dateStr: `${get("year")}-${get("month")}-${get("day")}`,
+    minutes: Number(get("hour")) * 60 + Number(get("minute")),
+  };
 }
 
 interface ResolvedDay {
@@ -80,6 +117,9 @@ async function loadDaySettings(supabaseAdmin: any, date: string): Promise<Resolv
   };
 }
 
+// Read-only slot listing for the UI — not authoritative. The
+// create_appointment/reschedule_appointment RPCs re-validate everything
+// against the database at booking time regardless of what this returns.
 export const getAvailableTimes = createServerFn({ method: "GET" })
   .validator((d: { serviceId: string; date: string; excludeAppointmentId?: string }) => d)
   .handler(async ({ data: { serviceId, date, excludeAppointmentId } }) => {
@@ -124,17 +164,10 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
       return !taken.some((t) => start < t.end && t.start < end);
     });
 
-    const now = new Date();
-    const dateObj = parseDate(date);
-    if (dateObj) {
-      const isToday =
-        now.getFullYear() === dateObj.getFullYear() &&
-        now.getMonth() === dateObj.getMonth() &&
-        now.getDate() === dateObj.getDate();
-      if (isToday) {
-        const cutoff = now.getHours() * 60 + now.getMinutes() + 30;
-        available = available.filter((slot) => toMinutes(slot) >= cutoff);
-      }
+    const { dateStr: todayStr, minutes: nowMinutes } = nowInJerusalem();
+    if (date === todayStr) {
+      const cutoff = nowMinutes + 30;
+      available = available.filter((slot) => toMinutes(slot) >= cutoff);
     }
 
     return available;
@@ -143,6 +176,20 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
 const VALID_STATUSES = ["pending", "confirmed", "completed", "cancelled"] as const;
 type AppointmentStatus = (typeof VALID_STATUSES)[number];
 
+// Admin-only status transitions. completed/cancelled are terminal (also
+// enforced at the database level, see check_appointment_status_transition
+// in the accompanying migration, as a backstop beneath this allowlist).
+const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  pending: ["confirmed", "completed", "cancelled"],
+  confirmed: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
+// The browser may only ever specify WHAT it wants (service_id, date,
+// time) and its own customer details. Duration, price, availability,
+// and overlap validation all happen inside the create_appointment()
+// database function — never trusted from the client.
 export const createAppointment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
@@ -153,119 +200,53 @@ export const createAppointment = createServerFn({ method: "POST" })
       customer_name: string;
       customer_phone: string;
       notes: string | null;
-      total_price: number;
     }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    if (!data.customer_name.trim()) throw new Error("Name is required");
-    if (!data.customer_phone.trim()) throw new Error("Phone is required");
+    const customerName = (data.customer_name ?? "").trim();
+    const customerPhone = (data.customer_phone ?? "").trim();
+    if (!customerName) throw new Error("Name is required");
+    if (!customerPhone) throw new Error("Phone is required");
     if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");
     if (!DATE_RE.test(data.appointment_date)) throw new Error("Invalid date format");
 
-    const dateObj = parseDate(data.appointment_date);
-    if (!dateObj) throw new Error("Invalid date");
-
-    const requestedStart = toMinutes(data.appointment_time);
-    if (requestedStart < 0) throw new Error("Invalid time");
-
-    const { count: activeCount } = await supabaseAdmin
-      .from("appointments")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
-      .in("status", ["pending", "confirmed"]);
-    if ((activeCount ?? 0) >= 2) throw new Error("MAX_APPOINTMENTS_REACHED");
-
-    const [{ data: service }, settings] = await Promise.all([
-      supabaseAdmin
-        .from("services")
-        .select("name, duration_minutes, price")
-        .eq("id", data.service_id)
-        .eq("is_active", true)
-        .single(),
-      loadDaySettings(supabaseAdmin, data.appointment_date),
-    ]);
-    if (!service) throw new Error("Service not found");
-    if (!settings) throw new Error("CLOSED_DAY");
-
-    const duration = service.duration_minutes;
-    const serverPrice = Number(service.price);
-    const requestedEnd = requestedStart + duration;
-
-    if (requestedStart < settings.open || requestedEnd > settings.close)
-      throw new Error("OUTSIDE_HOURS");
-
-    const inBreak = settings.breaks.some(
-      (b) => requestedStart < b.end && requestedEnd > b.start,
-    );
-    if (inBreak) throw new Error("OUTSIDE_HOURS");
-
-    const now = new Date();
-    const isToday =
-      now.getFullYear() === dateObj.getFullYear() &&
-      now.getMonth() === dateObj.getMonth() &&
-      now.getDate() === dateObj.getDate();
-    if (dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
-      throw new Error("PAST_DATE");
-    if (isToday && requestedStart < now.getHours() * 60 + now.getMinutes())
-      throw new Error("PAST_TIME");
-
-    // Check ALL services on the same date for cross-service conflicts (single-operator salon)
-    const { data: allExisting } = await supabaseAdmin
-      .from("appointments")
-      .select("appointment_time, services!inner(duration_minutes)")
-      .eq("appointment_date", data.appointment_date)
-      .neq("status", "cancelled");
-
-    if (settings.maxPerDay && (allExisting ?? []).length >= settings.maxPerDay)
-      throw new Error("TIME_TAKEN");
-
-    const buf = settings.buffer;
-    const conflict = (allExisting ?? []).some((a: any) => {
-      const aStart = toMinutes(String(a.appointment_time));
-      const aDuration = a.services?.duration_minutes ?? 30;
-      const aEnd = aStart + aDuration;
-      return (requestedStart < aEnd + buf) && (aStart < requestedEnd + buf);
+    const { data: appointmentId, error } = await supabaseAdmin.rpc("create_appointment", {
+      p_user_id: context.userId,
+      p_service_id: data.service_id,
+      p_appointment_date: data.appointment_date,
+      p_appointment_time: data.appointment_time,
+      p_customer_name: customerName,
+      p_customer_phone: customerPhone,
+      p_notes: data.notes?.trim() || null,
     });
-    if (conflict) throw new Error("TIME_TAKEN");
 
-    // Insert via supabaseAdmin to avoid RLS mismatch and ensure atomicity
-    const { error } = await supabaseAdmin.from("appointments").insert({
-      user_id: context.userId,
-      service_id: data.service_id,
-      appointment_date: data.appointment_date,
-      appointment_time: data.appointment_time,
-      customer_name: data.customer_name.trim(),
-      customer_phone: data.customer_phone.trim(),
-      notes: data.notes?.trim() || null,
-      status: "pending",
-      total_price: serverPrice,
-    });
-    if (error) {
-      if (error.code === "23505") throw new Error("TIME_TAKEN");
-      throw error;
+    if (error || !appointmentId) {
+      const code = APPOINTMENT_ERROR_CODES.find((c) => error?.message?.startsWith(c));
+      if (code) throw new Error(code);
+      console.error("[createAppointment] failed for user", context.userId, error);
+      throw new Error("BOOKING_FAILED");
     }
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const [{ data: service }, { data: profile }] = await Promise.all([
+      supabaseAdmin.from("services").select("name, duration_minutes, price").eq("id", data.service_id).maybeSingle(),
+      supabaseAdmin.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
+    ]);
 
-    if (profile?.email) {
+    if (profile?.email && service) {
       const { sendBookingConfirmation, sendAdminBookingNotification } = await import(
         "@/api/email/appointment-emails"
       );
       const details = {
-        customerName: data.customer_name.trim(),
-        customerPhone: data.customer_phone.trim(),
+        customerName,
+        customerPhone,
         customerEmail: profile.email,
         serviceName: service.name,
         date: data.appointment_date,
         time: data.appointment_time,
-        duration,
-        price: serverPrice,
+        duration: service.duration_minutes,
+        price: Number(service.price),
       };
       sendBookingConfirmation(details).catch(console.error);
       sendAdminBookingNotification(details).catch(console.error);
@@ -349,6 +330,10 @@ export const cancelAppointment = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// Same authoritative validation as createAppointment: the browser
+// specifies WHAT it wants (which appointment, new service/date/time);
+// ownership, eligibility, availability, and price/duration all come
+// from reschedule_appointment() in the database.
 export const rescheduleAppointment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
@@ -357,113 +342,43 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: existing } = await supabaseAdmin
-      .from("appointments")
-      .select("status, user_id, customer_name, customer_phone")
-      .eq("id", data.id)
-      .single();
-    if (!existing || existing.user_id !== context.userId) throw new Error("Not found");
-    if (existing.status === "completed" || existing.status === "cancelled")
-      throw new Error("Cannot reschedule this appointment");
-
     if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");
     if (!DATE_RE.test(data.appointment_date)) throw new Error("Invalid date format");
 
-    const dateObj = parseDate(data.appointment_date);
-    if (!dateObj) throw new Error("Invalid date");
-
-    const requestedStart = toMinutes(data.appointment_time);
-    if (requestedStart < 0) throw new Error("Invalid time");
-
-    const [{ data: service }, settings] = await Promise.all([
-      supabaseAdmin
-        .from("services")
-        .select("name, duration_minutes, price")
-        .eq("id", data.service_id)
-        .eq("is_active", true)
-        .single(),
-      loadDaySettings(supabaseAdmin, data.appointment_date),
-    ]);
-    if (!service) throw new Error("Service not found");
-    if (!settings) throw new Error("CLOSED_DAY");
-
-    const duration = service.duration_minutes;
-    const serverPrice = Number(service.price);
-    const requestedEnd = requestedStart + duration;
-
-    if (requestedStart < settings.open || requestedEnd > settings.close)
-      throw new Error("OUTSIDE_HOURS");
-
-    const inBreak = settings.breaks.some(
-      (b) => requestedStart < b.end && requestedEnd > b.start,
-    );
-    if (inBreak) throw new Error("OUTSIDE_HOURS");
-
-    const now = new Date();
-    const isToday =
-      now.getFullYear() === dateObj.getFullYear() &&
-      now.getMonth() === dateObj.getMonth() &&
-      now.getDate() === dateObj.getDate();
-    if (dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
-      throw new Error("PAST_DATE");
-    if (isToday && requestedStart < now.getHours() * 60 + now.getMinutes())
-      throw new Error("PAST_TIME");
-
-    // Check all OTHER appointments on the same date for conflicts (excluding this one)
-    const { data: allExisting } = await supabaseAdmin
-      .from("appointments")
-      .select("appointment_time, services!inner(duration_minutes)")
-      .eq("appointment_date", data.appointment_date)
-      .neq("status", "cancelled")
-      .neq("id", data.id);
-
-    if (settings.maxPerDay && (allExisting ?? []).length >= settings.maxPerDay)
-      throw new Error("TIME_TAKEN");
-
-    const buf = settings.buffer;
-    const conflict = (allExisting ?? []).some((a: any) => {
-      const aStart = toMinutes(String(a.appointment_time));
-      const aDuration = a.services?.duration_minutes ?? 30;
-      const aEnd = aStart + aDuration;
-      return (requestedStart < aEnd + buf) && (aStart < requestedEnd + buf);
+    const { data: result, error } = await supabaseAdmin.rpc("reschedule_appointment", {
+      p_user_id: context.userId,
+      p_appointment_id: data.id,
+      p_service_id: data.service_id,
+      p_appointment_date: data.appointment_date,
+      p_appointment_time: data.appointment_time,
     });
-    if (conflict) throw new Error("TIME_TAKEN");
 
-    const { error } = await supabaseAdmin
-      .from("appointments")
-      .update({
-        service_id: data.service_id,
-        appointment_date: data.appointment_date,
-        appointment_time: data.appointment_time,
-        total_price: serverPrice,
-        status: "pending" as const,
-      })
-      .eq("id", data.id)
-      .eq("user_id", context.userId);
-    if (error) {
-      if (error.code === "23505") throw new Error("TIME_TAKEN");
-      throw error;
+    if (error || !result) {
+      const code = RESCHEDULE_ERROR_CODES.find((c) => error?.message?.startsWith(c));
+      if (code) throw new Error(code);
+      console.error("[rescheduleAppointment] failed for user", context.userId, error);
+      throw new Error("RESCHEDULE_FAILED");
     }
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", context.userId)
-      .maybeSingle();
+    const [{ data: appt }, { data: service }, { data: profile }] = await Promise.all([
+      supabaseAdmin.from("appointments").select("customer_name, customer_phone").eq("id", data.id).maybeSingle(),
+      supabaseAdmin.from("services").select("name, duration_minutes, price").eq("id", data.service_id).maybeSingle(),
+      supabaseAdmin.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
+    ]);
 
-    if (profile?.email) {
+    if (profile?.email && service && appt) {
       const { sendBookingConfirmation, sendAdminBookingNotification } = await import(
         "@/api/email/appointment-emails"
       );
       const details = {
-        customerName: existing.customer_name,
-        customerPhone: existing.customer_phone,
+        customerName: appt.customer_name,
+        customerPhone: appt.customer_phone,
         customerEmail: profile.email,
         serviceName: service.name,
         date: data.appointment_date,
         time: data.appointment_time,
-        duration,
-        price: serverPrice,
+        duration: service.duration_minutes,
+        price: Number(service.price),
       };
       sendBookingConfirmation(details).catch(console.error);
       sendAdminBookingNotification(details).catch(console.error);
@@ -492,13 +407,30 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
   .validator((d: { id: string; status: string }) => d)
   .handler(async ({ data: { id, status } }) => {
     if (!VALID_STATUSES.includes(status as AppointmentStatus))
-      throw new Error("Invalid status");
+      throw new Error("INVALID_STATUS");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: current, error: fetchError } = await supabaseAdmin
+      .from("appointments")
+      .select("status")
+      .eq("id", id)
+      .single();
+    if (fetchError || !current) throw new Error("APPOINTMENT_NOT_FOUND");
+
+    const currentStatus = current.status as AppointmentStatus;
+    const nextStatus = status as AppointmentStatus;
+    if (currentStatus !== nextStatus && !VALID_TRANSITIONS[currentStatus].includes(nextStatus)) {
+      throw new Error("INVALID_STATUS_TRANSITION");
+    }
+
     const { error } = await supabaseAdmin
       .from("appointments")
-      .update({ status: status as AppointmentStatus })
+      .update({ status: nextStatus })
       .eq("id", id);
-    if (error) throw error;
+    if (error) {
+      console.error("[updateAppointmentStatus] failed for appointment", id, error);
+      throw new Error("STATUS_UPDATE_FAILED");
+    }
 
     if (status !== "pending") {
       const { data: appt } = await supabaseAdmin

@@ -27,11 +27,34 @@ export const checkEmailAvailable = createServerFn({ method: "GET" })
     return { available: !exists };
   });
 
+// Only these fields may ever be changed by a customer through this
+// function. `role`, `email`, `email_verified`, `id`, `created_at`, and
+// `updated_at` are intentionally never accepted here — they're either
+// server-managed or security-sensitive (see the profiles_own_update RLS
+// policy removal in supabase/migrations for why this matters).
 export const updateProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: { full_name: string; phone: string }) => d)
   .handler(async ({ data: { full_name, phone }, context }) => {
-    const { error } = await context.supabase.from("profiles").update({ full_name, phone }).eq("id", context.userId);
-    if (error) throw error;
+    if (typeof full_name !== "string" || typeof phone !== "string") {
+      throw new Error("Invalid profile data");
+    }
+
+    const trimmedName = full_name.trim().slice(0, 255);
+    if (!trimmedName) throw new Error("Full name is required");
+
+    // Same normalization convention as checkPhoneAvailable — digits only.
+    const cleanedPhone = phone.replace(/\D/g, "").slice(0, 20);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ full_name: trimmedName, phone: cleanedPhone })
+      .eq("id", context.userId);
+
+    if (error) {
+      console.error("[updateProfile] failed for user", context.userId, error);
+      throw new Error("Could not update profile. Please try again.");
+    }
     return { success: true };
   });
