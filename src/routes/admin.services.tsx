@@ -42,7 +42,14 @@ function Page() {
     return name.toLowerCase().includes(q) || (s.category ?? "").toLowerCase().includes(q);
   });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["admin-services"] });
+  // The public services queries (index.tsx and services.tsx both read
+  // ["services","active"]) now carry a 120s staleTime, so without this an
+  // admin edit could keep showing stale data on the public site for up to
+  // that long.
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["admin-services"] });
+    qc.invalidateQueries({ queryKey: ["services"] });
+  };
 
   const save = async (values: any) => {
     try {

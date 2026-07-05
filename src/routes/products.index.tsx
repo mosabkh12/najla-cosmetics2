@@ -24,11 +24,13 @@ function ProductsPage() {
   const { data: products = [] } = useQuery({
     queryKey: ["products", "all"],
     queryFn: async () => (await getProducts()) as Product[],
+    staleTime: 120_000,
   });
 
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
+    staleTime: 300_000,
   });
 
   const categories = useMemo(() => ["all", ...Array.from(new Set(products.map((p) => p.category)))], [products]);

@@ -27,13 +27,17 @@ function ProductDetailPage() {
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", id],
     queryFn: () => getProductById({ data: { id } }),
+    staleTime: 120_000,
   });
 
   const { data: images = [] } = useQuery({
     queryKey: ["product-images", id],
     queryFn: () => getProductImages({ data: { productId: id } }),
+    staleTime: 120_000,
   });
 
+  // User-specific — must never share the long staleTime used for public
+  // product data above; keeps refetching per default (staleTime: 0).
   const { data: fav } = useQuery({
     queryKey: ["favorite", id, user?.id],
     enabled: !!user,
@@ -44,6 +48,7 @@ function ProductDetailPage() {
     queryKey: ["related-products", id, product?.category],
     enabled: !!product,
     queryFn: async () => (await getRelatedProducts({ data: { id, category: product!.category } })) as Product[],
+    staleTime: 120_000,
   });
 
   const favMutation = useMutation({

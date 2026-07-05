@@ -1,9 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
+
+// Fixed, honest 60s ceiling — no stale-while-revalidate (see products.ts
+// for the full rationale). Fully public, read-only, non-personalized data
+// (no auth middleware, never reads context.userId) — safe to shared-cache
+// regardless of caller session.
+//
+// Plain standard HTTP caching only — no custom edge cache, no purge API,
+// no external service. See CACHING.md.
+const PUBLIC_CACHE_HEADER = "public, max-age=60, s-maxage=60";
 
 export const getSettings = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("business_settings").select("*").maybeSingle();
+  setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
   return data;
 });
 

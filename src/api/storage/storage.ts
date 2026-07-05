@@ -52,6 +52,16 @@ export const uploadAdminImage = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.storage.from(IMAGES_BUCKET).upload(path, buffer, {
       contentType: data.contentType,
       upsert: false,
+      // Path is a server-generated random UUID that is never reused or
+      // overwritten (upsert: false, enforced above) — safe to cache for a
+      // full year. The Supabase Storage SDK only exposes the max-age
+      // portion of Cache-Control via this option (it emits
+      // `Cache-Control: max-age=<seconds>`); the bucket itself is
+      // read-public (see supabase/migrations security_hardening /
+      // secure_storage_images_bucket), which is what makes `public`
+      // effectively apply on the served object. Never reuse this long
+      // duration for any path that can be overwritten (upsert: true).
+      cacheControl: "31536000",
     });
 
     if (error) {
@@ -67,7 +77,7 @@ export const uploadAdminImage = createServerFn({ method: "POST" })
 // bucket, in one of the allowed folders, with a plain generated
 // filename — anything else (external URLs, other buckets, malformed
 // values, path traversal, empty segments) returns null and must never
-// be deleted. The prefix is derived from the actual configured
+// be deleted. The prefix is deriv  ed from the actual configured
 // SUPABASE_URL, not a generic "supabase.co" string match.
 function extractImagesBucketPath(url: string | null | undefined): string | null {
   if (!url || typeof url !== "string") return null;

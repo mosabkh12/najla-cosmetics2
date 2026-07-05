@@ -19,14 +19,18 @@ function ServicesPage() {
   const [active, setActive] = useState<Service | null>(null);
   const [cat, setCat] = useState<string>("all");
 
+  // Same key/staleTime as index.tsx's identical getServices() call, so both
+  // pages share one cache entry instead of fetching/caching it twice.
   const { data: services = [] } = useQuery({
-    queryKey: ["services", "all"],
+    queryKey: ["services", "active"],
     queryFn: async () => (await getServices()) as Service[],
+    staleTime: 120_000,
   });
 
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
+    staleTime: 300_000,
   });
 
   const categories = useMemo(() => ["all", ...Array.from(new Set(services.map((s) => s.category)))], [services]);

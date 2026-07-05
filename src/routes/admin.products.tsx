@@ -43,7 +43,17 @@ function Page() {
     return name.toLowerCase().includes(q) || (p.category ?? "").toLowerCase().includes(q);
   });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["admin-products"] });
+  // The public product queries (products.index.tsx: ["products","all"],
+  // index.tsx: ["products","featured"], products.$id.tsx: ["product", id])
+  // now carry a 120s staleTime, so without this they could keep showing
+  // stale data in the browser for up to that long after an admin edit.
+  // Partial key matching means ["products"] and ["product"] each invalidate
+  // every query keyed under them, including per-id detail queries.
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["admin-products"] });
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["product"] });
+  };
 
   const save = async (values: any) => {
     try {

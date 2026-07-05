@@ -33,19 +33,25 @@ function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Query keys/staleTime here intentionally match services.tsx, products.index.tsx,
+  // and products.$id.tsx exactly, so the same public data is shared across
+  // pages instead of being fetched and cached separately per route.
   const { data: services = [] } = useQuery({
-    queryKey: ["services"],
+    queryKey: ["services", "active"],
     queryFn: async () => (await getServices()) as Service[],
+    staleTime: 120_000,
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products", "featured"],
     queryFn: async () => (await getFeaturedProducts()) as Product[],
+    staleTime: 120_000,
   });
 
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
+    staleTime: 300_000,
   });
 
   return (

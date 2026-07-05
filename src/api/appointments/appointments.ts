@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "../admin/middleware";
 import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
@@ -123,6 +124,13 @@ async function loadDaySettings(supabaseAdmin: any, date: string): Promise<Resolv
 export const getAvailableTimes = createServerFn({ method: "GET" })
   .validator((d: { serviceId: string; date: string; excludeAppointmentId?: string }) => d)
   .handler(async ({ data: { serviceId, date, excludeAppointmentId } }) => {
+    // Explicit safety net: this is an unauthenticated GET endpoint (no
+    // requireSupabaseAuth), which otherwise looks exactly like the public
+    // products/services/settings endpoints — but booking availability
+    // changes with every appointment created/cancelled, so it must never
+    // be stored by a browser or shared CDN cache, even by accident.
+    setResponseHeader("Cache-Control", "no-store");
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: service }, settings] = await Promise.all([

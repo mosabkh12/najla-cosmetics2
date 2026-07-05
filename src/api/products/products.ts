@@ -1,15 +1,36 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
+
+// Fixed, honest 60s ceiling — no stale-while-revalidate. swr would let a
+// shared cache keep serving a stale copy for minutes after the 60s mark
+// while it refetches in the background; a hard s-maxage means any cache
+// respecting this header cannot serve it past 60s, period. Also carries
+// max-age so a private/browser cache (which ignores s-maxage) gets the
+// same 60s lifetime. These handlers take no auth-derived context (no
+// requireSupabaseAuth/requireAdmin middleware, never read context.userId),
+// so the response is identical for every caller regardless of session —
+// safe to mark `public` even though a logged-in browser's request may
+// still carry an Authorization header (irrelevant to the response). Set
+// only on the success path so an error response never gets tagged cacheable.
+//
+// This is plain standard HTTP caching only — no custom edge cache, no
+// purge API, no external service. Vercel's CDN (and any browser) honors
+// this header directly; freshness after an admin change is bounded by
+// this 60s ceiling. See CACHING.md.
+const PUBLIC_CACHE_HEADER = "public, max-age=60, s-maxage=60";
 
 export const getProducts = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("products").select("*").eq("is_active", true);
+  setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
   return data ?? [];
 });
 
 export const getFeaturedProducts = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("products").select("*").eq("is_active", true).order("created_at").limit(8);
+  setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
   return data ?? [];
 });
 
@@ -19,6 +40,7 @@ export const getProductById = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin.from("products").select("*").eq("id", id).single();
     if (error) throw error;
+    setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     return data;
   });
 
@@ -27,6 +49,7 @@ export const getProductImages = createServerFn({ method: "GET" })
   .handler(async ({ data: { productId } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin.from("product_images").select("*").eq("product_id", productId).order("sort_order");
+    setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     return data ?? [];
   });
 
@@ -35,6 +58,7 @@ export const getRelatedProducts = createServerFn({ method: "GET" })
   .handler(async ({ data: { id, category } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin.from("products").select("*").eq("is_active", true).eq("category", category).neq("id", id).limit(4);
+    setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     if (data && data.length < 4) {
       const { data: more } = await supabaseAdmin.from("products").select("*").eq("is_active", true).neq("id", id).neq("category", category).limit(4 - data.length);
       return [...data, ...(more ?? [])];
