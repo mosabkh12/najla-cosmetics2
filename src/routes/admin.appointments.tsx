@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAdminAppointments, updateAppointmentStatus } from "@/api/appointments/appointments";
 import type { AdminAppointmentRow } from "@/lib/api-types";
@@ -18,7 +18,13 @@ import { CalendarDays, Search, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/admin/appointments")({ component: Page });
 
-const STATUSES = ["pending", "confirmed", "completed", "cancelled"] as const;
+// Bookings are created directly as 'confirmed' — there's no admin
+// approval step, so the dashboard never offers 'pending'/'confirmed' as
+// something to filter by or set by hand; the only actions an admin ever
+// takes are marking an appointment completed or cancelled. Colors are
+// still kept for all 4 in case an older row is still in one of those
+// states, so its badge/dot render sensibly until it's moved forward.
+const SELECTABLE_STATUSES = ["completed", "cancelled"] as const;
 
 const statusColor: Record<string, string> = {
   pending: "bg-gold-deep/10 text-gold-deep border-gold-deep/20",
@@ -36,7 +42,7 @@ const statusDot: Record<string, string> = {
 const TIME_FILTERS = ["today", "week", "month", "all"] as const;
 type TimeFilter = (typeof TIME_FILTERS)[number];
 
-const STATUS_FILTERS = ["all", ...STATUSES] as const;
+const STATUS_FILTERS = ["all", ...SELECTABLE_STATUSES] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 // Every other date/time decision in this app (the booking RPCs,
@@ -71,16 +77,30 @@ function daysBetweenDateStrings(dateStr: string, fromStr: string): number {
 // means "what's coming up in the next 7 days", not "what happened in the
 // past 7 days" (the convention used for order history). "All" still
 // includes past appointments too, so nothing is ever hidden permanently.
-function isWithinTimeFilter(dateStr: string, filter: TimeFilter, todayStr: string): boolean {
+// "month" is the exception: it's a specific calendar month the admin
+// picks (can be a past month too), not a rolling forward window.
+function isWithinTimeFilter(
+  dateStr: string,
+  filter: TimeFilter,
+  todayStr: string,
+  selectedMonth: string,
+): boolean {
   if (filter === "all") return true;
+  if (filter === "month") return dateStr.slice(0, 7) === selectedMonth;
   const diff = daysBetweenDateStrings(dateStr, todayStr);
   if (filter === "today") return diff === 0;
-  const days = filter === "week" ? 7 : 30;
-  return diff >= 0 && diff < days;
+  return diff >= 0 && diff < 7;
+}
+
+function formatMonthLabel(key: string, lang: string): string {
+  const [y, m] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, 1);
+  const locale = lang === "ar" ? "ar" : lang === "en" ? "en-US" : "he-IL";
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
 }
 
 function Page() {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
   const [search, setSearch] = useState("");
@@ -95,8 +115,19 @@ function Page() {
   });
 
   const todayStr = jerusalemTodayStr();
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => todayStr.slice(0, 7));
+
+  // Every month that actually has an appointment, plus the currently
+  // selected one (so it's never missing from the dropdown even if it has
+  // 0 appointments yet, e.g. the current month right after a rollover).
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>(rows.map((a) => a.appointment_date.slice(0, 7)));
+    set.add(selectedMonth);
+    return Array.from(set).sort().reverse();
+  }, [rows, selectedMonth]);
+
   const timeFiltered = rows.filter((a) =>
-    isWithinTimeFilter(a.appointment_date, timeFilter, todayStr),
+    isWithinTimeFilter(a.appointment_date, timeFilter, todayStr, selectedMonth),
   );
 
   const statusCounts = STATUS_FILTERS.reduce<Record<string, number>>((acc, s) => {
@@ -143,14 +174,12 @@ function Page() {
   const timeFilterLabel: Record<TimeFilter, string> = {
     today: L("היום", "اليوم", "Today"),
     week: L("השבוע", "هذا الأسبوع", "This Week"),
-    month: L("החודש", "هذا الشهر", "This Month"),
+    month: L("חודש", "شهر", "Month"),
     all: L("הכל", "الكل", "All Time"),
   };
 
   const statusFilterLabel: Record<StatusFilter, string> = {
     all: L("הכל", "الكل", "All"),
-    pending: L("חדשים", "جديدة", "New"),
-    confirmed: L("מאושרים", "مؤكدة", "Confirmed"),
     completed: L("הושלמו", "مكتملة", "Completed"),
     cancelled: L("בוטלו", "ملغاة", "Cancelled"),
   };
@@ -218,6 +247,22 @@ function Page() {
             </button>
           ))}
         </div>
+        {timeFilter === "month" && (
+          <div className="mt-2.5">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="h-9 w-[180px] rounded-full border-border/30 text-[12px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableMonths.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {formatMonthLabel(m, lang)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </Reveal>
 
       {/* Status tabs */}
@@ -391,10 +436,21 @@ function Page() {
                               <span
                                 className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[a.status] ?? "bg-muted-foreground"}`}
                               />
-                              <SelectValue />
+                              {/* A pre-migration appointment can still be 'pending'/'confirmed'
+                                  — that's no longer a choice in the list below, so it wouldn't
+                                  match any item and would otherwise render blank. Supplying it
+                                  here as static text only kicks in for that legacy case; for
+                                  completed/cancelled the normal item-matched label still shows. */}
+                              <SelectValue>
+                                {SELECTABLE_STATUSES.includes(
+                                  a.status as (typeof SELECTABLE_STATUSES)[number],
+                                )
+                                  ? undefined
+                                  : t(`status_${a.status}`)}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              {STATUSES.map((s) => (
+                              {SELECTABLE_STATUSES.map((s) => (
                                 <SelectItem key={s} value={s}>
                                   <span className="flex items-center gap-2">
                                     <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />

@@ -133,8 +133,13 @@ function ProductDetailPage() {
     );
   }
 
-  const name = pickLocalized(lang, product.name, product.name_ar);
-  const desc = pickLocalized(lang, product.description, product.description_ar);
+  const name = pickLocalized(lang, product.name, product.name_ar, product.name_en);
+  const desc = pickLocalized(
+    lang,
+    product.description,
+    product.description_ar,
+    product.description_en,
+  );
   const outOfStock = product.stock_quantity <= 0;
 
   const allImages = [

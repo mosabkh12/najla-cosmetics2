@@ -121,11 +121,17 @@ export function BookingDialog({
     if (d) {
       setSelectedDate(d);
       setStep(2);
+      return;
     }
+    // react-day-picker's single-select mode fires onSelect(undefined) when the
+    // already-selected day is clicked again (its built-in toggle-to-deselect
+    // behavior) — a date is always required in this booking flow, so just
+    // keep the current selection and proceed rather than silently no-op'ing.
+    setStep(2);
   }, []);
 
   if (!service) return null;
-  const localized = pickLocalized(lang, service.name, service.name_ar);
+  const localized = pickLocalized(lang, service.name, service.name_ar, service.name_en);
   const Back = dir === "rtl" ? ChevronRight : ChevronLeft;
 
   const submit = async () => {

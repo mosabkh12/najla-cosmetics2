@@ -11,9 +11,11 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { getSettings } from "@/api/settings/settings";
+import { getAvailabilitySettings } from "@/api/slots/slots";
 import { useI18n } from "@/lib/i18n";
 import { Reveal } from "@/components/ScrollReveal";
 import { getMapEmbedSrc, getGoogleMapsDirectionsUrl, getWazeUrl } from "@/lib/location";
+import { formatWeeklyHours } from "@/lib/business-hours";
 
 export const Route = createFileRoute("/location")({
   head: () => ({ meta: [{ title: "Location — Najla Cosmetics" }] }),
@@ -21,11 +23,20 @@ export const Route = createFileRoute("/location")({
 });
 
 function LocationPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
   });
+  // No staleTime, on purpose: an admin closing/opening a day should show
+  // up here right away, not minutes later.
+  const { data: availability } = useQuery({
+    queryKey: ["availability-settings"],
+    queryFn: () => getAvailabilitySettings(),
+  });
+  const hoursLines = availability
+    ? formatWeeklyHours(availability.weekly_hours, lang, t("closed"))
+    : [];
 
   return (
     <section className="min-h-[calc(100vh-160px)] bg-background">
@@ -107,12 +118,11 @@ function LocationPage() {
                       {t("working_hours")}
                     </p>
                     <div className="mt-1 text-[15px] text-foreground space-y-0.5">
-                      <p>
-                        Sun–Thu: <span className="font-medium">09:00–19:00</span>
-                      </p>
-                      <p>
-                        Fri: <span className="font-medium">09:00–15:00</span>
-                      </p>
+                      {hoursLines.map((line, i) => (
+                        <p key={i}>
+                          {line.label}: <span className="font-medium">{line.text}</span>
+                        </p>
+                      ))}
                     </div>
                   </div>
                 </div>

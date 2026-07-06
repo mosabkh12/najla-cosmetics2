@@ -188,6 +188,12 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
 const VALID_STATUSES = ["pending", "confirmed", "completed", "cancelled"] as const;
 type AppointmentStatus = (typeof VALID_STATUSES)[number];
 
+// Bookings are created directly as 'confirmed' (see create_appointment RPC)
+// — there's no admin approval step, so the admin dashboard never needs to
+// set (or offer) 'pending'/'confirmed' again. The only two transitions an
+// admin ever makes by hand are marking an appointment done or cancelled.
+const ADMIN_SETTABLE_STATUSES = ["completed", "cancelled"] as const;
+
 // The browser may only ever specify WHAT it wants (service_id, date,
 // time) and its own customer details. Duration, price, availability,
 // and overlap validation all happen inside the create_appointment()
@@ -429,7 +435,8 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { id: string; status: string }) => d)
   .handler(async ({ data: { id, status } }) => {
-    if (!VALID_STATUSES.includes(status as AppointmentStatus)) throw new Error("INVALID_STATUS");
+    if (!ADMIN_SETTABLE_STATUSES.includes(status as (typeof ADMIN_SETTABLE_STATUSES)[number]))
+      throw new Error("INVALID_STATUS");
     const nextStatus = status as AppointmentStatus;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -452,7 +459,7 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
 
     // Only notify the customer on a genuine change — re-saving the same
     // status (e.g. a duplicate submit) must not resend the email.
-    if (nextStatus !== "pending" && currentStatus !== nextStatus) {
+    if (currentStatus !== nextStatus) {
       const { data: appt } = await supabaseAdmin
         .from("appointments")
         .select("customer_name, appointment_date, appointment_time, user_id, service_id")

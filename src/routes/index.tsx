@@ -17,12 +17,14 @@ import {
 import { getServices } from "@/api/services/services";
 import { getFeaturedProducts } from "@/api/products/products";
 import { getSettings } from "@/api/settings/settings";
+import { getAvailabilitySettings } from "@/api/slots/slots";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { BookingDialog } from "@/components/services/BookingDialog";
 import { useI18n } from "@/lib/i18n";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 import { getMapEmbedSrc, getGoogleMapsDirectionsUrl, getWazeUrl } from "@/lib/location";
+import { formatWeeklyHours } from "@/lib/business-hours";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Najla Cosmetics — בית" }] }),
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [bookingService, setBookingService] = useState<Service | null>(null);
   const heroRef = useRef<HTMLElement>(null);
   const [heroOffset, setHeroOffset] = useState(0);
@@ -65,6 +67,19 @@ function Home() {
     queryFn: () => getSettings(),
     staleTime: 300_000,
   });
+
+  // The real, bookable weekly hours (same source of truth the Availability
+  // admin page edits and the booking flow itself enforces) — never
+  // hardcoded, so this can't drift out of sync with what customers can
+  // actually book. No staleTime, on purpose: an admin closing/opening a
+  // day should show up on this page right away, not minutes later.
+  const { data: availability } = useQuery({
+    queryKey: ["availability-settings"],
+    queryFn: () => getAvailabilitySettings(),
+  });
+  const hoursLines = availability
+    ? formatWeeklyHours(availability.weekly_hours, lang, t("closed"))
+    : [];
 
   return (
     <>
@@ -301,12 +316,11 @@ function Home() {
                         {t("working_hours")}
                       </p>
                       <div className="mt-1 text-[15px] text-foreground space-y-0.5">
-                        <p>
-                          Sun–Thu: <span className="font-medium">09:00–19:00</span>
-                        </p>
-                        <p>
-                          Fri: <span className="font-medium">09:00–15:00</span>
-                        </p>
+                        {hoursLines.map((line, i) => (
+                          <p key={i}>
+                            {line.label}: <span className="font-medium">{line.text}</span>
+                          </p>
+                        ))}
                       </div>
                     </div>
                   </div>

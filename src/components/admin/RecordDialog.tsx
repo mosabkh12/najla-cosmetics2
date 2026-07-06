@@ -5,6 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -12,6 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 export type Field =
   | {
@@ -21,7 +29,20 @@ export type Field =
       placeholder?: string;
       step?: string;
     }
-  | { name: string; label: string; type: "switch" };
+  | { name: string; label: string; type: "switch" }
+  | {
+      name: string;
+      label: string;
+      type: "select";
+      options: { value: string; label: string }[];
+      placeholder?: string;
+      // Adds a trailing "type a new value" option to the list — for fields
+      // like category, where the choices are open-ended (whatever's already
+      // in use), not a fixed enum, so there must be a way to introduce one
+      // that isn't in the list yet.
+      allowCustom?: boolean;
+      customLabel?: string;
+    };
 
 // The only value shapes any field type in this generic dialog ever
 // produces or loads: text/url/textarea write strings, number fields write
@@ -58,7 +79,11 @@ export function RecordDialog<T extends Record<string, FormValue>>({
   onSubmit: (values: T) => Promise<void> | void;
   submitting?: boolean;
 }) {
+  const { t } = useI18n();
   const [values, setValues] = useState<T>(initial);
+  // Fields currently showing a free-text input instead of their select
+  // list, because "type a new value" was chosen (see allowCustom above).
+  const [customFields, setCustomFields] = useState<Set<string>>(new Set());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,7 +98,63 @@ export function RecordDialog<T extends Record<string, FormValue>>({
               <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 {f.label}
               </Label>
-              {f.type === "textarea" ? (
+              {f.type === "select" ? (
+                customFields.has(f.name) ? (
+                  <div className="flex gap-2">
+                    <Input
+                      autoFocus
+                      value={textInputValue(values[f.name])}
+                      placeholder={f.placeholder}
+                      onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
+                      className="h-10 rounded-xl border-border/30 text-[13px]"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setCustomFields((prev) => {
+                          const next = new Set(prev);
+                          next.delete(f.name);
+                          return next;
+                        });
+                        setValues({ ...values, [f.name]: null });
+                      }}
+                      className="h-10 shrink-0 rounded-xl border-border/30 px-3 text-[12px]"
+                    >
+                      {t("cancel")}
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={
+                      typeof values[f.name] === "string" ? (values[f.name] as string) : "__none"
+                    }
+                    onValueChange={(v) => {
+                      if (v === "__custom") {
+                        setCustomFields((prev) => new Set(prev).add(f.name));
+                        setValues({ ...values, [f.name]: "" });
+                        return;
+                      }
+                      setValues({ ...values, [f.name]: v === "__none" ? null : v });
+                    }}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-border/30 text-[13px]">
+                      <SelectValue placeholder={f.placeholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">{f.placeholder ?? "—"}</SelectItem>
+                      {f.options.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                      {f.allowCustom && (
+                        <SelectItem value="__custom">{f.customLabel ?? "+"}</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )
+              ) : f.type === "textarea" ? (
                 <Textarea
                   value={textInputValue(values[f.name])}
                   onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
@@ -89,7 +170,7 @@ export function RecordDialog<T extends Record<string, FormValue>>({
                   <span
                     className={`text-[12px] font-medium ${values[f.name] ? "text-sage" : "text-muted-foreground"}`}
                   >
-                    {values[f.name] ? "Active" : "Inactive"}
+                    {values[f.name] ? t("is_active") : t("is_inactive")}
                   </span>
                 </div>
               ) : (
@@ -122,7 +203,7 @@ export function RecordDialog<T extends Record<string, FormValue>>({
             onClick={() => onOpenChange(false)}
             className="rounded-full px-6 border-border/40"
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <button
             className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5 disabled:opacity-50"
@@ -130,7 +211,7 @@ export function RecordDialog<T extends Record<string, FormValue>>({
             onClick={() => onSubmit(values)}
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Save
+            {t("save")}
           </button>
         </DialogFooter>
       </DialogContent>

@@ -6,8 +6,10 @@ export interface Service {
   id: string;
   name: string;
   name_ar: string | null;
+  name_en: string | null;
   description: string | null;
   description_ar: string | null;
+  description_en: string | null;
   category: string;
   image_url: string | null;
   price: number;
@@ -22,8 +24,13 @@ export function ServiceCard({
   onBook: (s: Service) => void;
 }) {
   const { t, lang } = useI18n();
-  const name = pickLocalized(lang, service.name, service.name_ar);
-  const desc = pickLocalized(lang, service.description, service.description_ar);
+  const name = pickLocalized(lang, service.name, service.name_ar, service.name_en);
+  const desc = pickLocalized(
+    lang,
+    service.description,
+    service.description_ar,
+    service.description_en,
+  );
 
   return (
     <article className="group relative flex flex-col">

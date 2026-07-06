@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
-import type { Json } from "@/integrations/supabase/types";
 import { requireAdmin } from "../admin/middleware";
 
 // Fixed, honest 60s ceiling — no stale-while-revalidate (see products.ts
@@ -48,7 +47,6 @@ export const saveSettings = createServerFn({ method: "POST" })
       google_maps_url: (payload.google_maps_url as string) || null,
       hero_image_url: (payload.hero_image_url as string) || null,
       about_image_url: (payload.about_image_url as string) || null,
-      working_hours: (payload.working_hours as Json) ?? null,
       latitude: lat != null && !isNaN(lat) ? lat : null,
       longitude: lng != null && !isNaN(lng) ? lng : null,
     };

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
 
 export interface DayHours {
@@ -97,6 +98,12 @@ export const getAvailabilitySettings = createServerFn({ method: "GET" }).handler
       .select("*")
       .limit(1)
       .maybeSingle();
+    // Which days are open/closed must reflect an admin change immediately —
+    // now shown live on the home/location pages, not just used inside the
+    // booking flow — so this stays uncached, same as getAvailableTimes in
+    // appointments.ts. A shared HTTP cache here previously meant a day the
+    // admin just closed could still show as open for up to a minute.
+    setResponseHeader("Cache-Control", "no-store");
     if (!data)
       return {
         weekly_hours: DEFAULT_WEEKLY,

@@ -7,7 +7,9 @@ export function pickLocalized(
   lang: Lang,
   base: string | null | undefined,
   ar: string | null | undefined,
+  en?: string | null,
 ): string {
   if (lang === "ar" && ar) return ar;
+  if (lang === "en" && en) return en;
   return base ?? "";
 }

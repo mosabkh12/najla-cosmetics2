@@ -8,6 +8,7 @@ import {
   deleteService,
 } from "@/api/services/services";
 import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
 import { getErrorMessage } from "@/lib/utils";
 import type { ServiceRow, ServiceFormValues } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
@@ -18,20 +19,8 @@ import { Reveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/admin/services")({ component: Page });
 
-const fields: Field[] = [
-  { name: "name", label: "Name (HE)" },
-  { name: "name_ar", label: "Name (AR)" },
-  { name: "description", label: "Description (HE)", type: "textarea" },
-  { name: "description_ar", label: "Description (AR)", type: "textarea" },
-  { name: "category", label: "Category" },
-  { name: "price", label: "Price (₪)", type: "number", step: "0.01" },
-  { name: "duration_minutes", label: "Duration (min)", type: "number" },
-  { name: "image_url", label: "Image URL", type: "url" },
-  { name: "is_active", label: "Active", type: "switch" },
-];
-
 function Page() {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
   const [dlg, setDlg] = useState<{ open: boolean; row: ServiceFormValues | null }>({
@@ -45,10 +34,55 @@ function Page() {
     queryFn: () => getAdminServices(),
   });
 
+  // Categories are open-ended (whatever the admin has already typed in),
+  // not a fixed enum — the select lists every distinct one in use, plus a
+  // "+ New category" entry (see allowCustom) to introduce another.
+  const categoryOptions = Array.from(new Set(services.map((s) => s.category).filter(Boolean)))
+    .sort()
+    .map((c) => ({ value: c, label: c }));
+
+  const fields: Field[] = [
+    { name: "name", label: L("שם (עברית)", "الاسم (بالعبرية)", "Name (Hebrew)") },
+    { name: "name_ar", label: L("שם (ערבית)", "الاسم (بالعربية)", "Name (Arabic)") },
+    { name: "name_en", label: L("שם (אנגלית)", "الاسم (بالإنجليزية)", "Name (English)") },
+    {
+      name: "description",
+      label: L("תיאור (עברית)", "الوصف (بالعبرية)", "Description (Hebrew)"),
+      type: "textarea",
+    },
+    {
+      name: "description_ar",
+      label: L("תיאור (ערבית)", "الوصف (بالعربية)", "Description (Arabic)"),
+      type: "textarea",
+    },
+    {
+      name: "description_en",
+      label: L("תיאור (אנגלית)", "الوصف (بالإنجليزية)", "Description (English)"),
+      type: "textarea",
+    },
+    {
+      name: "category",
+      label: L("קטגוריה", "الفئة", "Category"),
+      type: "select",
+      placeholder: L("בחר קטגוריה", "اختر فئة", "Select a category"),
+      options: categoryOptions,
+      allowCustom: true,
+      customLabel: L("+ קטגוריה חדשה", "+ فئة جديدة", "+ New category"),
+    },
+    { name: "price", label: L("מחיר (₪)", "السعر (₪)", "Price (₪)"), type: "number", step: "0.01" },
+    {
+      name: "duration_minutes",
+      label: L("משך (דקות)", "المدة (دقائق)", "Duration (min)"),
+      type: "number",
+    },
+    { name: "image_url", label: L("קישור לתמונה", "رابط الصورة", "Image URL"), type: "url" },
+    { name: "is_active", label: t("is_active"), type: "switch" },
+  ];
+
   const filtered = services.filter((s) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    const name = (lang === "ar" ? s.name_ar || s.name : s.name) ?? "";
+    const name = pickLocalized(lang, s.name, s.name_ar, s.name_en);
     return name.toLowerCase().includes(q) || (s.category ?? "").toLowerCase().includes(q);
   });
 
@@ -64,7 +98,7 @@ function Page() {
   const save = async (values: ServiceFormValues) => {
     try {
       await saveService({ data: { id: dlg.row?.id, payload: values } });
-      toast.success("Saved");
+      toast.success(t("save"));
       setDlg({ open: false, row: null });
       refresh();
     } catch (e: unknown) {
@@ -90,10 +124,10 @@ function Page() {
   };
 
   const del = async (id: string) => {
-    if (!confirm("Delete this service?")) return;
+    if (!confirm(L("למחוק את השירות?", "هل تريد حذف هذه الخدمة؟", "Delete this service?"))) return;
     try {
       await deleteService({ data: { id } });
-      toast.success("Deleted");
+      toast.success(L("נמחק", "تم الحذف", "Deleted"));
       refresh();
     } catch (e: unknown) {
       toast.error(getErrorMessage(e));
@@ -189,7 +223,7 @@ function Page() {
                           </div>
                         )}
                         <span className="font-medium text-foreground">
-                          {lang === "ar" ? s.name_ar || s.name : s.name}
+                          {pickLocalized(lang, s.name, s.name_ar, s.name_en)}
                         </span>
                       </div>
                     </td>
@@ -215,9 +249,7 @@ function Page() {
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${s.is_active ? "bg-sage" : "bg-muted-foreground/50"}`}
                         />
-                        {s.is_active
-                          ? L("פעיל", "نشط", "Active")
-                          : L("מושבת", "غير نشط", "Inactive")}
+                        {s.is_active ? t("is_active") : t("is_inactive")}
                       </span>
                     </td>
                     <td className="p-3.5 text-end">

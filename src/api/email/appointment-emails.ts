@@ -72,10 +72,10 @@ function detailsTable(d: BookingDetails) {
 export async function sendBookingConfirmation(details: BookingDetails) {
   const body = `
     <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">Hi <strong>${escapeHtml(details.customerName)}</strong>,</p>
-    <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">Your appointment has been received and is awaiting confirmation. We'll be in touch soon!</p>
+    <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">Your appointment is booked! We look forward to seeing you.</p>
     ${detailsTable(details)}
     <div style="margin-top:20px;padding:14px 16px;background:${BRAND.bg};border-radius:10px;text-align:center;">
-      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:${BRAND.accent};">Status: Pending Confirmation</span>
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:${BRAND.accent};">Status: Confirmed</span>
     </div>`;
 
   await sendMail(

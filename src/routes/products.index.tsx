@@ -14,11 +14,15 @@ export const Route = createFileRoute("/products/")({
   component: ProductsPage,
 });
 
+const SKIN_TYPES = ["oily", "dry", "sensitive", "normal"] as const;
+
 function ProductsPage() {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [sort, setSort] = useState("newest");
+  const [skinTypes, setSkinTypes] = useState<string[]>([]);
+  const [priceCap, setPriceCap] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: products = [] } = useQuery({
@@ -37,6 +41,17 @@ function ProductsPage() {
     () => ["all", ...Array.from(new Set(products.map((p) => p.category)))],
     [products],
   );
+
+  const priceBounds = useMemo(() => {
+    if (products.length === 0) return { min: 0, max: 0 };
+    const prices = products.map((p) => p.price);
+    return { min: Math.floor(Math.min(...prices)), max: Math.ceil(Math.max(...prices)) };
+  }, [products]);
+  const priceCeiling = priceCap ?? priceBounds.max;
+
+  const toggleSkinType = (v: string) =>
+    setSkinTypes((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+
   const filtered = useMemo(() => {
     let r = products;
     if (cat !== "all") r = r.filter((p) => p.category === cat);
@@ -44,10 +59,12 @@ function ProductsPage() {
       r = r.filter((p) =>
         (p.name + " " + (p.name_ar ?? "")).toLowerCase().includes(q.toLowerCase()),
       );
+    if (skinTypes.length > 0) r = r.filter((p) => !!p.skin_type && skinTypes.includes(p.skin_type));
+    r = r.filter((p) => p.price <= priceCeiling);
     if (sort === "price_asc") r = [...r].sort((a, b) => a.price - b.price);
     else if (sort === "price_desc") r = [...r].sort((a, b) => b.price - a.price);
     return r;
-  }, [products, q, cat, sort]);
+  }, [products, q, cat, sort, skinTypes, priceCeiling]);
 
   return (
     <section className="min-h-screen bg-background -mt-20">
@@ -135,6 +152,22 @@ function ProductsPage() {
             </button>
 
             <div className={`space-y-12 ${showFilters ? "block" : "hidden"} lg:block`}>
+              {/* Search */}
+              <div>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
+                  {t("search")}
+                </h3>
+                <div className="relative">
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t("search")}
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    className="h-10 ps-9 border-border/40 bg-transparent text-sm focus:border-primary rounded-lg"
+                  />
+                </div>
+              </div>
+
               {/* Sort By */}
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
@@ -180,43 +213,44 @@ function ProductsPage() {
                 </div>
               </div>
 
-              {/* Categories */}
+              {/* Skin Type */}
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
-                  {t("category")}
+                  {t("skin_type")}
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories
-                    .filter((c) => c !== "all")
-                    .map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setCat(cat === c ? "all" : c)}
-                        className={`px-4 py-2.5 border rounded-lg text-[14px] transition-all ${
-                          cat === c
-                            ? "border-primary text-primary"
-                            : "border-border/50 text-muted-foreground hover:border-primary hover:text-primary"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
+                <div className="flex flex-wrap gap-2">
+                  {SKIN_TYPES.map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => toggleSkinType(st)}
+                      className={`px-4 py-2 border rounded-full text-[13px] transition-all ${
+                        skinTypes.includes(st)
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border/50 text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      {t(`skin_type_${st}`)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Search */}
+              {/* Price Range */}
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
-                  {t("search")}
+                  {t("price_range")}
                 </h3>
-                <div className="relative">
-                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t("search")}
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    className="h-10 ps-9 border-border/40 bg-transparent text-sm focus:border-primary rounded-lg"
-                  />
+                <input
+                  type="range"
+                  min={priceBounds.min}
+                  max={Math.max(priceBounds.max, priceBounds.min + 1)}
+                  value={priceCeiling}
+                  onChange={(e) => setPriceCap(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex justify-between mt-2 text-[13px] text-muted-foreground">
+                  <span>₪{priceBounds.min}</span>
+                  <span>₪{priceCeiling}</span>
                 </div>
               </div>
 

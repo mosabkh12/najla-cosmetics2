@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/utils";
 import { Reveal } from "@/components/ScrollReveal";
+import { dayName } from "@/lib/business-hours";
 
 export const Route = createFileRoute("/admin/slots")({ component: Page });
 
@@ -71,24 +72,10 @@ function TimeSelect({
   );
 }
 
-const DAY_NAMES: Record<string, [string, string, string]> = {
-  "0": ["ראשון", "الأحد", "Sunday"],
-  "1": ["שני", "الإثنين", "Monday"],
-  "2": ["שלישי", "الثلاثاء", "Tuesday"],
-  "3": ["רביעי", "الأربعاء", "Wednesday"],
-  "4": ["חמישי", "الخميس", "Thursday"],
-  "5": ["שישי", "الجمعة", "Friday"],
-  "6": ["שבת", "السبت", "Saturday"],
-};
-
 function Page() {
   const { lang } = useI18n();
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
-  const dayName = (d: string) => {
-    const n = DAY_NAMES[d];
-    return n ? (lang === "ar" ? n[1] : lang === "en" ? n[2] : n[0]) : d;
-  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["availability-settings"],
@@ -236,7 +223,7 @@ function Page() {
                   <span
                     className={`w-16 sm:w-20 text-[13px] font-medium shrink-0 ${day?.enabled ? "text-foreground" : "text-muted-foreground"}`}
                   >
-                    {dayName(d)}
+                    {dayName(d, lang)}
                   </span>
                   {day?.enabled ? (
                     <div className="flex items-center gap-2">

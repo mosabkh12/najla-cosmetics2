@@ -130,7 +130,13 @@ export function RescheduleDialog({
     if (d) {
       setSelectedDate(d);
       setStep(3);
+      return;
     }
+    // react-day-picker's single-select mode fires onSelect(undefined) when the
+    // already-selected day is clicked again (its built-in toggle-to-deselect
+    // behavior) — a date is always required in this flow, so just keep the
+    // current selection and proceed rather than silently no-op'ing.
+    setStep(3);
   }, []);
 
   if (!appointment) return null;
@@ -174,7 +180,14 @@ export function RescheduleDialog({
           </h2>
           {selectedService && (
             <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground">
-              <span>{pickLocalized(lang, selectedService.name, selectedService.name_ar)}</span>
+              <span>
+                {pickLocalized(
+                  lang,
+                  selectedService.name,
+                  selectedService.name_ar,
+                  selectedService.name_en,
+                )}
+              </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-primary" />
                 {selectedService.duration_minutes} {t("minutes")}
@@ -217,7 +230,7 @@ export function RescheduleDialog({
                 >
                   <div>
                     <div className="text-[13px] font-medium text-foreground">
-                      {pickLocalized(lang, s.name, s.name_ar)}
+                      {pickLocalized(lang, s.name, s.name_ar, s.name_en)}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
                       <Clock className="h-3 w-3" />

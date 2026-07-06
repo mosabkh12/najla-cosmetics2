@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAdminOrders, getOrderItems, updateOrderStatus } from "@/api/orders/orders";
 import { useI18n } from "@/lib/i18n";
@@ -42,15 +42,33 @@ type TimeFilter = (typeof TIME_FILTERS)[number];
 const STATUS_FILTERS = ["all", ...STATUSES] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
-function isWithinTimeFilter(createdAt: string, filter: TimeFilter): boolean {
+// "YYYY-MM" — the unit the month picker operates on, distinct from the
+// "week"/"today" rolling windows below.
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthLabel(key: string, lang: string): string {
+  const [y, m] = key.split("-").map(Number);
+  const date = new Date(y, m - 1, 1);
+  const locale = lang === "ar" ? "ar" : lang === "en" ? "en-US" : "he-IL";
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
+}
+
+// "today"/"week" stay rolling windows (useful for daily triage), but
+// "month" is a specific calendar month the admin picks — not a rolling
+// 30-day window — so past months can be browsed exactly.
+function isWithinTimeFilter(createdAt: string, filter: TimeFilter, selectedMonth: string): boolean {
   if (filter === "all") return true;
   const created = new Date(createdAt);
   const now = new Date();
   if (filter === "today") return created.toDateString() === now.toDateString();
-  const days = filter === "week" ? 7 : 30;
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - days);
-  return created >= cutoff;
+  if (filter === "week") {
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 7);
+    return created >= cutoff;
+  }
+  return monthKey(created) === selectedMonth;
 }
 
 function Page() {
@@ -61,16 +79,28 @@ function Page() {
   const [search, setSearch] = useState("");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => monthKey(new Date()));
 
   const { data: orders = [] } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => getAdminOrders(),
   });
 
+  // Every month that actually has an order, plus the currently-selected
+  // one (so it's never missing from the dropdown even if it has 0 orders
+  // yet, e.g. the current month right after a rollover).
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>(orders.map((o) => monthKey(new Date(o.created_at))));
+    set.add(selectedMonth);
+    return Array.from(set).sort().reverse();
+  }, [orders, selectedMonth]);
+
   // Time range narrows the pool first, so status tab counts reflect "how
   // many of THESE (e.g. this week's) orders are pending" rather than the
   // all-time total — the two filters are meant to combine, not compete.
-  const timeFiltered = orders.filter((o) => isWithinTimeFilter(o.created_at, timeFilter));
+  const timeFiltered = orders.filter((o) =>
+    isWithinTimeFilter(o.created_at, timeFilter, selectedMonth),
+  );
 
   const statusCounts = STATUS_FILTERS.reduce<Record<string, number>>((acc, s) => {
     acc[s] = s === "all" ? timeFiltered.length : timeFiltered.filter((o) => o.status === s).length;
@@ -94,7 +124,7 @@ function Page() {
     all: L("הכל", "الكل", "All Time"),
     today: L("היום", "اليوم", "Today"),
     week: L("השבוע", "هذا الأسبوع", "This Week"),
-    month: L("החודש", "هذا الشهر", "This Month"),
+    month: L("חודש", "شهر", "Month"),
   };
 
   const statusFilterLabel: Record<StatusFilter, string> = {
@@ -163,6 +193,22 @@ function Page() {
             </button>
           ))}
         </div>
+        {timeFilter === "month" && (
+          <div className="mt-2.5">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="h-9 w-[180px] rounded-full border-border/30 text-[12px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableMonths.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {formatMonthLabel(m, lang)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </Reveal>
 
       {/* Status tabs */}

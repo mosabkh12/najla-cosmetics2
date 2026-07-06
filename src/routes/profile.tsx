@@ -147,12 +147,25 @@ function ProfilePage() {
     qc.invalidateQueries({ queryKey: ["appointments", user.id] });
   };
 
-  const filteredAppts = appts.filter((a) => {
-    if (apptFilter === "upcoming") return ["pending", "confirmed"].includes(a.status);
-    if (apptFilter === "completed") return a.status === "completed";
-    if (apptFilter === "cancelled") return a.status === "cancelled";
-    return true;
-  });
+  const filteredAppts = appts
+    .filter((a) => {
+      if (apptFilter === "upcoming") return ["pending", "confirmed"].includes(a.status);
+      if (apptFilter === "completed") return a.status === "completed";
+      if (apptFilter === "cancelled") return a.status === "cancelled";
+      return true;
+    })
+    // Not-yet-finished appointments always come first (soonest next at the very
+    // top), then finished ones below (most recent first) — grouped by status,
+    // not raw date, so e.g. a cancelled appointment dated in the future still
+    // sorts into the "finished" group rather than appearing above what's upcoming.
+    .sort((a, b) => {
+      const aUpcoming = ["pending", "confirmed"].includes(a.status);
+      const bUpcoming = ["pending", "confirmed"].includes(b.status);
+      if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+      const aKey = `${a.appointment_date} ${a.appointment_time}`;
+      const bKey = `${b.appointment_date} ${b.appointment_time}`;
+      return aUpcoming ? aKey.localeCompare(bKey) : bKey.localeCompare(aKey);
+    });
 
   const filteredOrders = orders.filter((o) => {
     if (orderFilter === "active") return !["completed", "cancelled"].includes(o.status);
