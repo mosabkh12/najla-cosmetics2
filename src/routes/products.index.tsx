@@ -33,11 +33,17 @@ function ProductsPage() {
     staleTime: 300_000,
   });
 
-  const categories = useMemo(() => ["all", ...Array.from(new Set(products.map((p) => p.category)))], [products]);
+  const categories = useMemo(
+    () => ["all", ...Array.from(new Set(products.map((p) => p.category)))],
+    [products],
+  );
   const filtered = useMemo(() => {
     let r = products;
     if (cat !== "all") r = r.filter((p) => p.category === cat);
-    if (q.trim()) r = r.filter((p) => (p.name + " " + (p.name_ar ?? "")).toLowerCase().includes(q.toLowerCase()));
+    if (q.trim())
+      r = r.filter((p) =>
+        (p.name + " " + (p.name_ar ?? "")).toLowerCase().includes(q.toLowerCase()),
+      );
     if (sort === "price_asc") r = [...r].sort((a, b) => a.price - b.price);
     else if (sort === "price_desc") r = [...r].sort((a, b) => b.price - a.price);
     return r;
@@ -45,7 +51,6 @@ function ProductsPage() {
 
   return (
     <section className="min-h-screen bg-background -mt-20">
-
       {/* ═══════════ Hero Banner ═══════════ */}
       <div className="relative h-[400px] sm:h-[550px] md:h-[680px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
@@ -58,7 +63,9 @@ function ProductsPage() {
         </div>
         <div className="relative z-10 w-full flex justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-2xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_1.2s_0.2s_both]">Najla Cosmetics</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_1.2s_0.2s_both]">
+              Najla Cosmetics
+            </p>
             <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_1.2s_0.4s_both]">
               {t("products_title")}
             </h1>
@@ -110,7 +117,6 @@ function ProductsPage() {
       {/* ═══════════ Main: Sidebar + Grid ═══════════ */}
       <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-12 sm:py-16 md:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-
           {/* ─── Sidebar ─── */}
           <aside className="lg:col-span-3 lg:pe-4">
             {/* Mobile toggle */}
@@ -118,31 +124,57 @@ function ProductsPage() {
               onClick={() => setShowFilters(!showFilters)}
               className="lg:hidden w-full flex items-center justify-between py-3 border-b border-border/40 mb-6"
             >
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground">{t("sort")}</span>
-              <span className={`text-muted-foreground text-xs transition-transform ${showFilters ? "rotate-180" : ""}`}>▾</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground">
+                {t("sort")}
+              </span>
+              <span
+                className={`text-muted-foreground text-xs transition-transform ${showFilters ? "rotate-180" : ""}`}
+              >
+                ▾
+              </span>
             </button>
 
             <div className={`space-y-12 ${showFilters ? "block" : "hidden"} lg:block`}>
-
               {/* Sort By */}
               <div>
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">{t("sort")}</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
+                  {t("sort")}
+                </h3>
                 <div className="space-y-4">
-                  {([
-                    ["newest", t("sort_newest")],
-                    ["price_asc", t("sort_price_asc")],
-                    ["price_desc", t("sort_price_desc")],
-                  ] as const).map(([val, label]) => (
+                  {(
+                    [
+                      ["newest", t("sort_newest")],
+                      ["price_asc", t("sort_price_asc")],
+                      ["price_desc", t("sort_price_desc")],
+                    ] as const
+                  ).map(([val, label]) => (
                     <label key={val} className="flex items-center gap-3 cursor-pointer group">
-                      <span className={`grid h-4 w-4 place-items-center rounded-full border-[1.5px] transition-colors ${
-                        sort === val ? "border-primary" : "border-border group-hover:border-muted-foreground"
-                      }`}>
+                      <span
+                        className={`grid h-4 w-4 place-items-center rounded-full border-[1.5px] transition-colors ${
+                          sort === val
+                            ? "border-primary"
+                            : "border-border group-hover:border-muted-foreground"
+                        }`}
+                      >
                         {sort === val && <span className="h-2 w-2 rounded-full bg-primary" />}
                       </span>
-                      <span className={`text-[15px] transition-colors ${
-                        sort === val ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-                      }`}>{label}</span>
-                      <input type="radio" name="sort" value={val} checked={sort === val} onChange={() => setSort(val)} className="sr-only" />
+                      <span
+                        className={`text-[15px] transition-colors ${
+                          sort === val
+                            ? "text-foreground"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                      <input
+                        type="radio"
+                        name="sort"
+                        value={val}
+                        checked={sort === val}
+                        onChange={() => setSort(val)}
+                        className="sr-only"
+                      />
                     </label>
                   ))}
                 </div>
@@ -150,27 +182,33 @@ function ProductsPage() {
 
               {/* Categories */}
               <div>
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">{t("category")}</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
+                  {t("category")}
+                </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {categories.filter((c) => c !== "all").map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setCat(cat === c ? "all" : c)}
-                      className={`px-4 py-2.5 border rounded-lg text-[14px] transition-all ${
-                        cat === c
-                          ? "border-primary text-primary"
-                          : "border-border/50 text-muted-foreground hover:border-primary hover:text-primary"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
+                  {categories
+                    .filter((c) => c !== "all")
+                    .map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setCat(cat === c ? "all" : c)}
+                        className={`px-4 py-2.5 border rounded-lg text-[14px] transition-all ${
+                          cat === c
+                            ? "border-primary text-primary"
+                            : "border-border/50 text-muted-foreground hover:border-primary hover:text-primary"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
                 </div>
               </div>
 
               {/* Search */}
               <div>
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">{t("search")}</h3>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground mb-6">
+                  {t("search")}
+                </h3>
                 <div className="relative">
                   <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -191,22 +229,27 @@ function ProductsPage() {
                     className="h-full w-full object-cover"
                   />
                 </div>
-                <p className="font-display text-[22px] italic text-center mb-2">{t("book_appointment")}?</p>
-                <p className="text-[14px] text-muted-foreground text-center mb-5 leading-relaxed">{t("services_sub")}</p>
+                <p className="font-display text-[22px] italic text-center mb-2">
+                  {t("book_appointment")}?
+                </p>
+                <p className="text-[14px] text-muted-foreground text-center mb-5 leading-relaxed">
+                  {t("services_sub")}
+                </p>
                 <Link to="/services" className="block">
                   <button className="w-full py-3.5 rounded-full border border-foreground text-foreground text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all">
                     {t("book_appointment")}
                   </button>
                 </Link>
               </div>
-
             </div>
           </aside>
 
           {/* ─── Product Grid ─── */}
           <div className="lg:col-span-9">
             <StaggerGrid className="grid grid-cols-2 xl:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-16">
-              {filtered.map((p) => <ProductCard key={p.id} product={p} />)}
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
             </StaggerGrid>
 
             {filtered.length === 0 && (
@@ -215,7 +258,6 @@ function ProductsPage() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </section>

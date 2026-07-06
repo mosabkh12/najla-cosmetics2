@@ -1,7 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, MapPin, Phone, Clock, MessageCircle, Navigation, Navigation2, Sparkles, Star, ShieldCheck, Award } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  Phone,
+  Clock,
+  MessageCircle,
+  Navigation,
+  Navigation2,
+  Sparkles,
+  Star,
+  ShieldCheck,
+  Award,
+} from "lucide-react";
 import { getServices } from "@/api/services/services";
 import { getFeaturedProducts } from "@/api/products/products";
 import { getSettings } from "@/api/settings/settings";
@@ -57,7 +69,10 @@ function Home() {
   return (
     <>
       {/* ═══════════ HERO — parallax ═══════════ */}
-      <section ref={heroRef} className="relative h-[500px] sm:h-[600px] md:h-[85vh] md:max-h-[900px] overflow-hidden -mt-20">
+      <section
+        ref={heroRef}
+        className="relative h-[500px] sm:h-[600px] md:h-[85vh] md:max-h-[900px] overflow-hidden -mt-20"
+      >
         <div className="absolute inset-0 overflow-hidden">
           <img
             src={settings?.hero_image_url || "/images/brand/hero.png"}
@@ -70,7 +85,8 @@ function Home() {
         <div className="relative flex h-full items-center justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-2xl pt-20">
             <h1 className="font-display text-[36px] sm:text-[52px] md:text-[72px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_1.2s_0.2s_both]">
-              {t("hero_title").split(".")[0]}. <em className="italic">{t("hero_title").split(".")[1] || ""}</em>
+              {t("hero_title").split(".")[0]}.{" "}
+              <em className="italic">{t("hero_title").split(".")[1] || ""}</em>
             </h1>
             <p className="mt-5 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_1.2s_0.5s_both]">
               {t("hero_sub")}
@@ -96,9 +112,15 @@ function Home() {
         <Reveal direction="up">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">{t("about_eyebrow")}</p>
-              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">{t("services_title")}</h2>
-              <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">{t("services_sub")}</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">
+                {t("about_eyebrow")}
+              </p>
+              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">
+                {t("services_title")}
+              </h2>
+              <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">
+                {t("services_sub")}
+              </p>
             </div>
             <Link to="/services" className="shrink-0">
               <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
@@ -108,7 +130,9 @@ function Home() {
           </div>
         </Reveal>
         <StaggerGrid className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
-          {services.slice(0, 6).map((s) => <ServiceCard key={s.id} service={s} onBook={setBookingService} />)}
+          {services.slice(0, 6).map((s) => (
+            <ServiceCard key={s.id} service={s} onBook={setBookingService} />
+          ))}
         </StaggerGrid>
       </section>
 
@@ -118,9 +142,15 @@ function Home() {
           <Reveal direction="up">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">Najla Cosmetics</p>
-                <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">{t("products_title")}</h2>
-                <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">{t("products_sub")}</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">
+                  Najla Cosmetics
+                </p>
+                <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.1] text-foreground">
+                  {t("products_title")}
+                </h2>
+                <p className="mt-3 text-[15px] text-muted-foreground max-w-lg leading-relaxed">
+                  {t("products_sub")}
+                </p>
               </div>
               <Link to="/products" className="shrink-0">
                 <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
@@ -130,7 +160,9 @@ function Home() {
             </div>
           </Reveal>
           <StaggerGrid className="grid grid-cols-2 lg:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
-            {products.map((p) => <ProductCard key={p.id} product={p} />)}
+            {products.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </StaggerGrid>
         </div>
       </section>
@@ -140,24 +172,38 @@ function Home() {
         <div className="grid gap-10 lg:gap-20 md:grid-cols-2 md:items-center overflow-x-hidden">
           <Reveal direction="start">
             <div className="relative">
-              <div className="aspect-[4/5] max-h-[600px] overflow-hidden rounded-3xl"
+              <div
+                className="aspect-[4/5] max-h-[600px] overflow-hidden rounded-3xl"
                 style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
               >
-                <img src={settings?.about_image_url ?? "/images/brand/about.png"} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={settings?.about_image_url ?? "/images/brand/about.png"}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </div>
-              <div className="absolute -bottom-5 start-5 sm:start-8 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
+              <div
+                className="absolute -bottom-5 start-5 sm:start-8 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
                 style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
               >
                 <p className="font-display text-[18px] italic text-foreground">Najla Cosmetics</p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-0.5">
+                  {t("footer_tagline")}
+                </p>
               </div>
             </div>
           </Reveal>
           <Reveal direction="end" delay={2}>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">{t("about_eyebrow")}</p>
-              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.12] text-foreground italic">{t("about_title")}</h2>
-              <p className="mt-5 text-[16px] text-muted-foreground leading-[1.7] max-w-lg">{t("about_body")}</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-4">
+                {t("about_eyebrow")}
+              </p>
+              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] leading-[1.12] text-foreground italic">
+                {t("about_title")}
+              </h2>
+              <p className="mt-5 text-[16px] text-muted-foreground leading-[1.7] max-w-lg">
+                {t("about_body")}
+              </p>
 
               <div className="mt-10 grid grid-cols-2 gap-5">
                 {[
@@ -168,7 +214,9 @@ function Home() {
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-3">
                     <span className="text-primary">{item.icon}</span>
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{item.label}</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                      {item.label}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -190,63 +238,105 @@ function Home() {
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
           <Reveal direction="up">
             <div className="text-center max-w-xl mx-auto mb-12">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">Najla Cosmetics</p>
-              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] text-foreground">{t("location_title")}</h2>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">
+                Najla Cosmetics
+              </p>
+              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] text-foreground">
+                {t("location_title")}
+              </h2>
             </div>
           </Reveal>
           <div className="grid gap-8 md:grid-cols-2 md:items-stretch overflow-x-hidden">
             <Reveal direction="start">
-              <div className="overflow-hidden rounded-3xl min-h-[350px] h-full"
+              <div
+                className="overflow-hidden rounded-3xl min-h-[350px] h-full"
                 style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
               >
-                <iframe title="Map" src={getMapEmbedSrc(settings)} className="h-full w-full min-h-[350px]" loading="lazy" />
+                <iframe
+                  title="Map"
+                  src={getMapEmbedSrc(settings)}
+                  className="h-full w-full min-h-[350px]"
+                  loading="lazy"
+                />
               </div>
             </Reveal>
             <Reveal direction="end" delay={2}>
-              <div className="rounded-3xl bg-card p-8 sm:p-10 flex flex-col h-full"
+              <div
+                className="rounded-3xl bg-card p-8 sm:p-10 flex flex-col h-full"
                 style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
               >
                 <div className="space-y-6 flex-1">
                   <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><MapPin className="h-5 w-5 text-primary" /></div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface">
+                      <MapPin className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("address")}</p>
-                      <p className="text-[15px] text-foreground mt-1 leading-relaxed">{settings?.address || "Nazareth, Israel"}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                        {t("address")}
+                      </p>
+                      <p className="text-[15px] text-foreground mt-1 leading-relaxed">
+                        {settings?.address || "Nazareth, Israel"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><Phone className="h-5 w-5 text-primary" /></div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface">
+                      <Phone className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("phone")}</p>
-                      <p className="text-[15px] text-foreground mt-1 font-medium" dir="ltr">{settings?.phone || "—"}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                        {t("phone")}
+                      </p>
+                      <p className="text-[15px] text-foreground mt-1 font-medium" dir="ltr">
+                        {settings?.phone || "—"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface"><Clock className="h-5 w-5 text-primary" /></div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface">
+                      <Clock className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{t("working_hours")}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                        {t("working_hours")}
+                      </p>
                       <div className="mt-1 text-[15px] text-foreground space-y-0.5">
-                        <p>Sun–Thu: <span className="font-medium">09:00–19:00</span></p>
-                        <p>Fri: <span className="font-medium">09:00–15:00</span></p>
+                        <p>
+                          Sun–Thu: <span className="font-medium">09:00–19:00</span>
+                        </p>
+                        <p>
+                          Fri: <span className="font-medium">09:00–15:00</span>
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="mt-8 space-y-3">
-                  <a href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="block">
+                  <a
+                    href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block"
+                  >
                     <button className="w-full py-3.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
-                      <MessageCircle className="h-4 w-4" />WhatsApp
+                      <MessageCircle className="h-4 w-4" />
+                      WhatsApp
                     </button>
                   </a>
                   <div className="grid grid-cols-2 gap-3">
                     <a href={getGoogleMapsDirectionsUrl(settings)} target="_blank" rel="noreferrer">
                       <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                        <Navigation className="h-4 w-4" />{t("get_directions")}
+                        <Navigation className="h-4 w-4" />
+                        {t("get_directions")}
                       </button>
                     </a>
                     <a href={getWazeUrl(settings)} target="_blank" rel="noreferrer">
-                      <button className="w-full py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2" style={{ backgroundColor: "#33CCFF" }}>
-                        <Navigation2 className="h-4 w-4" />{t("waze")}
+                      <button
+                        className="w-full py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        style={{ backgroundColor: "#33CCFF" }}
+                      >
+                        <Navigation2 className="h-4 w-4" />
+                        {t("waze")}
                       </button>
                     </a>
                   </div>
@@ -257,7 +347,11 @@ function Home() {
         </div>
       </section>
 
-      <BookingDialog service={bookingService} open={!!bookingService} onOpenChange={(b) => !b && setBookingService(null)} />
+      <BookingDialog
+        service={bookingService}
+        open={!!bookingService}
+        onOpenChange={(b) => !b && setBookingService(null)}
+      />
     </>
   );
 }

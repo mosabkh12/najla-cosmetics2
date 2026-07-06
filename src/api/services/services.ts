@@ -14,7 +14,11 @@ const PUBLIC_CACHE_HEADER = "public, max-age=60, s-maxage=60";
 
 export const getServices = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("services").select("*").eq("is_active", true).order("created_at");
+  const { data } = await supabaseAdmin
+    .from("services")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at");
   setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
   return data ?? [];
 });
@@ -23,7 +27,10 @@ export const getAdminServices = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("services").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabaseAdmin
+      .from("services")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return data ?? [];
   });
@@ -37,7 +44,11 @@ export const saveService = createServerFn({ method: "POST" })
 
     let previousImageUrl: string | null = null;
     if (id) {
-      const { data } = await supabaseAdmin.from("services").select("image_url").eq("id", id).maybeSingle();
+      const { data } = await supabaseAdmin
+        .from("services")
+        .select("image_url")
+        .eq("id", id)
+        .maybeSingle();
       previousImageUrl = data?.image_url ?? null;
     }
 
@@ -69,7 +80,10 @@ export const toggleService = createServerFn({ method: "POST" })
   .validator((d: { id: string; currentActive: boolean }) => d)
   .handler(async ({ data: { id, currentActive } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("services").update({ is_active: !currentActive }).eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("services")
+      .update({ is_active: !currentActive })
+      .eq("id", id);
     if (error) throw error;
     return { success: true };
   });
@@ -81,7 +95,11 @@ export const deleteService = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
 
-    const { data: existing } = await supabaseAdmin.from("services").select("image_url").eq("id", id).maybeSingle();
+    const { data: existing } = await supabaseAdmin
+      .from("services")
+      .select("image_url")
+      .eq("id", id)
+      .maybeSingle();
 
     const { error } = await supabaseAdmin.from("services").delete().eq("id", id);
     if (error) throw error;

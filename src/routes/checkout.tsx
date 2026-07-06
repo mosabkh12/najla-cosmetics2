@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useI18n } from "@/lib/i18n";
+import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout")({
@@ -35,23 +36,35 @@ function CheckoutPage() {
   const [delivery, setDelivery] = useState("pickup");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [loading, user, navigate]);
   useEffect(() => {
-    if (user) getProfile().then((data) => {
-      if (data) { setName(data.full_name ?? ""); setPhone(data.phone ?? ""); }
-    });
+    if (!loading && !user) navigate({ to: "/auth" });
+  }, [loading, user, navigate]);
+  useEffect(() => {
+    if (user)
+      getProfile().then((data) => {
+        if (data) {
+          setName(data.full_name ?? "");
+          setPhone(data.phone ?? "");
+        }
+      });
   }, [user]);
 
   if (!user) return null;
-  if (items.length === 0) return (
-    <section className="container-page py-16 text-center">
-      <h1 className="font-display text-2xl">{t("empty_cart")}</h1>
-      <Link to="/products"><Button className="btn-gold mt-4">{t("continue_shopping")}</Button></Link>
-    </section>
-  );
+  if (items.length === 0)
+    return (
+      <section className="container-page py-16 text-center">
+        <h1 className="font-display text-2xl">{t("empty_cart")}</h1>
+        <Link to="/products">
+          <Button className="btn-gold mt-4">{t("continue_shopping")}</Button>
+        </Link>
+      </section>
+    );
 
   const placeOrder = async () => {
-    if (!name || !phone) { toast.error("Required fields missing"); return; }
+    if (!name || !phone) {
+      toast.error("Required fields missing");
+      return;
+    }
     setBusy(true);
     try {
       await createOrder({
@@ -69,8 +82,8 @@ function CheckoutPage() {
       toast.success(t("order_success"));
       clear();
       navigate({ to: "/profile" });
-    } catch (e: any) {
-      const key = ORDER_ERROR_MAP[e.message];
+    } catch (e: unknown) {
+      const key = ORDER_ERROR_MAP[getErrorMessage(e)];
       toast.error(key ? t(key) : t("order_creation_failed"));
     } finally {
       setBusy(false);
@@ -79,36 +92,75 @@ function CheckoutPage() {
 
   return (
     <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-10 grid gap-8 lg:grid-cols-[1fr_380px]">
-      <div className="rounded-2xl border border-border/30 bg-card p-6 space-y-5" style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}>
+      <div
+        className="rounded-2xl border border-border/30 bg-card p-6 space-y-5"
+        style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
+      >
         <h1 className="font-display text-[28px] italic text-foreground">{t("checkout")}</h1>
         <div className="grid sm:grid-cols-2 gap-3">
-          <div><Label className="text-xs">{t("full_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 h-10" /></div>
-          <div><Label className="text-xs">{t("phone")}</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-10" /></div>
+          <div>
+            <Label className="text-xs">{t("full_name")}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 h-10" />
+          </div>
+          <div>
+            <Label className="text-xs">{t("phone")}</Label>
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-10" />
+          </div>
         </div>
         <div>
           <Label className="text-xs mb-2 block">{t("delivery_pickup")}</Label>
-          <RadioGroup value={delivery} onValueChange={setDelivery} className="grid grid-cols-2 gap-2">
-            <label className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer text-sm ${delivery === "pickup" ? "border-primary bg-surface" : "border-border"}`}>
+          <RadioGroup
+            value={delivery}
+            onValueChange={setDelivery}
+            className="grid grid-cols-2 gap-2"
+          >
+            <label
+              className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer text-sm ${delivery === "pickup" ? "border-primary bg-surface" : "border-border"}`}
+            >
               <RadioGroupItem value="pickup" /> {t("delivery_pickup")}
             </label>
           </RadioGroup>
         </div>
         <div>
           <Label className="text-xs">{t("notes_optional")}</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1" />
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            className="mt-1"
+          />
         </div>
         <div className="rounded-lg border border-border/60 bg-surface p-3 text-sm">
           <p className="font-medium text-foreground">{t("pay_at_store")}</p>
           <p className="text-xs text-muted-foreground mt-1">Online payments coming soon.</p>
         </div>
       </div>
-      <div className="rounded-2xl border border-border/30 bg-card p-6 h-fit" style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}>
+      <div
+        className="rounded-2xl border border-border/30 bg-card p-6 h-fit"
+        style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
+      >
         <h2 className="font-display text-[22px] text-foreground">{t("cart")}</h2>
         <ul className="mt-3 space-y-2 text-sm">
-          {items.map((i) => <li key={i.product_id} className="flex justify-between"><span className="text-secondary-foreground truncate me-2">{i.name} × {i.quantity}</span><span className="font-medium">₪{(i.price * i.quantity).toFixed(2)}</span></li>)}
+          {items.map((i) => (
+            <li key={i.product_id} className="flex justify-between">
+              <span className="text-secondary-foreground truncate me-2">
+                {i.name} × {i.quantity}
+              </span>
+              <span className="font-medium">₪{(i.price * i.quantity).toFixed(2)}</span>
+            </li>
+          ))}
         </ul>
-        <div className="mt-4 pt-3 border-t flex justify-between"><span className="text-secondary-foreground">{t("total")}</span><span className="font-semibold text-foreground text-lg">₪{subtotal.toFixed(2)}</span></div>
-        <button onClick={placeOrder} disabled={busy} className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-4">{t("place_order")}</button>
+        <div className="mt-4 pt-3 border-t flex justify-between">
+          <span className="text-secondary-foreground">{t("total")}</span>
+          <span className="font-semibold text-foreground text-lg">₪{subtotal.toFixed(2)}</span>
+        </div>
+        <button
+          onClick={placeOrder}
+          disabled={busy}
+          className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-4"
+        >
+          {t("place_order")}
+        </button>
       </div>
     </section>
   );

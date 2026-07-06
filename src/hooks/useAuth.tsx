@@ -21,20 +21,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (s?.user) {
         setTimeout(async () => {
-          const { data } = await supabase.from("profiles").select("role").eq("id", s.user.id).maybeSingle();
+          const { data } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", s.user.id)
+            .maybeSingle();
           setIsAdmin(data?.role === "admin");
         }, 0);
       } else setIsAdmin(false);
     });
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false); });
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
   return (
-    <Ctx.Provider value={{
-      user: session?.user ?? null, session, isAdmin, loading,
-      signOut: async () => { await supabase.auth.signOut(); },
-    }}>{children}</Ctx.Provider>
+    <Ctx.Provider
+      value={{
+        user: session?.user ?? null,
+        session,
+        isAdmin,
+        loading,
+        signOut: async () => {
+          await supabase.auth.signOut();
+        },
+      }}
+    >
+      {children}
+    </Ctx.Provider>
   );
 }
 

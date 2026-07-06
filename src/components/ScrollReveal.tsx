@@ -1,7 +1,12 @@
 import { Children, type ReactNode } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
-export function Reveal({ children, className = "", direction = "up", delay = 0 }: {
+export function Reveal({
+  children,
+  className = "",
+  direction = "up",
+  delay = 0,
+}: {
   children: ReactNode;
   className?: string;
   direction?: "up" | "down" | "start" | "end" | "scale" | "zoom";
@@ -10,7 +15,10 @@ export function Reveal({ children, className = "", direction = "up", delay = 0 }
   const { ref, visible } = useScrollReveal(0.12);
   const delayClass = delay > 0 ? `reveal-delay-${delay}` : "";
   return (
-    <div ref={ref} className={`reveal-base reveal-${direction} ${delayClass} ${visible ? "revealed" : ""} ${className}`}>
+    <div
+      ref={ref}
+      className={`reveal-base reveal-${direction} ${delayClass} ${visible ? "revealed" : ""} ${className}`}
+    >
       {children}
     </div>
   );
@@ -30,11 +38,17 @@ function RevealItem({ children, index }: { children: ReactNode; index: number })
   );
 }
 
-export function StaggerGrid({ children, className = "" }: { children: ReactNode; className?: string }) {
+export function StaggerGrid({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={className}>
       {Children.map(children, (child, i) =>
-        child ? <RevealItem index={i}>{child}</RevealItem> : null
+        child ? <RevealItem index={i}>{child}</RevealItem> : null,
       )}
     </div>
   );

@@ -9,7 +9,13 @@ import { createServerFn } from "@tanstack/react-start";
 // validated below.
 export const adminSignUp = createServerFn({ method: "POST" })
   .validator(
-    (d: { email: string; password: string; full_name: string; phone: string; verification_token: string }) => d,
+    (d: {
+      email: string;
+      password: string;
+      full_name: string;
+      phone: string;
+      verification_token: string;
+    }) => d,
   )
   .handler(async ({ data: { email, password, full_name, phone, verification_token } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

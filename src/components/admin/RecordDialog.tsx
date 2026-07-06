@@ -4,15 +4,51 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 export type Field =
-  | { name: string; label: string; type?: "text" | "number" | "url" | "textarea"; placeholder?: string; step?: string }
+  | {
+      name: string;
+      label: string;
+      type?: "text" | "number" | "url" | "textarea";
+      placeholder?: string;
+      step?: string;
+    }
   | { name: string; label: string; type: "switch" };
 
-export function RecordDialog<T extends Record<string, any>>({
-  open, onOpenChange, title, fields, initial, onSubmit, submitting,
+// The only value shapes any field type in this generic dialog ever
+// produces or loads: text/url/textarea write strings, number fields write
+// a number or "" (while the input is empty), switch fields write a
+// boolean — plus `null`/`undefined` for a DB row's nullable columns or a
+// not-yet-filled-in field on a new record.
+export type FormValue = string | number | boolean | null | undefined;
+
+// `values` (keyed by T, generic per-instance) and `f` (the field
+// definition driving which branch renders) aren't statically linked, so
+// TypeScript can't itself prove "this value is a string/number because
+// f.type is text/number" the way the runtime branching guarantees — this
+// makes that guarantee explicit for the text/number/url/textarea inputs,
+// which never actually hold a boolean (that's only ever written by the
+// switch branch, a distinct field type).
+function textInputValue(v: FormValue): string | number {
+  return typeof v === "boolean" ? "" : (v ?? "");
+}
+
+export function RecordDialog<T extends Record<string, FormValue>>({
+  open,
+  onOpenChange,
+  title,
+  fields,
+  initial,
+  onSubmit,
+  submitting,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -34,28 +70,45 @@ export function RecordDialog<T extends Record<string, any>>({
         <div className="px-6 py-5 space-y-4">
           {fields.map((f) => (
             <div key={f.name} className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{f.label}</Label>
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {f.label}
+              </Label>
               {f.type === "textarea" ? (
                 <Textarea
-                  value={values[f.name] ?? ""}
+                  value={textInputValue(values[f.name])}
                   onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
                   rows={3}
                   className="rounded-xl border-border/30 text-[13px]"
                 />
               ) : f.type === "switch" ? (
                 <div className="flex items-center gap-3">
-                  <Switch checked={!!values[f.name]} onCheckedChange={(v) => setValues({ ...values, [f.name]: v })} />
-                  <span className={`text-[12px] font-medium ${values[f.name] ? "text-sage" : "text-muted-foreground"}`}>
+                  <Switch
+                    checked={!!values[f.name]}
+                    onCheckedChange={(v) => setValues({ ...values, [f.name]: v })}
+                  />
+                  <span
+                    className={`text-[12px] font-medium ${values[f.name] ? "text-sage" : "text-muted-foreground"}`}
+                  >
                     {values[f.name] ? "Active" : "Inactive"}
                   </span>
                 </div>
               ) : (
                 <Input
                   type={f.type ?? "text"}
-                  step={(f as any).step}
-                  value={values[f.name] ?? ""}
-                  placeholder={(f as any).placeholder}
-                  onChange={(e) => setValues({ ...values, [f.name]: f.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value })}
+                  step={f.step}
+                  value={textInputValue(values[f.name])}
+                  placeholder={f.placeholder}
+                  onChange={(e) =>
+                    setValues({
+                      ...values,
+                      [f.name]:
+                        f.type === "number"
+                          ? e.target.value === ""
+                            ? ""
+                            : Number(e.target.value)
+                          : e.target.value,
+                    })
+                  }
                   className="h-10 rounded-xl border-border/30 text-[13px]"
                 />
               )}
@@ -64,7 +117,11 @@ export function RecordDialog<T extends Record<string, any>>({
         </div>
 
         <DialogFooter className="px-6 pb-6 pt-0 gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full px-6 border-border/40">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="rounded-full px-6 border-border/40"
+          >
             Cancel
           </Button>
           <button

@@ -29,7 +29,12 @@ export const getProducts = createServerFn({ method: "GET" }).handler(async () =>
 
 export const getFeaturedProducts = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("products").select("*").eq("is_active", true).order("created_at").limit(8);
+  const { data } = await supabaseAdmin
+    .from("products")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at")
+    .limit(8);
   setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
   return data ?? [];
 });
@@ -48,7 +53,11 @@ export const getProductImages = createServerFn({ method: "GET" })
   .validator((d: { productId: string }) => d)
   .handler(async ({ data: { productId } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin.from("product_images").select("*").eq("product_id", productId).order("sort_order");
+    const { data } = await supabaseAdmin
+      .from("product_images")
+      .select("*")
+      .eq("product_id", productId)
+      .order("sort_order");
     setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     return data ?? [];
   });
@@ -57,10 +66,22 @@ export const getRelatedProducts = createServerFn({ method: "GET" })
   .validator((d: { id: string; category: string }) => d)
   .handler(async ({ data: { id, category } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin.from("products").select("*").eq("is_active", true).eq("category", category).neq("id", id).limit(4);
+    const { data } = await supabaseAdmin
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .eq("category", category)
+      .neq("id", id)
+      .limit(4);
     setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     if (data && data.length < 4) {
-      const { data: more } = await supabaseAdmin.from("products").select("*").eq("is_active", true).neq("id", id).neq("category", category).limit(4 - data.length);
+      const { data: more } = await supabaseAdmin
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .neq("id", id)
+        .neq("category", category)
+        .limit(4 - data.length);
       return [...data, ...(more ?? [])];
     }
     return data ?? [];
@@ -70,7 +91,10 @@ export const getAdminProducts = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("products").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return data ?? [];
   });
@@ -84,7 +108,11 @@ export const saveProduct = createServerFn({ method: "POST" })
 
     let previousImageUrl: string | null = null;
     if (id) {
-      const { data } = await supabaseAdmin.from("products").select("image_url").eq("id", id).maybeSingle();
+      const { data } = await supabaseAdmin
+        .from("products")
+        .select("image_url")
+        .eq("id", id)
+        .maybeSingle();
       previousImageUrl = data?.image_url ?? null;
     }
 
@@ -117,7 +145,10 @@ export const toggleProduct = createServerFn({ method: "POST" })
   .validator((d: { id: string; currentActive: boolean }) => d)
   .handler(async ({ data: { id, currentActive } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("products").update({ is_active: !currentActive }).eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("products")
+      .update({ is_active: !currentActive })
+      .eq("id", id);
     if (error) throw error;
     return { success: true };
   });
@@ -129,7 +160,11 @@ export const deleteProduct = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
 
-    const { data: existing } = await supabaseAdmin.from("products").select("image_url").eq("id", id).maybeSingle();
+    const { data: existing } = await supabaseAdmin
+      .from("products")
+      .select("image_url")
+      .eq("id", id)
+      .maybeSingle();
 
     const { error } = await supabaseAdmin.from("products").delete().eq("id", id);
     if (error) throw error;

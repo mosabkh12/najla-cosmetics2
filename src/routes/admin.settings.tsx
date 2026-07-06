@@ -7,12 +7,39 @@ import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, X, Loader2, Building2, Phone, MapPin, Image as ImageIcon, Clock as ClockIcon, Save, Search } from "lucide-react";
+import {
+  Upload,
+  X,
+  Loader2,
+  Building2,
+  Phone,
+  MapPin,
+  Image as ImageIcon,
+  Clock as ClockIcon,
+  Save,
+  Search,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
-import { getMapEmbedSrc, getFindOnMapsUrl, isValidLatitude, isValidLongitude } from "@/lib/location";
+import {
+  getMapEmbedSrc,
+  getFindOnMapsUrl,
+  isValidLatitude,
+  isValidLongitude,
+} from "@/lib/location";
+import { getErrorMessage } from "@/lib/utils";
+import type { BusinessSettingsRow } from "@/lib/api-types";
+import type { Json } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/admin/settings")({ component: Page });
+
+// Mirrors BusinessSettingsRow, except latitude/longitude are held as the
+// raw string the number input produces while being edited (parsed back to
+// a number only on save) — everything else matches the row shape exactly.
+type SettingsFormState = Partial<Omit<BusinessSettingsRow, "latitude" | "longitude">> & {
+  latitude?: string | number | null;
+  longitude?: string | number | null;
+};
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -47,15 +74,26 @@ async function uploadFile(file: File, folder: string): Promise<string | null> {
   }
   try {
     const base64 = await fileToBase64(file);
-    const { publicUrl } = await uploadAdminImage({ data: { folder, contentType: file.type, base64 } });
+    const { publicUrl } = await uploadAdminImage({
+      data: { folder, contentType: file.type, base64 },
+    });
     return publicUrl;
-  } catch (e: any) {
-    toast.error(UPLOAD_ERROR_MAP[e.message] ?? "Upload failed, please try again");
+  } catch (e: unknown) {
+    const message = getErrorMessage(e);
+    toast.error(UPLOAD_ERROR_MAP[message] ?? "Upload failed, please try again");
     return null;
   }
 }
 
-function ImageUpload({ label, value, onChange }: { label: string; value: string; onChange: (url: string) => void }) {
+function ImageUpload({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -81,7 +119,9 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
 
   return (
     <div className="grid gap-3">
-      <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</Label>
+      <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </Label>
 
       {value && (
         <div className="relative rounded-xl overflow-hidden bg-surface aspect-video max-h-[180px] border border-border/10">
@@ -101,7 +141,11 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
           disabled={uploading}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border/50 text-[12px] font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
         >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
           {uploading ? "Uploading..." : "Choose File"}
         </button>
         <Input
@@ -113,7 +157,13 @@ function ImageUpload({ label, value, onChange }: { label: string; value: string;
         />
       </div>
 
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFile}
+      />
     </div>
   );
 }
@@ -128,7 +178,7 @@ function Page() {
     queryFn: () => getSettings(),
   });
 
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<SettingsFormState>({});
   const [hours, setHours] = useState("");
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
@@ -143,12 +193,15 @@ function Page() {
   // instead of reloading the map iframe on every keystroke.
   useEffect(() => {
     const id = setTimeout(() => {
-      setPreviewSrc(getMapEmbedSrc({
-        latitude: form.latitude === "" || form.latitude == null ? null : Number(form.latitude),
-        longitude: form.longitude === "" || form.longitude == null ? null : Number(form.longitude),
-        address: form.address,
-        business_name: form.business_name,
-      }));
+      setPreviewSrc(
+        getMapEmbedSrc({
+          latitude: form.latitude === "" || form.latitude == null ? null : Number(form.latitude),
+          longitude:
+            form.longitude === "" || form.longitude == null ? null : Number(form.longitude),
+          address: form.address,
+          business_name: form.business_name,
+        }),
+      );
     }, 500);
     return () => clearTimeout(id);
   }, [form.latitude, form.longitude, form.address, form.business_name]);
@@ -159,16 +212,26 @@ function Page() {
   const lngError = lngNum != null && !isValidLongitude(lngNum);
 
   const save = async () => {
-    let working_hours: any = null;
-    try { working_hours = hours.trim() ? JSON.parse(hours) : null; }
-    catch { toast.error("Working hours must be valid JSON"); return; }
+    // Free-typed JSON from the textarea below — admin-only, and validated
+    // for well-formedness right here; its actual shape is whatever the
+    // admin wrote, which is exactly what the `working_hours` Json column
+    // accepts.
+    let working_hours: Json | null = null;
+    try {
+      working_hours = hours.trim() ? (JSON.parse(hours) as Json) : null;
+    } catch {
+      toast.error("Working hours must be valid JSON");
+      return;
+    }
 
     if (latError || lngError) {
-      toast.error(L(
-        "קואורדינטות לא תקינות. קו רוחב חייב להיות בין 90- ל-90, קו אורך בין 180- ל-180.",
-        "إحداثيات غير صالحة. خط العرض بين 90- و90، خط الطول بين 180- و180.",
-        "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.",
-      ));
+      toast.error(
+        L(
+          "קואורדינטות לא תקינות. קו רוחב חייב להיות בין 90- ל-90, קו אורך בין 180- ל-180.",
+          "إحداثيات غير صالحة. خط العرض بين 90- و90، خط الطول بين 180- و180.",
+          "Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.",
+        ),
+      );
       return;
     }
 
@@ -190,8 +253,8 @@ function Page() {
       toast.success("Saved");
       qc.invalidateQueries({ queryKey: ["admin-settings"] });
       qc.invalidateQueries({ queryKey: ["business_settings"] });
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
     }
   };
 
@@ -200,14 +263,23 @@ function Page() {
       <Reveal direction="up">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">{L("הגדרות העסק", "إعدادات العمل", "Business Settings")}</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">{L("ניהול פרטי העסק והגדרות", "إدارة بيانات العمل والإعدادات", "Manage your business details and preferences")}</p>
+            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">
+              {L("הגדרות העסק", "إعدادات العمل", "Business Settings")}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
+              {L(
+                "ניהול פרטי העסק והגדרות",
+                "إدارة بيانات العمل والإعدادات",
+                "Manage your business details and preferences",
+              )}
+            </p>
           </div>
           <button
             onClick={save}
             className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5"
           >
-            <Save className="h-3.5 w-3.5" />{L("שמירה", "حفظ", "Save")}
+            <Save className="h-3.5 w-3.5" />
+            {L("שמירה", "حفظ", "Save")}
           </button>
         </div>
       </Reveal>
@@ -222,40 +294,76 @@ function Page() {
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10">
               <Building2 className="h-4 w-4 text-primary" />
             </div>
-            <h2 className="text-[14px] font-semibold text-foreground">{L("פרטי עסק", "بيانات العمل", "Business Information")}</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">
+              {L("פרטי עסק", "بيانات العمل", "Business Information")}
+            </h2>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("שם העסק", "اسم العمل", "Business Name")}</Label>
-              <Input value={form.business_name ?? ""} onChange={(e) => setForm({ ...form, business_name: e.target.value })} className="h-10 rounded-xl border-border/30" />
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("שם העסק", "اسم العمل", "Business Name")}
+              </Label>
+              <Input
+                value={form.business_name ?? ""}
+                onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                className="h-10 rounded-xl border-border/30"
+              />
             </div>
             <div className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("טלפון", "الهاتف", "Phone")}</Label>
-              <Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="h-10 rounded-xl border-border/30" />
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("טלפון", "الهاتف", "Phone")}
+              </Label>
+              <Input
+                value={form.phone ?? ""}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="h-10 rounded-xl border-border/30"
+              />
             </div>
             <div className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("WhatsApp", "واتساب", "WhatsApp")}</Label>
-              <Input value={form.whatsapp_number ?? ""} onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })} className="h-10 rounded-xl border-border/30" />
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("WhatsApp", "واتساب", "WhatsApp")}
+              </Label>
+              <Input
+                value={form.whatsapp_number ?? ""}
+                onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+                className="h-10 rounded-xl border-border/30"
+              />
             </div>
             <div className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("קישור Google Maps", "رابط خرائط Google", "Google Maps URL")}</Label>
-              <Input type="url" value={form.google_maps_url ?? ""} onChange={(e) => setForm({ ...form, google_maps_url: e.target.value })} className="h-10 rounded-xl border-border/30" />
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("קישור Google Maps", "رابط خرائط Google", "Google Maps URL")}
+              </Label>
+              <Input
+                type="url"
+                value={form.google_maps_url ?? ""}
+                onChange={(e) => setForm({ ...form, google_maps_url: e.target.value })}
+                className="h-10 rounded-xl border-border/30"
+              />
             </div>
           </div>
 
           <div className="grid gap-2 mt-4">
             <div className="flex items-center justify-between">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("כתובת", "العنوان", "Address")}</Label>
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("כתובת", "العنوان", "Address")}
+              </Label>
               <a
                 href={getFindOnMapsUrl(form.address)}
-                target="_blank" rel="noreferrer"
+                target="_blank"
+                rel="noreferrer"
                 className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
               >
-                <Search className="h-3 w-3" />{L("חיפוש ב-Google Maps", "بحث في Google Maps", "Find on Google Maps")}
+                <Search className="h-3 w-3" />
+                {L("חיפוש ב-Google Maps", "بحث في Google Maps", "Find on Google Maps")}
               </a>
             </div>
-            <Textarea value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} className="rounded-xl border-border/30" />
+            <Textarea
+              value={form.address ?? ""}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              rows={2}
+              className="rounded-xl border-border/30"
+            />
             <p className="text-[11px] text-muted-foreground">
               {L(
                 "כתובת זו קובעת את המיקום במפה אם לא הוזנו קואורדינטות מדויקות למטה.",
@@ -267,24 +375,50 @@ function Page() {
 
           <div className="grid sm:grid-cols-2 gap-4 mt-4">
             <div className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("קו רוחב (Latitude)", "خط العرض (Latitude)", "Latitude")}</Label>
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("קו רוחב (Latitude)", "خط العرض (Latitude)", "Latitude")}
+              </Label>
               <Input
-                type="number" step="any" dir="ltr" placeholder="32.6996"
+                type="number"
+                step="any"
+                dir="ltr"
+                placeholder="32.6996"
                 value={form.latitude ?? ""}
                 onChange={(e) => setForm({ ...form, latitude: e.target.value })}
                 className={`h-10 rounded-xl ${latError ? "border-destructive focus-visible:ring-destructive/30" : "border-border/30"}`}
               />
-              {latError && <p className="text-[11px] text-destructive">{L("חייב להיות בין 90- ל-90", "يجب أن يكون بين 90- و90", "Must be between -90 and 90")}</p>}
+              {latError && (
+                <p className="text-[11px] text-destructive">
+                  {L(
+                    "חייב להיות בין 90- ל-90",
+                    "يجب أن يكون بين 90- و90",
+                    "Must be between -90 and 90",
+                  )}
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("קו אורך (Longitude)", "خط الطول (Longitude)", "Longitude")}</Label>
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("קו אורך (Longitude)", "خط الطول (Longitude)", "Longitude")}
+              </Label>
               <Input
-                type="number" step="any" dir="ltr" placeholder="35.3035"
+                type="number"
+                step="any"
+                dir="ltr"
+                placeholder="35.3035"
                 value={form.longitude ?? ""}
                 onChange={(e) => setForm({ ...form, longitude: e.target.value })}
                 className={`h-10 rounded-xl ${lngError ? "border-destructive focus-visible:ring-destructive/30" : "border-border/30"}`}
               />
-              {lngError && <p className="text-[11px] text-destructive">{L("חייב להיות בין 180- ל-180", "يجب أن يكون بين 180- و180", "Must be between -180 and 180")}</p>}
+              {lngError && (
+                <p className="text-[11px] text-destructive">
+                  {L(
+                    "חייב להיות בין 180- ל-180",
+                    "يجب أن يكون بين 180- و180",
+                    "Must be between -180 and 180",
+                  )}
+                </p>
+              )}
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">
@@ -297,9 +431,18 @@ function Page() {
 
           {/* Live preview — exactly what visitors will see */}
           <div className="grid gap-2 mt-4">
-            <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("תצוגה מקדימה של המפה", "معاينة الخريطة", "Map Preview")}</Label>
+            <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              {L("תצוגה מקדימה של המפה", "معاينة الخريطة", "Map Preview")}
+            </Label>
             <div className="rounded-xl border border-border/20 overflow-hidden h-[240px] bg-surface">
-              {previewSrc && <iframe title="Map preview" src={previewSrc} className="h-full w-full" loading="lazy" />}
+              {previewSrc && (
+                <iframe
+                  title="Map preview"
+                  src={previewSrc}
+                  className="h-full w-full"
+                  loading="lazy"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -315,7 +458,9 @@ function Page() {
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-terracotta-soft">
               <ImageIcon className="h-4 w-4 text-terracotta" />
             </div>
-            <h2 className="text-[14px] font-semibold text-foreground">{L("תמונות", "الصور", "Images")}</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">
+              {L("תמונות", "الصور", "Images")}
+            </h2>
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
             <ImageUpload
@@ -342,7 +487,9 @@ function Page() {
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-sage-soft">
               <ClockIcon className="h-4 w-4 text-sage" />
             </div>
-            <h2 className="text-[14px] font-semibold text-foreground">{L("שעות פעילות", "ساعات العمل", "Working Hours")}</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">
+              {L("שעות פעילות", "ساعات العمل", "Working Hours")}
+            </h2>
           </div>
           <Textarea
             value={hours}
@@ -361,7 +508,8 @@ function Page() {
             onClick={save}
             className="w-full bg-foreground text-background py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
           >
-            <Save className="h-3.5 w-3.5" />{L("שמירה", "حفظ", "Save Changes")}
+            <Save className="h-3.5 w-3.5" />
+            {L("שמירה", "حفظ", "Save Changes")}
           </button>
         </div>
       </Reveal>

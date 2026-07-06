@@ -33,12 +33,14 @@ function ServicesPage() {
     staleTime: 300_000,
   });
 
-  const categories = useMemo(() => ["all", ...Array.from(new Set(services.map((s) => s.category)))], [services]);
+  const categories = useMemo(
+    () => ["all", ...Array.from(new Set(services.map((s) => s.category)))],
+    [services],
+  );
   const filtered = cat === "all" ? services : services.filter((s) => s.category === cat);
 
   return (
     <section className="min-h-screen bg-background -mt-20">
-
       {/* ═══════════ Hero ═══════════ */}
       <div className="relative h-[320px] sm:h-[420px] md:h-[520px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
@@ -51,7 +53,9 @@ function ServicesPage() {
         </div>
         <div className="relative z-10 w-full flex justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-2xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">Najla Cosmetics</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">
+              Najla Cosmetics
+            </p>
             <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.8s_0.4s_both]">
               {t("services_title")}
             </h1>
@@ -91,7 +95,9 @@ function ServicesPage() {
       {/* ═══════════ Service Grid ═══════════ */}
       <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-12 sm:py-16">
         <StaggerGrid className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
-          {filtered.map((s) => <ServiceCard key={s.id} service={s} onBook={setActive} />)}
+          {filtered.map((s) => (
+            <ServiceCard key={s.id} service={s} onBook={setActive} />
+          ))}
         </StaggerGrid>
 
         {filtered.length === 0 && (
@@ -137,8 +143,12 @@ function ServicesPage() {
                         {step.num}
                       </div>
                       <div>
-                        <h3 className="font-display text-[17px] sm:text-[19px] text-foreground">{step.title}</h3>
-                        <p className="mt-1.5 text-[14px] text-muted-foreground leading-[1.7]">{step.desc}</p>
+                        <h3 className="font-display text-[17px] sm:text-[19px] text-foreground">
+                          {step.title}
+                        </h3>
+                        <p className="mt-1.5 text-[14px] text-muted-foreground leading-[1.7]">
+                          {step.desc}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -148,7 +158,8 @@ function ServicesPage() {
 
             <Reveal direction="end" delay={2}>
               <div className="relative">
-                <div className="aspect-[3/4] rounded-3xl overflow-hidden"
+                <div
+                  className="aspect-[3/4] rounded-3xl overflow-hidden"
                   style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
                 >
                   <img
@@ -156,11 +167,16 @@ function ServicesPage() {
                     alt=""
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute bottom-6 start-6 end-6 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
+                  <div
+                    className="absolute bottom-6 start-6 end-6 bg-card/95 backdrop-blur-md rounded-2xl px-6 py-4"
                     style={{ boxShadow: "0 10px 30px -10px rgba(45, 45, 45, 0.15)" }}
                   >
-                    <p className="font-display text-[20px] italic text-foreground">Najla Cosmetics</p>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">{t("footer_tagline")}</p>
+                    <p className="font-display text-[20px] italic text-foreground">
+                      Najla Cosmetics
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
+                      {t("footer_tagline")}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -173,8 +189,12 @@ function ServicesPage() {
       <Reveal direction="scale">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-16 sm:py-20 text-center">
           <Sparkles className="h-7 w-7 mx-auto text-primary" />
-          <h2 className="mt-4 font-display text-[26px] sm:text-[34px] text-foreground">{t("hero_title")}</h2>
-          <p className="mt-3 text-[15px] text-muted-foreground max-w-md mx-auto leading-relaxed">{t("hero_sub")}</p>
+          <h2 className="mt-4 font-display text-[26px] sm:text-[34px] text-foreground">
+            {t("hero_title")}
+          </h2>
+          <p className="mt-3 text-[15px] text-muted-foreground max-w-md mx-auto leading-relaxed">
+            {t("hero_sub")}
+          </p>
           <div className="mt-8 flex justify-center gap-4">
             <Link to="/products">
               <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">

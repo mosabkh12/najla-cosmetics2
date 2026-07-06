@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireAdmin } from "../admin/middleware";
 import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
 
@@ -28,7 +29,7 @@ const RESCHEDULE_ERROR_CODES = [...APPOINTMENT_ERROR_CODES, "NOT_FOUND", "NOT_RE
 // older than the retention window. Runs opportunistically on every read so
 // it's enforced even without a working DB-level cron (see the accompanying
 // migration for the pg_cron-based version of the same policy).
-async function purgeOldAppointments(supabaseAdmin: any) {
+async function purgeOldAppointments(supabaseAdmin: SupabaseAdmin) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - HISTORY_RETENTION_DAYS);
   const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-${String(cutoff.getDate()).padStart(2, "0")}`;
@@ -87,7 +88,10 @@ interface ResolvedDay {
   maxPerDay: number | null;
 }
 
-async function loadDaySettings(supabaseAdmin: any, date: string): Promise<ResolvedDay | null> {
+async function loadDaySettings(
+  supabaseAdmin: SupabaseAdmin,
+  date: string,
+): Promise<ResolvedDay | null> {
   const { data } = await supabaseAdmin
     .from("availability_settings")
     .select("*")
@@ -160,7 +164,7 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
     if (settings.maxPerDay && (appointments ?? []).length >= settings.maxPerDay) return [];
 
     const buf = settings.buffer;
-    const taken = (appointments ?? []).map((a: any) => {
+    const taken = (appointments ?? []).map((a) => {
       const start = toMinutes(String(a.appointment_time));
       const aDuration = a.services?.duration_minutes ?? 30;
       return { start: start - buf, end: start + aDuration + buf };
@@ -183,16 +187,6 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
 
 const VALID_STATUSES = ["pending", "confirmed", "completed", "cancelled"] as const;
 type AppointmentStatus = (typeof VALID_STATUSES)[number];
-
-// Admin-only status transitions. completed/cancelled are terminal (also
-// enforced at the database level, see check_appointment_status_transition
-// in the accompanying migration, as a backstop beneath this allowlist).
-const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
-  pending: ["confirmed", "completed", "cancelled"],
-  confirmed: ["completed", "cancelled"],
-  completed: [],
-  cancelled: [],
-};
 
 // The browser may only ever specify WHAT it wants (service_id, date,
 // time) and its own customer details. Duration, price, availability,
@@ -238,14 +232,17 @@ export const createAppointment = createServerFn({ method: "POST" })
     }
 
     const [{ data: service }, { data: profile }] = await Promise.all([
-      supabaseAdmin.from("services").select("name, duration_minutes, price").eq("id", data.service_id).maybeSingle(),
+      supabaseAdmin
+        .from("services")
+        .select("name, duration_minutes, price")
+        .eq("id", data.service_id)
+        .maybeSingle(),
       supabaseAdmin.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
     ]);
 
     if (profile?.email && service) {
-      const { sendBookingConfirmation, sendAdminBookingNotification } = await import(
-        "@/api/email/appointment-emails"
-      );
+      const { sendBookingConfirmation, sendAdminBookingNotification } =
+        await import("@/api/email/appointment-emails");
       const details = {
         customerName,
         customerPhone,
@@ -345,7 +342,8 @@ export const cancelAppointment = createServerFn({ method: "POST" })
 export const rescheduleAppointment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (d: { id: string; service_id: string; appointment_date: string; appointment_time: string }) => d,
+    (d: { id: string; service_id: string; appointment_date: string; appointment_time: string }) =>
+      d,
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -369,15 +367,22 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
     }
 
     const [{ data: appt }, { data: service }, { data: profile }] = await Promise.all([
-      supabaseAdmin.from("appointments").select("customer_name, customer_phone").eq("id", data.id).maybeSingle(),
-      supabaseAdmin.from("services").select("name, duration_minutes, price").eq("id", data.service_id).maybeSingle(),
+      supabaseAdmin
+        .from("appointments")
+        .select("customer_name, customer_phone")
+        .eq("id", data.id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("services")
+        .select("name, duration_minutes, price")
+        .eq("id", data.service_id)
+        .maybeSingle(),
       supabaseAdmin.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
     ]);
 
     if (profile?.email && service && appt) {
-      const { sendBookingConfirmation, sendAdminBookingNotification } = await import(
-        "@/api/email/appointment-emails"
-      );
+      const { sendBookingConfirmation, sendAdminBookingNotification } =
+        await import("@/api/email/appointment-emails");
       const details = {
         customerName: appt.customer_name,
         customerPhone: appt.customer_phone,
@@ -410,12 +415,22 @@ export const getAdminAppointments = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+// Admin may move an appointment to ANY status from ANY status, including
+// back out of "completed"/"cancelled" — those are no longer terminal (see
+// the accompanying migration that dropped the DB-level transition trigger
+// for appointments, mirroring the same fix already applied to orders).
+// This is intentionally unrestricted: reachable only through requireAdmin,
+// and direct client writes to appointments remain fully revoked (see
+// secure_appointment_booking.sql) — a customer can never reach this
+// regardless of the status graph, so the only thing the old transition
+// allowlist was protecting against was an admin's own mistake, which is
+// exactly what it needs to be possible to undo.
 export const updateAppointmentStatus = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { id: string; status: string }) => d)
   .handler(async ({ data: { id, status } }) => {
-    if (!VALID_STATUSES.includes(status as AppointmentStatus))
-      throw new Error("INVALID_STATUS");
+    if (!VALID_STATUSES.includes(status as AppointmentStatus)) throw new Error("INVALID_STATUS");
+    const nextStatus = status as AppointmentStatus;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: current, error: fetchError } = await supabaseAdmin
@@ -424,12 +439,7 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
       .eq("id", id)
       .single();
     if (fetchError || !current) throw new Error("APPOINTMENT_NOT_FOUND");
-
     const currentStatus = current.status as AppointmentStatus;
-    const nextStatus = status as AppointmentStatus;
-    if (currentStatus !== nextStatus && !VALID_TRANSITIONS[currentStatus].includes(nextStatus)) {
-      throw new Error("INVALID_STATUS_TRANSITION");
-    }
 
     const { error } = await supabaseAdmin
       .from("appointments")
@@ -440,7 +450,9 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
       throw new Error("STATUS_UPDATE_FAILED");
     }
 
-    if (status !== "pending") {
+    // Only notify the customer on a genuine change — re-saving the same
+    // status (e.g. a duplicate submit) must not resend the email.
+    if (nextStatus !== "pending" && currentStatus !== nextStatus) {
       const { data: appt } = await supabaseAdmin
         .from("appointments")
         .select("customer_name, appointment_date, appointment_time, user_id, service_id")

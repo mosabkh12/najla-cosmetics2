@@ -31,16 +31,31 @@ export function Header() {
           {/* Mobile menu */}
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
-              <button className="md:hidden grid h-10 w-10 place-items-center"><Menu className="h-5 w-5 text-foreground" /></button>
+              <button className="md:hidden grid h-10 w-10 place-items-center">
+                <Menu className="h-5 w-5 text-foreground" />
+              </button>
             </SheetTrigger>
-            <SheetContent side={dir === "rtl" ? "right" : "left"} className="w-[300px] p-0 bg-background">
+            <SheetContent
+              side={dir === "rtl" ? "right" : "left"}
+              className="w-[300px] p-0 bg-background"
+            >
               <div className="flex items-center justify-between border-b border-border/20 px-6 h-20">
                 <span className="font-display text-xl italic">Najla Cosmetics</span>
-                <button onClick={() => setMenuOpen(false)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface"><X className="h-5 w-5" /></button>
+                <button
+                  onClick={() => setMenuOpen(false)}
+                  className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
               <nav className="flex flex-col p-6 gap-1">
                 {nav.map((n) => (
-                  <Link key={n.to} to={n.to} onClick={() => setMenuOpen(false)} className={`rounded-xl px-4 py-3 text-[15px] font-medium transition-colors ${pathname === n.to ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface/50"}`}>
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={`rounded-xl px-4 py-3 text-[15px] font-medium transition-colors ${pathname === n.to ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-surface/50"}`}
+                  >
                     {n.label}
                   </Link>
                 ))}
@@ -69,7 +84,9 @@ export function Header() {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <span className="font-display text-[22px] sm:text-[26px] italic tracking-tight text-foreground">Najla Cosmetics</span>
+            <span className="font-display text-[22px] sm:text-[26px] italic tracking-tight text-foreground">
+              Najla Cosmetics
+            </span>
           </Link>
         </div>
 
@@ -80,9 +97,7 @@ export function Header() {
               key={n.to}
               to={n.to}
               className={`text-[13px] uppercase tracking-[0.08em] font-medium transition-colors duration-300 ${
-                pathname === n.to
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                pathname === n.to ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {n.label}
@@ -102,13 +117,21 @@ export function Header() {
             <div className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-surface transition-colors">
               <ShoppingBag className="h-[18px] w-[18px] text-foreground" />
               {count > 0 && (
-                <span className="absolute -top-0.5 -end-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">{count}</span>
+                <span className="absolute -top-0.5 -end-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
+                  {count}
+                </span>
               )}
             </div>
           </Link>
           {isAdmin && (
             <Link to="/admin" className="hidden md:block">
-              <Button variant="outline" size="sm" className="h-9 px-3 text-[11px] rounded-full border-border/40">{t("language") === "שפה" ? "ניהול" : "Admin"}</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-[11px] rounded-full border-border/40"
+              >
+                {t("language") === "שפה" ? "ניהול" : "Admin"}
+              </Button>
             </Link>
           )}
           <Link to="/services" className="hidden md:block">

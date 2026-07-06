@@ -1,5 +1,6 @@
 import { Clock, Sparkles } from "lucide-react";
-import { useI18n, pickLocalized } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
 
 export interface Service {
   id: string;
@@ -13,7 +14,13 @@ export interface Service {
   duration_minutes: number;
 }
 
-export function ServiceCard({ service, onBook }: { service: Service; onBook: (s: Service) => void }) {
+export function ServiceCard({
+  service,
+  onBook,
+}: {
+  service: Service;
+  onBook: (s: Service) => void;
+}) {
   const { t, lang } = useI18n();
   const name = pickLocalized(lang, service.name, service.name_ar);
   const desc = pickLocalized(lang, service.description, service.description_ar);
@@ -47,7 +54,10 @@ export function ServiceCard({ service, onBook }: { service: Service; onBook: (s:
         {/* Hover overlay - Book Now */}
         <div className="absolute bottom-4 sm:bottom-5 inset-x-3 sm:inset-x-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
           <button
-            onClick={(e) => { e.stopPropagation(); onBook(service); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook(service);
+            }}
             className="flex-1 bg-foreground/90 backdrop-blur-md text-background py-2.5 sm:py-3 rounded-full text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] hover:bg-foreground transition-colors"
           >
             {t("book_now")}

@@ -1,5 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Outlet, Link, createRootRouteWithContext, useRouter, HeadContent, Scripts } from "@tanstack/react-router";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { DirectionProvider } from "@radix-ui/react-direction";
 import appCss from "../styles.css?url";
@@ -25,7 +32,12 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="font-display text-6xl text-foreground">404</h1>
         <p className="mt-3 text-sm text-secondary-foreground">Page not found.</p>
-        <Link to="/" className="mt-5 inline-flex items-center justify-center rounded-md btn-gold px-4 py-2 text-sm">Go home</Link>
+        <Link
+          to="/"
+          className="mt-5 inline-flex items-center justify-center rounded-md btn-gold px-4 py-2 text-sm"
+        >
+          Go home
+        </Link>
       </div>
     </div>
   );
@@ -34,13 +46,23 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => { reportLovableError(error, { boundary: "tanstack_root_error_component" }); }, [error]);
+  useEffect(() => {
+    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+  }, [error]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="font-display text-xl text-foreground">Something went wrong</h1>
         <p className="mt-2 text-sm text-secondary-foreground">Please try again.</p>
-        <button onClick={() => { router.invalidate(); reset(); }} className="mt-5 rounded-md btn-gold px-4 py-2 text-sm">Try again</button>
+        <button
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
+          className="mt-5 rounded-md btn-gold px-4 py-2 text-sm"
+        >
+          Try again
+        </button>
       </div>
     </div>
   );
@@ -52,14 +74,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Najla Cosmetics — טיפולי יופי ומוצרים" },
-      { name: "description", content: "Najla Cosmetics — טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים." },
+      {
+        name: "description",
+        content: "Najla Cosmetics — טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים.",
+      },
       { property: "og:title", content: "Najla Cosmetics — טיפולי יופי ומוצרים" },
-      { property: "og:description", content: "Najla Cosmetics — טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים." },
+      {
+        property: "og:description",
+        content: "Najla Cosmetics — טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:title", content: "Najla Cosmetics — טיפולי יופי ומוצרים" },
-      { name: "twitter:description", content: "Najla Cosmetics — טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/300cc964-7800-4a67-ac68-c96cce87c586/id-preview-0315d698--c587dc59-acb7-400d-9e6d-48419d945913.lovable.app-1782510558358.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/300cc964-7800-4a67-ac68-c96cce87c586/id-preview-0315d698--c587dc59-acb7-400d-9e6d-48419d945913.lovable.app-1782510558358.png" },
+      {
+        name: "twitter:description",
+        content: "Najla Cosmetics — טיפולי יופי מקצועיים ומוצרי קוסמטיקה נבחרים.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/300cc964-7800-4a67-ac68-c96cce87c586/id-preview-0315d698--c587dc59-acb7-400d-9e6d-48419d945913.lovable.app-1782510558358.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/300cc964-7800-4a67-ac68-c96cce87c586/id-preview-0315d698--c587dc59-acb7-400d-9e6d-48419d945913.lovable.app-1782510558358.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
@@ -73,8 +112,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="he" dir="rtl">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
@@ -89,7 +133,9 @@ function RootComponent() {
             <CartProvider>
               <div className="flex min-h-screen flex-col">
                 <Header />
-                <main className="flex-1 pt-20"><Outlet /></main>
+                <main className="flex-1 pt-20">
+                  <Outlet />
+                </main>
                 <Footer />
                 <Toaster position="top-center" />
               </div>

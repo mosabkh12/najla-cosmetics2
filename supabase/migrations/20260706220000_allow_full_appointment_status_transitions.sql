@@ -1,0 +1,31 @@
+-- =============================================
+-- Allow full appointment status transitions
+--
+-- Mirrors 20260705220000_allow_full_order_status_transitions.sql, applied
+-- to appointments. 20260704190000_harden_order_appointment_status_transitions.sql
+-- made "completed"/"cancelled" terminal for appointments — no status could
+-- ever move out of them again, enforced both in TypeScript
+-- (VALID_TRANSITIONS in updateAppointmentStatus) and here at the database
+-- level as a hard backstop.
+--
+-- In practice this blocked the same legitimate admin workflow as orders
+-- did: correcting a mis-click (e.g. accidentally marking an appointment
+-- "completed" and needing to set it back). updateAppointmentStatus is
+-- reachable only through requireAdmin — direct client writes to
+-- appointments are, and remain, fully revoked from `authenticated`
+-- (see 20260704180000_secure_appointment_booking.sql) — so the
+-- terminal-state restriction was never protecting against a customer; it
+-- was only ever getting in the admin's own way. Removing it here matches
+-- the corresponding removal of the TypeScript-level allowlist in
+-- updateAppointmentStatus (src/api/appointments/appointments.ts).
+--
+-- Note: reschedule_appointment() (see secure_appointment_booking.sql)
+-- independently sets status = 'pending' on every reschedule regardless of
+-- the prior status — that RPC's own logic is untouched by this migration;
+-- it never depended on this trigger to do that (it's a plain UPDATE
+-- inside a SECURITY DEFINER function, not gated by this trigger's graph
+-- either before or after this change).
+-- =============================================
+
+DROP TRIGGER IF EXISTS check_appointment_status_transition ON public.appointments;
+DROP FUNCTION IF EXISTS public.check_appointment_status_transition();

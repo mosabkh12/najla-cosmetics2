@@ -1,13 +1,25 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Heart, Minus, Plus, Truck, Sparkles, ShieldCheck, Award, Star, ChevronLeft } from "lucide-react";
+import {
+  Heart,
+  Minus,
+  Plus,
+  Truck,
+  Sparkles,
+  ShieldCheck,
+  Award,
+  Star,
+  ChevronLeft,
+} from "lucide-react";
 import { getProductById, getProductImages, getRelatedProducts } from "@/api/products/products";
 import { checkFavorite, toggleFavorite } from "@/api/favorites/favorites";
-import { useI18n, pickLocalized } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
+import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/products/$id")({
@@ -47,7 +59,8 @@ function ProductDetailPage() {
   const { data: relatedProducts = [] } = useQuery({
     queryKey: ["related-products", id, product?.category],
     enabled: !!product,
-    queryFn: async () => (await getRelatedProducts({ data: { id, category: product!.category } })) as Product[],
+    queryFn: async () =>
+      (await getRelatedProducts({ data: { id, category: product!.category } })) as Product[],
     staleTime: 120_000,
   });
 
@@ -57,27 +70,30 @@ function ProductDetailPage() {
       if (!user) return;
       const favKey = ["favorite", id, user.id];
       const listKey = ["favorites", user.id];
-      await Promise.all([qc.cancelQueries({ queryKey: favKey }), qc.cancelQueries({ queryKey: listKey })]);
+      await Promise.all([
+        qc.cancelQueries({ queryKey: favKey }),
+        qc.cancelQueries({ queryKey: listKey }),
+      ]);
 
       const prevFav = qc.getQueryData<boolean>(favKey);
-      const prevList = qc.getQueryData<any[]>(listKey);
+      const prevList = qc.getQueryData<Product[]>(listKey);
       const nextFav = !prevFav;
 
       qc.setQueryData(favKey, nextFav);
       if (product) {
-        qc.setQueryData<any[]>(listKey, (old = []) =>
+        qc.setQueryData<Product[]>(listKey, (old = []) =>
           nextFav ? [...old, product] : old.filter((p) => p.id !== id),
         );
       }
 
       return { prevFav, prevList, favKey, listKey };
     },
-    onError: (e: any, _vars, ctx) => {
+    onError: (e: unknown, _vars, ctx) => {
       if (ctx) {
         qc.setQueryData(ctx.favKey, ctx.prevFav);
         qc.setQueryData(ctx.listKey, ctx.prevList);
       }
-      toast.error(e.message);
+      toast.error(getErrorMessage(e));
     },
     onSettled: () => {
       if (!user) return;
@@ -87,7 +103,10 @@ function ProductDetailPage() {
   });
 
   const toggleFav = () => {
-    if (!user) { toast.info(t("sign_in")); return; }
+    if (!user) {
+      toast.info(t("sign_in"));
+      return;
+    }
     favMutation.mutate();
   };
 
@@ -120,12 +139,18 @@ function ProductDetailPage() {
 
   const allImages = [
     ...(product.image_url ? [product.image_url] : []),
-    ...images.map((img: any) => img.image_url),
+    ...images.map((img) => img.image_url),
   ];
 
   const addToCart = () => {
     add(
-      { product_id: product.id, name, price: product.price, image_url: product.image_url, stock: product.stock_quantity },
+      {
+        product_id: product.id,
+        name,
+        price: product.price,
+        image_url: product.image_url,
+        stock: product.stock_quantity,
+      },
       qty,
     );
     toast.success(t("add_to_cart"));
@@ -133,7 +158,13 @@ function ProductDetailPage() {
 
   const buyNow = () => {
     add(
-      { product_id: product.id, name, price: product.price, image_url: product.image_url, stock: product.stock_quantity },
+      {
+        product_id: product.id,
+        name,
+        price: product.price,
+        image_url: product.image_url,
+        stock: product.stock_quantity,
+      },
       qty,
     );
     navigate({ to: "/checkout" });
@@ -142,10 +173,8 @@ function ProductDetailPage() {
   return (
     <section className="min-h-screen bg-background">
       <div key={id} className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto pt-6 pb-16">
-
         {/* ═══════════ Product Layout ═══════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-10 lg:gap-16 items-start">
-
           {/* ── Left: Image Gallery ── */}
           <div className="flex gap-4 lg:sticky lg:top-24 animate-in fade-in slide-in-from-start-10 duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
             {/* Thumbnail strip */}
@@ -155,13 +184,17 @@ function ProductDetailPage() {
                   key={i}
                   onClick={() => setActiveImage(i)}
                   className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all bg-surface ${
-                    activeImage === i ? "border-primary shadow-md" : "border-border/20 hover:border-border/60"
+                    activeImage === i
+                      ? "border-primary shadow-md"
+                      : "border-border/20 hover:border-border/60"
                   }`}
                 >
                   {url ? (
                     <img src={url} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full grid place-items-center"><Sparkles className="h-4 w-4 text-muted-foreground/20" /></div>
+                    <div className="w-full h-full grid place-items-center">
+                      <Sparkles className="h-4 w-4 text-muted-foreground/20" />
+                    </div>
                   )}
                 </button>
               ))}
@@ -170,7 +203,11 @@ function ProductDetailPage() {
             {/* Main Image */}
             <div
               className="flex-1 relative rounded-2xl overflow-hidden bg-surface"
-              style={{ aspectRatio: "4/5", maxHeight: "680px", boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
+              style={{
+                aspectRatio: "4/5",
+                maxHeight: "680px",
+                boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)",
+              }}
             >
               {allImages.length > 0 ? (
                 <img
@@ -184,20 +221,22 @@ function ProductDetailPage() {
                 </div>
               )}
 
-              {product.stock_quantity > 0 && product.stock_quantity <= product.low_stock_threshold && (
-                <span className="absolute top-5 start-5 bg-primary text-primary-foreground px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.1em]">
-                  {t("low_stock")}
-                </span>
-              )}
+              {product.stock_quantity > 0 &&
+                product.stock_quantity <= product.low_stock_threshold && (
+                  <span className="absolute top-5 start-5 bg-primary text-primary-foreground px-4 py-1.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.1em]">
+                    {t("low_stock")}
+                  </span>
+                )}
             </div>
           </div>
 
           {/* ── Right: Product Info ── */}
           <div className="flex flex-col pt-0 lg:pt-2 animate-in fade-in slide-in-from-end-10 duration-700 delay-150 fill-mode-backwards ease-[cubic-bezier(0.22,1,0.36,1)]">
-
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              <Link to="/products" className="hover:text-foreground transition-colors">{t("shop_products")}</Link>
+              <Link to="/products" className="hover:text-foreground transition-colors">
+                {t("shop_products")}
+              </Link>
               <span>/</span>
               <span className="text-foreground">{product.category}</span>
             </nav>
@@ -238,7 +277,9 @@ function ProductDetailPage() {
                 >
                   <Minus className="h-4 w-4 text-foreground" />
                 </button>
-                <span className="w-8 text-center text-[16px] font-medium text-foreground select-none">{qty}</span>
+                <span className="w-8 text-center text-[16px] font-medium text-foreground select-none">
+                  {qty}
+                </span>
                 <button
                   onClick={() => setQty(Math.min(product.stock_quantity, qty + 1))}
                   className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface transition-colors"
@@ -261,7 +302,9 @@ function ProductDetailPage() {
                 onClick={toggleFav}
                 className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full border border-border/40 hover:bg-surface transition-colors"
               >
-                <Heart className={`h-5 w-5 transition-colors ${fav ? "fill-primary text-primary" : "text-foreground/40"}`} />
+                <Heart
+                  className={`h-5 w-5 transition-colors ${fav ? "fill-primary text-primary" : "text-foreground/40"}`}
+                />
               </button>
             </div>
 
@@ -279,24 +322,32 @@ function ProductDetailPage() {
               {[
                 { icon: <Truck className="h-[22px] w-[22px]" />, label: "FREE SHIPPING" },
                 { icon: <Sparkles className="h-[22px] w-[22px]" />, label: "VEGAN & ETHICAL" },
-                { icon: <ShieldCheck className="h-[22px] w-[22px]" />, label: "DERMATOLOGY APPROVED" },
+                {
+                  icon: <ShieldCheck className="h-[22px] w-[22px]" />,
+                  label: "DERMATOLOGY APPROVED",
+                },
                 { icon: <Award className="h-[22px] w-[22px]" />, label: "SALON PROFESSIONAL" },
               ].map((badge) => (
                 <div key={badge.label} className="flex items-center gap-3">
                   <span className="text-primary shrink-0">{badge.icon}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{badge.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    {badge.label}
+                  </span>
                 </div>
               ))}
             </div>
-
           </div>
         </div>
 
         {/* ── Related Products ── */}
         {relatedProducts.length > 0 && (
           <div className="mt-20 pt-12 border-t border-border/20">
-            <h2 className="font-display text-[24px] sm:text-[28px] text-foreground text-center">{t("products_title")}</h2>
-            <p className="mt-2 text-[14px] text-muted-foreground text-center">{t("products_sub")}</p>
+            <h2 className="font-display text-[24px] sm:text-[28px] text-foreground text-center">
+              {t("products_title")}
+            </h2>
+            <p className="mt-2 text-[14px] text-muted-foreground text-center">
+              {t("products_sub")}
+            </p>
             <div className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
@@ -307,12 +358,14 @@ function ProductDetailPage() {
 
         {/* ── Back link ── */}
         <div className="mt-16 pt-10 border-t border-border/20">
-          <Link to="/products" className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+          <Link
+            to="/products"
+            className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
+          >
             <ChevronLeft className="h-4 w-4" />
             {t("continue_shopping")}
           </Link>
         </div>
-
       </div>
     </section>
   );

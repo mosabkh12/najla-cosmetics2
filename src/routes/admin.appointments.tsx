@@ -2,8 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAdminAppointments, updateAppointmentStatus } from "@/api/appointments/appointments";
+import type { AdminAppointmentRow } from "@/lib/api-types";
 import { useI18n } from "@/lib/i18n";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
 import { CalendarDays, Search, Clock } from "lucide-react";
@@ -25,18 +33,81 @@ const statusDot: Record<string, string> = {
   cancelled: "bg-destructive",
 };
 
+const TIME_FILTERS = ["today", "week", "month", "all"] as const;
+type TimeFilter = (typeof TIME_FILTERS)[number];
+
+const STATUS_FILTERS = ["all", ...STATUSES] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+// Every other date/time decision in this app (the booking RPCs,
+// nowInJerusalem() in appointments.ts) deliberately uses Asia/Jerusalem
+// rather than the viewer's local clock, specifically so "today" means the
+// same thing regardless of what timezone a browser happens to be set to.
+// This page grouping by date needs that same guarantee — an admin opening
+// this page from a device set to a different timezone must still see the
+// same "today" a customer in Israel would be booking against.
+function jerusalemTodayStr(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)!.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+// Both dateStr and fromStr are plain "YYYY-MM-DD" values (never
+// timezone-aware timestamps) — diffing them as UTC-midnight instants
+// avoids any local-timezone shift that constructing a plain `new
+// Date(dateStr)` could introduce.
+function daysBetweenDateStrings(dateStr: string, fromStr: string): number {
+  const [y1, m1, d1] = dateStr.split("-").map(Number);
+  const [y2, m2, d2] = fromStr.split("-").map(Number);
+  return Math.round((Date.UTC(y1, m1 - 1, d1) - Date.UTC(y2, m2 - 1, d2)) / 86400000);
+}
+
+// A schedule is inherently forward-looking — "this week" for an admin
+// means "what's coming up in the next 7 days", not "what happened in the
+// past 7 days" (the convention used for order history). "All" still
+// includes past appointments too, so nothing is ever hidden permanently.
+function isWithinTimeFilter(dateStr: string, filter: TimeFilter, todayStr: string): boolean {
+  if (filter === "all") return true;
+  const diff = daysBetweenDateStrings(dateStr, todayStr);
+  if (filter === "today") return diff === 0;
+  const days = filter === "week" ? 7 : 30;
+  return diff >= 0 && diff < days;
+}
+
 function Page() {
   const { lang } = useI18n();
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
   const [search, setSearch] = useState("");
+  // Defaults to "today" — the most common question for a service business
+  // admin opening this page is "who am I seeing today", not a full history dump.
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("today");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const { data: rows = [] } = useQuery({
     queryKey: ["admin-appointments"],
     queryFn: () => getAdminAppointments(),
   });
 
-  const filtered = rows.filter((a: any) => {
+  const todayStr = jerusalemTodayStr();
+  const timeFiltered = rows.filter((a) =>
+    isWithinTimeFilter(a.appointment_date, timeFilter, todayStr),
+  );
+
+  const statusCounts = STATUS_FILTERS.reduce<Record<string, number>>((acc, s) => {
+    acc[s] = s === "all" ? timeFiltered.length : timeFiltered.filter((a) => a.status === s).length;
+    return acc;
+  }, {});
+
+  const statusFilteredRows =
+    statusFilter === "all" ? timeFiltered : timeFiltered.filter((a) => a.status === statusFilter);
+
+  const filtered = statusFilteredRows.filter((a) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -46,14 +117,66 @@ function Page() {
     );
   });
 
+  // Soonest first — a schedule reads better chronologically than newest-created-first.
+  const sorted = [...filtered].sort((a, b) => {
+    const d = a.appointment_date.localeCompare(b.appointment_date);
+    return d !== 0 ? d : String(a.appointment_time).localeCompare(String(b.appointment_time));
+  });
+
+  const groups: { date: string; items: AdminAppointmentRow[] }[] = [];
+  for (const a of sorted) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === a.appointment_date) last.items.push(a);
+    else groups.push({ date: a.appointment_date, items: [a] });
+  }
+
   const setStatus = async (id: string, status: string) => {
     try {
       await updateAppointmentStatus({ data: { id, status } });
       toast.success("Updated");
       qc.invalidateQueries({ queryKey: ["admin-appointments"] });
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
     }
+  };
+
+  const timeFilterLabel: Record<TimeFilter, string> = {
+    today: L("היום", "اليوم", "Today"),
+    week: L("השבוע", "هذا الأسبوع", "This Week"),
+    month: L("החודש", "هذا الشهر", "This Month"),
+    all: L("הכל", "الكل", "All Time"),
+  };
+
+  const statusFilterLabel: Record<StatusFilter, string> = {
+    all: L("הכל", "الكل", "All"),
+    pending: L("חדשים", "جديدة", "New"),
+    confirmed: L("מאושרים", "مؤكدة", "Confirmed"),
+    completed: L("הושלמו", "مكتملة", "Completed"),
+    cancelled: L("בוטלו", "ملغاة", "Cancelled"),
+  };
+
+  const dateGroupLabel = (
+    dateStr: string,
+  ): { kind: "today" | "tomorrow" | "yesterday" | null; badge: string | null; full: string } => {
+    // Constructing a local-midnight Date purely for weekday/month display
+    // is safe here — a calendar date's weekday doesn't depend on the
+    // viewer's timezone, only the "is this today" comparison above does
+    // (handled via todayStr/daysBetweenDateStrings, both Jerusalem-based).
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const displayDate = new Date(y, m - 1, d);
+    const diffDays = daysBetweenDateStrings(dateStr, todayStr);
+    const full = displayDate.toLocaleDateString(
+      lang === "he" ? "he-IL" : lang === "ar" ? "ar-EG" : "en-US",
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      },
+    );
+    if (diffDays === 0) return { kind: "today", badge: L("היום", "اليوم", "Today"), full };
+    if (diffDays === 1) return { kind: "tomorrow", badge: L("מחר", "غدًا", "Tomorrow"), full };
+    if (diffDays === -1) return { kind: "yesterday", badge: L("אתמול", "أمس", "Yesterday"), full };
+    return { kind: null, badge: null, full };
   };
 
   return (
@@ -62,14 +185,72 @@ function Page() {
       <Reveal direction="up">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">{L("תורים", "المواعيد", "Appointments")}</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">{L(`${rows.length} תורים`, `${rows.length} مواعيد`, `${rows.length} appointments`)}</p>
+            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">
+              {L("תורים", "المواعيد", "Appointments")}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
+              {filtered.length === rows.length
+                ? L(`${rows.length} תורים`, `${rows.length} مواعيد`, `${rows.length} appointments`)
+                : L(
+                    `${filtered.length} מתוך ${rows.length} תורים`,
+                    `${filtered.length} من ${rows.length} مواعيد`,
+                    `${filtered.length} of ${rows.length} appointments`,
+                  )}
+            </p>
           </div>
         </div>
       </Reveal>
 
-      {/* Search */}
+      {/* Time range tabs */}
       <Reveal direction="up" delay={1}>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {TIME_FILTERS.map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setTimeFilter(tf)}
+              className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
+                timeFilter === tf
+                  ? "bg-foreground text-background"
+                  : "bg-surface text-muted-foreground hover:bg-surface-2"
+              }`}
+            >
+              {timeFilterLabel[tf]}
+            </button>
+          ))}
+        </div>
+      </Reveal>
+
+      {/* Status tabs */}
+      <Reveal direction="up" delay={2}>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {STATUS_FILTERS.map((sf) => (
+            <button
+              key={sf}
+              onClick={() => setStatusFilter(sf)}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
+                statusFilter === sf
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-surface text-muted-foreground hover:bg-surface-2"
+              }`}
+            >
+              {sf !== "all" && <span className={`h-1.5 w-1.5 rounded-full ${statusDot[sf]}`} />}
+              {statusFilterLabel[sf]}
+              <span
+                className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
+                  statusFilter === sf
+                    ? "bg-background/20 text-primary-foreground"
+                    : "bg-surface-3 text-muted-foreground"
+                }`}
+              >
+                {statusCounts[sf]}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Reveal>
+
+      {/* Search */}
+      <Reveal direction="up" delay={3}>
         <div className="relative">
           <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -82,87 +263,157 @@ function Page() {
         </div>
       </Reveal>
 
-      {/* Table */}
-      <Reveal direction="up" delay={2}>
-        <div
-          className="rounded-2xl bg-card overflow-hidden border border-border/10"
-          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-surface/60 border-b border-border/15">
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("לקוחה", "العميلة", "Customer")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("תאריך ושעה", "التاريخ والوقت", "Date & Time")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden md:table-cell">{L("טלפון", "الهاتف", "Phone")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">{L("שירות", "الخدمة", "Service")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("מחיר", "السعر", "Price")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("סטטוס", "الحالة", "Status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((a: any) => (
-                  <tr key={a.id} className="border-t border-border/10 hover:bg-surface/30 transition-colors">
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
-                          {(a.customer_name ?? "?")[0]}
-                        </div>
-                        <span className="font-medium text-foreground">{a.customer_name}</span>
-                      </div>
-                    </td>
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-1.5 text-[12px]">
-                        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                        <span className="text-foreground">{a.appointment_date}</span>
-                        {a.appointment_time && (
-                          <>
-                            <Clock className="h-3 w-3 text-muted-foreground/40 ms-1.5" />
-                            <span className="text-muted-foreground">{a.appointment_time?.slice(0, 5)}</span>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell" dir="ltr">{a.customer_phone}</td>
-                    <td className="p-3.5 hidden sm:table-cell">
-                      <span className="text-[12px] font-medium text-foreground">
-                        {lang === "ar" ? a.service?.name_ar || a.service?.name : a.service?.name}
-                      </span>
-                    </td>
-                    <td className="p-3.5 font-semibold">₪{Number(a.total_price).toFixed(0)}</td>
-                    <td className="p-3.5">
-                      <Select value={a.status} onValueChange={(v) => setStatus(a.id, v)}>
-                        <SelectTrigger className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[a.status] ?? "bg-surface text-muted-foreground border-border/30"}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[a.status] ?? "bg-muted-foreground"}`} />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              <span className="flex items-center gap-2">
-                                <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />
-                                {s}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-16 text-center">
-                      <CalendarDays className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                      <div className="text-[14px] font-medium text-muted-foreground">{search ? L("לא נמצאו תוצאות", "لم يتم العثور على نتائج", "No results found") : L("אין תורים עדיין", "لا مواعيد بعد", "No appointments yet")}</div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      {/* Date groups */}
+      {groups.length === 0 && (
+        <Reveal direction="up" delay={4}>
+          <div
+            className="rounded-2xl bg-card overflow-hidden border border-border/10 py-16 text-center"
+            style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+          >
+            <CalendarDays className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+            <div className="text-[14px] font-medium text-muted-foreground">
+              {search
+                ? L("לא נמצאו תוצאות", "لم يتم العثور على نتائج", "No results found")
+                : timeFilter === "today"
+                  ? L("אין תורים היום", "لا مواعيد اليوم", "No appointments today")
+                  : statusFilter !== "all" || timeFilter !== "all"
+                    ? L(
+                        "אין תורים התואמים לסינון",
+                        "لا توجد مواعيد مطابقة للتصفية",
+                        "No appointments match this filter",
+                      )
+                    : L("אין תורים עדיין", "لا مواعيد بعد", "No appointments yet")}
+            </div>
           </div>
-        </div>
-      </Reveal>
+        </Reveal>
+      )}
+
+      {groups.map((group, gi) => {
+        const { kind, badge, full } = dateGroupLabel(group.date);
+        const isToday = kind === "today";
+        return (
+          <Reveal direction="up" delay={gi === 0 ? 4 : 0} key={group.date}>
+            <div
+              className="rounded-2xl bg-card overflow-hidden border border-border/10"
+              style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+            >
+              <div
+                className={`flex items-center justify-between px-4 py-3 border-b border-border/15 ${isToday ? "bg-cream" : "bg-surface/60"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <CalendarDays
+                    className={`h-4 w-4 ${isToday ? "text-primary" : "text-muted-foreground/60"}`}
+                  />
+                  {badge && (
+                    <span className="font-display text-[15px] text-foreground">{badge}</span>
+                  )}
+                  <span
+                    className={
+                      badge
+                        ? "text-[12px] text-muted-foreground"
+                        : "font-display text-[15px] text-foreground"
+                    }
+                  >
+                    {full}
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                  {L(
+                    `${group.items.length} תורים`,
+                    `${group.items.length} مواعيد`,
+                    `${group.items.length} appts`,
+                  )}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-surface/30 border-b border-border/10">
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                        {L("לקוחה", "العميلة", "Customer")}
+                      </th>
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                        {L("שעה", "الوقت", "Time")}
+                      </th>
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden md:table-cell">
+                        {L("טלפון", "الهاتف", "Phone")}
+                      </th>
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">
+                        {L("שירות", "الخدمة", "Service")}
+                      </th>
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                        {L("מחיר", "السعر", "Price")}
+                      </th>
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                        {L("סטטוס", "الحالة", "Status")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((a) => (
+                      <tr
+                        key={a.id}
+                        className="border-t border-border/10 hover:bg-surface/30 transition-colors"
+                      >
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
+                              {(a.customer_name ?? "?")[0]}
+                            </div>
+                            <span className="font-medium text-foreground">{a.customer_name}</span>
+                          </div>
+                        </td>
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-1.5 text-[12px] text-foreground">
+                            <Clock className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                            {String(a.appointment_time).slice(0, 5)}
+                          </div>
+                        </td>
+                        <td
+                          className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell"
+                          dir="ltr"
+                        >
+                          {a.customer_phone}
+                        </td>
+                        <td className="p-3.5 hidden sm:table-cell">
+                          <span className="text-[12px] font-medium text-foreground">
+                            {lang === "ar"
+                              ? a.service?.name_ar || a.service?.name
+                              : a.service?.name}
+                          </span>
+                        </td>
+                        <td className="p-3.5 font-semibold">₪{Number(a.total_price).toFixed(0)}</td>
+                        <td className="p-3.5">
+                          <Select value={a.status} onValueChange={(v) => setStatus(a.id, v)}>
+                            <SelectTrigger
+                              className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[a.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[a.status] ?? "bg-muted-foreground"}`}
+                              />
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUSES.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  <span className="flex items-center gap-2">
+                                    <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />
+                                    {s}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Reveal>
+        );
+      })}
     </div>
   );
 }

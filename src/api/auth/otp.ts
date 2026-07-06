@@ -118,7 +118,10 @@ export const verifyOtp = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (existingProfile) {
-      await supabaseAdmin.from("profiles").update({ email_verified: true }).eq("id", existingProfile.id);
+      await supabaseAdmin
+        .from("profiles")
+        .update({ email_verified: true })
+        .eq("id", existingProfile.id);
     }
 
     // Issue the one-time signup verification token. Only its hash is

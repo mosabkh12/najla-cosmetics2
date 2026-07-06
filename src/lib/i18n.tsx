@@ -27,7 +27,8 @@ const HE: Dict = {
   view_all_products: "כל המוצרים",
   about_eyebrow: "אודות Najla Cosmetics",
   about_title: "יופי הוא יותר מטיפול.",
-  about_body: "ב-Najla Cosmetics כל פרט מתוכנן כדי שתרגישי בטוחה, מטופחת ויפה במלוא מובן המילה. משירותים אישיים ועד מוצרי קוסמטיקה איכותיים — אנו מאחדים איכות, נוחות ואלגנטיות.",
+  about_body:
+    "ב-Najla Cosmetics כל פרט מתוכנן כדי שתרגישי בטוחה, מטופחת ויפה במלוא מובן המילה. משירותים אישיים ועד מוצרי קוסמטיקה איכותיים — אנו מאחדים איכות, נוחות ואלגנטיות.",
   discover_story: "גלי את הסיפור שלנו",
   location_title: "בקרי ב-Najla Cosmetics",
   get_directions: "קבלי הוראות הגעה",
@@ -75,7 +76,8 @@ const HE: Dict = {
   booking_past_date: "לא ניתן להזמין תור לתאריך שעבר",
   booking_past_time: "לא ניתן להזמין שעה שכבר עברה",
   booking_time_taken: "השעה הזו כבר תפוסה, נסי שעה אחרת",
-  booking_max_reached: "ניתן להחזיק עד 2 תורים פעילים בו-זמנית. בטלי או שני תור קיים כדי להזמין תור נוסף.",
+  booking_max_reached:
+    "ניתן להחזיק עד 2 תורים פעילים בו-זמנית. בטלי או שני תור קיים כדי להזמין תור נוסף.",
   booking_service_unavailable: "השירות הזה אינו זמין כרגע",
   booking_invalid_slot: "יש לבחור שעה מתוך השעות הזמינות",
   booking_failed: "ההזמנה נכשלה, נסי שוב",
@@ -84,11 +86,13 @@ const HE: Dict = {
   reschedule: "שינוי מועד",
   reschedule_appointment: "שינוי מועד לתור",
   reschedule_success: "התור עודכן בהצלחה!",
-  max_appointments_notice: "הגעת למקסימום של 2 תורים פעילים. בטלי או שני תור קיים כדי להזמין תור חדש.",
+  max_appointments_notice:
+    "הגעת למקסימום של 2 תורים פעילים. בטלי או שני תור קיים כדי להזמין תור חדש.",
   delete: "מחיקה",
   clear_history: "מחיקת היסטוריה",
   delete_appointment_confirm: "למחוק את התור לצמיתות? לא ניתן לשחזר פעולה זו.",
-  clear_history_confirm: "למחוק לצמיתות את כל היסטוריית התורים (הושלמו/בוטלו)? לא ניתן לשחזר פעולה זו.",
+  clear_history_confirm:
+    "למחוק לצמיתות את כל היסטוריית התורים (הושלמו/בוטלו)? לא ניתן לשחזר פעולה זו.",
   appointment_deleted: "התור נמחק",
   history_cleared: "היסטוריית התורים נמחקה",
   appointment_auto_delete_notice: "תורים שהושלמו או בוטלו נמחקים אוטומטית לאחר 14 יום.",
@@ -177,7 +181,8 @@ const AR: Dict = {
   view_all_products: "كل المنتجات",
   about_eyebrow: "عن Najla Cosmetics",
   about_title: "الجمال أكثر من مجرد خدمة.",
-  about_body: "في Najla Cosmetics، كل تفصيل مصمم لتشعري بالثقة والعناية والجمال. من الخدمات الشخصية إلى منتجات التجميل الموثوقة، نجمع بين الجودة والراحة والأناقة.",
+  about_body:
+    "في Najla Cosmetics، كل تفصيل مصمم لتشعري بالثقة والعناية والجمال. من الخدمات الشخصية إلى منتجات التجميل الموثوقة، نجمع بين الجودة والراحة والأناقة.",
   discover_story: "اكتشفي قصتنا",
   location_title: "زورينا في Najla Cosmetics",
   get_directions: "احصلي على الاتجاهات",
@@ -225,7 +230,8 @@ const AR: Dict = {
   booking_past_date: "لا يمكن الحجز في تاريخ سابق",
   booking_past_time: "لا يمكن الحجز في وقت مضى",
   booking_time_taken: "هذا الوقت محجوز بالفعل، جربي وقتاً آخر",
-  booking_max_reached: "يمكنك الاحتفاظ بحد أقصى موعدين نشطين في نفس الوقت. ألغي أو غيّري موعد قائم لحجز موعد جديد.",
+  booking_max_reached:
+    "يمكنك الاحتفاظ بحد أقصى موعدين نشطين في نفس الوقت. ألغي أو غيّري موعد قائم لحجز موعد جديد.",
   booking_service_unavailable: "هذه الخدمة غير متوفرة حالياً",
   booking_invalid_slot: "يرجى اختيار وقت من الأوقات المتاحة",
   booking_failed: "فشل الحجز، حاولي مرة أخرى",
@@ -234,11 +240,13 @@ const AR: Dict = {
   reschedule: "تغيير الموعد",
   reschedule_appointment: "تغيير موعد الحجز",
   reschedule_success: "تم تحديث الموعد بنجاح!",
-  max_appointments_notice: "وصلتِ للحد الأقصى وهو موعدان نشطان. ألغي أو غيّري موعداً قائماً لحجز موعد جديد.",
+  max_appointments_notice:
+    "وصلتِ للحد الأقصى وهو موعدان نشطان. ألغي أو غيّري موعداً قائماً لحجز موعد جديد.",
   delete: "حذف",
   clear_history: "حذف السجل",
   delete_appointment_confirm: "هل تريدين حذف هذا الموعد نهائياً؟ لا يمكن التراجع عن هذا الإجراء.",
-  clear_history_confirm: "هل تريدين حذف كل سجل المواعيد (المكتملة/الملغاة) نهائياً؟ لا يمكن التراجع عن هذا الإجراء.",
+  clear_history_confirm:
+    "هل تريدين حذف كل سجل المواعيد (المكتملة/الملغاة) نهائياً؟ لا يمكن التراجع عن هذا الإجراء.",
   appointment_deleted: "تم حذف الموعد",
   history_cleared: "تم حذف سجل المواعيد",
   appointment_auto_delete_notice: "المواعيد المكتملة أو الملغاة تُحذف تلقائياً بعد 14 يوماً.",
@@ -306,28 +314,69 @@ const AR: Dict = {
 };
 
 const EN: Dict = {
-  brand: "Najla Cosmetics", nav_home: "Home", nav_services: "Services", nav_products: "Products",
-  nav_about: "About", nav_location: "Location", book_appointment: "Book Appointment",
-  shop_products: "Shop Products", account: "My Account", sign_in: "Sign In", sign_up: "Sign Up",
-  sign_out: "Sign Out", hero_title: "Your Beauty, Refined with Care.",
-  hero_sub: "Discover professional beauty services and carefully selected cosmetics made to elevate your everyday glow.",
+  brand: "Najla Cosmetics",
+  nav_home: "Home",
+  nav_services: "Services",
+  nav_products: "Products",
+  nav_about: "About",
+  nav_location: "Location",
+  book_appointment: "Book Appointment",
+  shop_products: "Shop Products",
+  account: "My Account",
+  sign_in: "Sign In",
+  sign_up: "Sign Up",
+  sign_out: "Sign Out",
+  hero_title: "Your Beauty, Refined with Care.",
+  hero_sub:
+    "Discover professional beauty services and carefully selected cosmetics made to elevate your everyday glow.",
   services_title: "Beauty Services Designed for You",
   services_sub: "Choose the service that fits your routine and book your preferred time.",
-  products_title: "Beauty Essentials", products_sub: "Handpicked products for your skincare and beauty routine.",
-  view_all_products: "View All Products", about_eyebrow: "About Najla Cosmetics",
+  products_title: "Beauty Essentials",
+  products_sub: "Handpicked products for your skincare and beauty routine.",
+  view_all_products: "View All Products",
+  about_eyebrow: "About Najla Cosmetics",
   about_title: "Beauty Is More Than a Service.",
-  about_body: "At Najla Cosmetics, every detail is designed to help you feel confident, cared for, and beautifully yourself.",
-  discover_story: "Discover Our Story", location_title: "Visit Najla Cosmetics",
-  get_directions: "Get Directions", waze: "Waze", whatsapp: "WhatsApp", working_hours: "Working Hours",
-  address: "Address", phone: "Phone", add_to_cart: "Add to Cart", out_of_stock: "Out of Stock",
-  in_stock: "In Stock", low_stock: "Low Stock", starting_at: "From ", duration: "Duration",
-  minutes: "min", book_now: "Book Now", view: "View", category: "Category",
-  all_categories: "All Categories", search: "Search", sort: "Sort", sort_newest: "Newest",
-  sort_price_asc: "Price: Low to High", sort_price_desc: "Price: High to Low", cart: "Cart",
-  empty_cart: "Your cart is empty", subtotal: "Subtotal", checkout: "Checkout",
-  continue_shopping: "Continue Shopping", remove: "Remove", quantity: "Quantity",
-  full_name: "Full Name", email: "Email", password: "Password", notes_optional: "Note (optional)",
-  select_date: "Select Date", select_time: "Select Time", select_service: "Select Service", confirm_booking: "Confirm Booking",
+  about_body:
+    "At Najla Cosmetics, every detail is designed to help you feel confident, cared for, and beautifully yourself.",
+  discover_story: "Discover Our Story",
+  location_title: "Visit Najla Cosmetics",
+  get_directions: "Get Directions",
+  waze: "Waze",
+  whatsapp: "WhatsApp",
+  working_hours: "Working Hours",
+  address: "Address",
+  phone: "Phone",
+  add_to_cart: "Add to Cart",
+  out_of_stock: "Out of Stock",
+  in_stock: "In Stock",
+  low_stock: "Low Stock",
+  starting_at: "From ",
+  duration: "Duration",
+  minutes: "min",
+  book_now: "Book Now",
+  view: "View",
+  category: "Category",
+  all_categories: "All Categories",
+  search: "Search",
+  sort: "Sort",
+  sort_newest: "Newest",
+  sort_price_asc: "Price: Low to High",
+  sort_price_desc: "Price: High to Low",
+  cart: "Cart",
+  empty_cart: "Your cart is empty",
+  subtotal: "Subtotal",
+  checkout: "Checkout",
+  continue_shopping: "Continue Shopping",
+  remove: "Remove",
+  quantity: "Quantity",
+  full_name: "Full Name",
+  email: "Email",
+  password: "Password",
+  notes_optional: "Note (optional)",
+  select_date: "Select Date",
+  select_time: "Select Time",
+  select_service: "Select Service",
+  confirm_booking: "Confirm Booking",
   booking_success: "Booking confirmed! We will contact you soon.",
   booking_no_times: "No available times on this day",
   booking_fields_required: "Please fill in all required fields",
@@ -336,33 +385,57 @@ const EN: Dict = {
   booking_past_date: "Cannot book a past date",
   booking_past_time: "Cannot book a time that has passed",
   booking_time_taken: "This time is already taken, try another",
-  booking_max_reached: "You can have up to 2 active appointments at a time. Cancel or reschedule one to book another.",
+  booking_max_reached:
+    "You can have up to 2 active appointments at a time. Cancel or reschedule one to book another.",
   booking_service_unavailable: "This service is currently unavailable",
   booking_invalid_slot: "Please choose a time from the available slots",
   booking_failed: "Booking failed, please try again",
   reschedule_not_eligible: "This appointment cannot be rescheduled",
   reschedule_failed: "Reschedule failed, please try again",
-  reschedule: "Reschedule", reschedule_appointment: "Reschedule Appointment",
+  reschedule: "Reschedule",
+  reschedule_appointment: "Reschedule Appointment",
   reschedule_success: "Appointment updated successfully!",
-  max_appointments_notice: "You've reached the maximum of 2 active appointments. Cancel or reschedule one to book a new appointment.",
-  delete: "Delete", clear_history: "Clear History",
+  max_appointments_notice:
+    "You've reached the maximum of 2 active appointments. Cancel or reschedule one to book a new appointment.",
+  delete: "Delete",
+  clear_history: "Clear History",
   delete_appointment_confirm: "Permanently delete this appointment? This cannot be undone.",
-  clear_history_confirm: "Permanently delete all appointment history (completed/cancelled)? This cannot be undone.",
-  appointment_deleted: "Appointment deleted", history_cleared: "Appointment history cleared",
-  appointment_auto_delete_notice: "Completed or cancelled appointments are automatically deleted after 14 days.",
+  clear_history_confirm:
+    "Permanently delete all appointment history (completed/cancelled)? This cannot be undone.",
+  appointment_deleted: "Appointment deleted",
+  history_cleared: "Appointment history cleared",
+  appointment_auto_delete_notice:
+    "Completed or cancelled appointments are automatically deleted after 14 days.",
   appointment: "Appointment",
-  appointments: "Appointments", orders: "Orders", favorites: "Favorites", upcoming: "Upcoming",
-  completed: "Completed", cancelled: "Cancelled", active: "Active", status_pending: "Pending",
-  status_confirmed: "Confirmed", status_completed: "Completed", status_cancelled: "Cancelled",
-  status_preparing: "Preparing", order_number: "Order #", total: "Total",
+  appointments: "Appointments",
+  orders: "Orders",
+  favorites: "Favorites",
+  upcoming: "Upcoming",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  active: "Active",
+  status_pending: "Pending",
+  status_confirmed: "Confirmed",
+  status_completed: "Completed",
+  status_cancelled: "Cancelled",
+  status_preparing: "Preparing",
+  order_number: "Order #",
+  total: "Total",
   copyright: "© 2026 Najla Cosmetics. All rights reserved.",
-  footer_tagline: "Premium beauty services and cosmetics.", language: "Language",
-  edit_profile: "Edit Profile", save: "Save", cancel: "Cancel", pay_at_store: "Pay at Store",
-  delivery_pickup: "Store Pickup", place_order: "Place Order", order_success: "Order received!",
+  footer_tagline: "Premium beauty services and cosmetics.",
+  language: "Language",
+  edit_profile: "Edit Profile",
+  save: "Save",
+  cancel: "Cancel",
+  pay_at_store: "Pay at Store",
+  delivery_pickup: "Store Pickup",
+  place_order: "Place Order",
+  order_success: "Order received!",
   order_invalid: "Please check your order details and try again",
   order_product_unavailable: "One of the items in your cart is no longer available",
   order_creation_failed: "Could not place your order, please try again",
-  no_appointments: "No appointments to show", no_orders: "No orders to show",
+  no_appointments: "No appointments to show",
+  no_orders: "No orders to show",
   no_favorites: "No favorites to show",
   auth_welcome: "Welcome",
   auth_welcome_back: "Welcome back",
@@ -399,14 +472,20 @@ const EN: Dict = {
 const BUNDLES: Record<Lang, Dict> = { he: HE, ar: AR, en: EN };
 const DIRS: Record<Lang, Dir> = { he: "rtl", ar: "rtl", en: "ltr" };
 
-interface I18n { lang: Lang; dir: Dir; t: (k: string) => string; setLang: (l: Lang) => void; }
+interface I18n {
+  lang: Lang;
+  dir: Dir;
+  t: (k: string) => string;
+  setLang: (l: Lang) => void;
+}
 const I18nCtx = createContext<I18n | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("he");
 
   useEffect(() => {
-    const saved = (typeof window !== "undefined" && (localStorage.getItem("najla:lang") as Lang)) || "he";
+    const saved =
+      (typeof window !== "undefined" && (localStorage.getItem("najla:lang") as Lang)) || "he";
     setLangState(saved);
   }, []);
 
@@ -416,11 +495,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = DIRS[lang];
   }, [lang]);
 
-  const value = useMemo<I18n>(() => ({
-    lang, dir: DIRS[lang],
-    t: (k) => BUNDLES[lang][k] ?? BUNDLES.he[k] ?? k,
-    setLang: (l) => { setLangState(l); if (typeof window !== "undefined") localStorage.setItem("najla:lang", l); },
-  }), [lang]);
+  const value = useMemo<I18n>(
+    () => ({
+      lang,
+      dir: DIRS[lang],
+      t: (k) => BUNDLES[lang][k] ?? BUNDLES.he[k] ?? k,
+      setLang: (l) => {
+        setLangState(l);
+        if (typeof window !== "undefined") localStorage.setItem("najla:lang", l);
+      },
+    }),
+    [lang],
+  );
 
   return <I18nCtx.Provider value={value}>{children}</I18nCtx.Provider>;
 }
@@ -429,9 +515,4 @@ export function useI18n() {
   const ctx = useContext(I18nCtx);
   if (!ctx) throw new Error("useI18n must be used within I18nProvider");
   return ctx;
-}
-
-export function pickLocalized(lang: Lang, base: string | null | undefined, ar: string | null | undefined) {
-  if (lang === "ar" && ar) return ar;
-  return base ?? "";
 }

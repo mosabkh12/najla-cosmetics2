@@ -16,19 +16,14 @@ const ALLOWED_DELIVERY_METHODS = ["pickup"];
 // the browser.
 const ORDER_ERROR_CODES = ["OUT_OF_STOCK", "PRODUCT_NOT_AVAILABLE", "INVALID_ORDER"];
 
-const ORDER_STATUSES = ["pending", "confirmed", "preparing", "completed", "cancelled"] as const;
-type OrderStatus = (typeof ORDER_STATUSES)[number];
-
-// Admin-only status transitions. Also enforced at the database level
-// (check_order_status_transition trigger) as a backstop beneath this
-// allowlist, in case a future bug or service-role call bypasses it.
-const ORDER_VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["preparing", "cancelled"],
-  preparing: ["completed", "cancelled"],
-  completed: [],
-  cancelled: [],
-};
+export const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "completed",
+  "cancelled",
+] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 // The browser may only ever specify WHAT it wants (product_id + quantity)
 // and its own customer details. Prices, product names, subtotal/total,
@@ -101,7 +96,11 @@ export const createOrder = createServerFn({ method: "POST" })
 export const getUserOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await context.supabase.from("orders").select("*, order_items(*)").eq("user_id", context.userId).order("created_at", { ascending: false });
+    const { data } = await context.supabase
+      .from("orders")
+      .select("*, order_items(*)")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
     return data ?? [];
   });
 
@@ -109,7 +108,10 @@ export const getAdminOrders = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("orders").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return data ?? [];
   });
@@ -119,42 +121,50 @@ export const getOrderItems = createServerFn({ method: "GET" })
   .validator((d: { orderId: string }) => d)
   .handler(async ({ data: { orderId } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("order_items").select("*").eq("order_id", orderId);
+    const { data, error } = await supabaseAdmin
+      .from("order_items")
+      .select("*")
+      .eq("order_id", orderId);
     if (error) throw error;
     return data ?? [];
   });
 
+// Admin may move an order to ANY status from ANY status, including back out
+// of "completed"/"cancelled" — those are no longer terminal (see the
+// accompanying migration that dropped the DB-level transition trigger for
+// orders). This is intentionally unrestricted: this function is only ever
+// reachable through requireAdmin + supabaseAdmin, and direct client writes
+// to orders remain fully revoked (see secure_order_creation.sql) — a
+// customer can never reach this regardless of the status graph, so the
+// only thing the old transition allowlist was protecting against was an
+// admin's own mistake, which is exactly what it needs to be possible to
+// undo (e.g. accidentally marking an order completed and wanting it back
+// to pending).
 export const updateOrderStatus = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { id: string; status: string }) => d)
   .handler(async ({ data: { id, status } }) => {
     if (!ORDER_STATUSES.includes(status as OrderStatus)) throw new Error("INVALID_STATUS");
+    const nextStatus = status as OrderStatus;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: current, error: fetchError } = await supabaseAdmin
+    // completed_at only ever reflects the CURRENT completion, not history —
+    // set on every (re-)entry into completed, cleared the moment it isn't.
+    const patch = {
+      status: nextStatus,
+      completed_at: nextStatus === "completed" ? new Date().toISOString() : null,
+    };
+
+    const { data, error } = await supabaseAdmin
       .from("orders")
-      .select("status")
+      .update(patch)
       .eq("id", id)
-      .single();
-    if (fetchError || !current) throw new Error("ORDER_NOT_FOUND");
-
-    const currentStatus = current.status as OrderStatus;
-    const nextStatus = status as OrderStatus;
-    if (currentStatus !== nextStatus && !ORDER_VALID_TRANSITIONS[currentStatus].includes(nextStatus)) {
-      throw new Error("INVALID_STATUS_TRANSITION");
-    }
-
-    const patch: { status: OrderStatus; completed_at?: string } = { status: nextStatus };
-    // Only stamp completed_at on a genuine transition into completed —
-    // never overwrite it on an unrelated update or a repeated no-op.
-    if (currentStatus !== "completed" && nextStatus === "completed") {
-      patch.completed_at = new Date().toISOString();
-    }
-
-    const { error } = await supabaseAdmin.from("orders").update(patch).eq("id", id);
+      .select("id");
     if (error) {
       console.error("[updateOrderStatus] failed for order", id, error);
       throw new Error("STATUS_UPDATE_FAILED");
     }
+    if (!data || data.length === 0) throw new Error("ORDER_NOT_FOUND");
+
     return { success: true };
   });

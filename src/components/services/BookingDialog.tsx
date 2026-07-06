@@ -4,7 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { useI18n, pickLocalized } from "@/lib/i18n";
+import type { Matcher } from "react-day-picker";
+import { getErrorMessage } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
 import { useAuth } from "@/hooks/useAuth";
 import { getAvailableTimes, createAppointment } from "@/api/appointments/appointments";
 import { getAvailabilitySettings } from "@/api/slots/slots";
@@ -37,7 +40,15 @@ function fmtDisplay(d: Date, lang: string): string {
   return d.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" });
 }
 
-export function BookingDialog({ service, open, onOpenChange }: { service: Service | null; open: boolean; onOpenChange: (b: boolean) => void }) {
+export function BookingDialog({
+  service,
+  open,
+  onOpenChange,
+}: {
+  service: Service | null;
+  open: boolean;
+  onOpenChange: (b: boolean) => void;
+}) {
   const { t, lang, dir } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -73,7 +84,7 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
       { before: todayDate },
       ...closedWeekdays.map((day) => ({ dayOfWeek: [day] })),
       ...closedDates.map((d) => d),
-    ] as any[];
+    ] satisfies Matcher[];
   }, [settings, todayDate]);
 
   const [fetchKey, setFetchKey] = useState(0);
@@ -91,17 +102,26 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
   useEffect(() => {
     if (user) {
       getProfile().then((data) => {
-        if (data) { setName(data.full_name ?? ""); setPhone(data.phone ?? ""); }
+        if (data) {
+          setName(data.full_name ?? "");
+          setPhone(data.phone ?? "");
+        }
       });
     }
   }, [user]);
 
   useEffect(() => {
-    if (open) { setStep(1); setFetchKey((k) => k + 1); }
+    if (open) {
+      setStep(1);
+      setFetchKey((k) => k + 1);
+    }
   }, [open]);
 
   const handleDateSelect = useCallback((d: Date | undefined) => {
-    if (d) { setSelectedDate(d); setStep(2); }
+    if (d) {
+      setSelectedDate(d);
+      setStep(2);
+    }
   }, []);
 
   if (!service) return null;
@@ -109,8 +129,16 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
   const Back = dir === "rtl" ? ChevronRight : ChevronLeft;
 
   const submit = async () => {
-    if (!user) { toast.info(t("sign_in")); onOpenChange(false); navigate({ to: "/auth" }); return; }
-    if (!dateStr || !time || !name.trim() || !phone.trim()) { toast.error(t("booking_fields_required")); return; }
+    if (!user) {
+      toast.info(t("sign_in"));
+      onOpenChange(false);
+      navigate({ to: "/auth" });
+      return;
+    }
+    if (!dateStr || !time || !name.trim() || !phone.trim()) {
+      toast.error(t("booking_fields_required"));
+      return;
+    }
     setBusy(true);
     try {
       await createAppointment({
@@ -125,10 +153,12 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
       });
       toast.success(t("booking_success"));
       onOpenChange(false);
-      setTime(""); setNotes("");
-    } catch (e: any) {
-      const key = ERROR_MAP[e.message];
-      toast.error(key ? t(key) : e.message);
+      setTime("");
+      setNotes("");
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      const key = ERROR_MAP[message];
+      toast.error(key ? t(key) : message);
     } finally {
       setBusy(false);
     }
@@ -136,13 +166,21 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] bg-card p-0 overflow-hidden gap-0 rounded-3xl border-border/20" style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.15)" }}>
+      <DialogContent
+        className="max-w-[420px] bg-card p-0 overflow-hidden gap-0 rounded-3xl border-border/20"
+        style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.15)" }}
+      >
         {/* ── Header ── */}
         <div className="bg-cream px-5 py-4 border-b border-border/15">
           <h2 className="font-display text-lg italic text-foreground">{localized}</h2>
           <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground">
-            <span>{t("starting_at")} <strong className="text-primary">₪{service.price}</strong></span>
-            <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-primary" />{service.duration_minutes} {t("minutes")}</span>
+            <span>
+              {t("starting_at")} <strong className="text-primary">₪{service.price}</strong>
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3 text-primary" />
+              {service.duration_minutes} {t("minutes")}
+            </span>
           </div>
         </div>
 
@@ -150,7 +188,9 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
         <div className="flex items-center gap-1.5 px-5 py-3 border-b border-border/10 bg-surface/30">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex-1">
-              <div className={`h-1 rounded-full transition-colors ${step >= s ? "bg-primary" : "bg-border/30"}`} />
+              <div
+                className={`h-1 rounded-full transition-colors ${step >= s ? "bg-primary" : "bg-border/30"}`}
+              />
             </div>
           ))}
         </div>
@@ -159,7 +199,8 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
         {step === 1 && (
           <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5" />{t("select_date")}
+              <CalendarDays className="h-3.5 w-3.5" />
+              {t("select_date")}
             </p>
             <div className="rounded-xl border border-border/20 overflow-hidden flex justify-center">
               <Calendar
@@ -178,15 +219,21 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
         {step === 2 && (
           <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between mb-4">
-              <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                <Back className="h-3.5 w-3.5" />{t("select_date")}
+              <button
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Back className="h-3.5 w-3.5" />
+                {t("select_date")}
               </button>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1 text-[11px] font-semibold text-primary border border-primary/15">
-                <CalendarDays className="h-3 w-3" />{fmtDisplay(selectedDate, lang)}
+                <CalendarDays className="h-3 w-3" />
+                {fmtDisplay(selectedDate, lang)}
               </span>
             </div>
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />{t("select_time")}
+              <Clock className="h-3.5 w-3.5" />
+              {t("select_time")}
             </p>
             {loadingTimes ? (
               <div className="flex items-center justify-center py-10">
@@ -203,7 +250,10 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
                   {available.map((tm) => (
                     <button
                       key={tm}
-                      onClick={() => { setTime(tm); setStep(3); }}
+                      onClick={() => {
+                        setTime(tm);
+                        setStep(3);
+                      }}
                       className="rounded-xl border py-2 text-[13px] font-medium transition-all border-border/30 bg-card hover:border-primary/40 hover:bg-cream/50 active:scale-95"
                     >
                       {tm}
@@ -219,36 +269,62 @@ export function BookingDialog({ service, open, onOpenChange }: { service: Servic
         {step === 3 && (
           <div className="px-5 py-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between">
-              <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                <Back className="h-3.5 w-3.5" />{t("select_time")}
+              <button
+                onClick={() => setStep(2)}
+                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Back className="h-3.5 w-3.5" />
+                {t("select_time")}
               </button>
             </div>
 
             {/* Summary */}
             <div className="rounded-xl bg-cream border border-primary/10 px-4 py-3 flex items-center justify-center gap-4">
               <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                <CalendarDays className="h-3.5 w-3.5 text-primary" />{fmtDisplay(selectedDate, lang)}
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                {fmtDisplay(selectedDate, lang)}
               </span>
               <span className="text-border">|</span>
               <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-                <Clock className="h-3.5 w-3.5" />{time}
+                <Clock className="h-3.5 w-3.5" />
+                {time}
               </span>
             </div>
 
             {/* Form */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{t("full_name")}</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1.5 h-10 rounded-xl border-border/30" />
+                <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  {t("full_name")}
+                </Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1.5 h-10 rounded-xl border-border/30"
+                />
               </div>
               <div>
-                <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{t("phone")}</Label>
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1.5 h-10 rounded-xl border-border/30" dir="ltr" />
+                <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  {t("phone")}
+                </Label>
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="mt-1.5 h-10 rounded-xl border-border/30"
+                  dir="ltr"
+                />
               </div>
             </div>
             <div>
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{t("notes_optional")}</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1.5 resize-none rounded-xl border-border/30" />
+              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {t("notes_optional")}
+              </Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                className="mt-1.5 resize-none rounded-xl border-border/30"
+              />
             </div>
 
             <button

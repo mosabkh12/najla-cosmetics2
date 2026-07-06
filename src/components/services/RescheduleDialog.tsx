@@ -1,14 +1,25 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { useI18n, pickLocalized } from "@/lib/i18n";
+import type { Matcher } from "react-day-picker";
+import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
+import { getErrorMessage } from "@/lib/utils";
 import { getAvailableTimes, rescheduleAppointment } from "@/api/appointments/appointments";
 import { getAvailabilitySettings } from "@/api/slots/slots";
 import { getServices } from "@/api/services/services";
 import type { Service } from "@/components/services/ServiceCard";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Clock, CalendarDays, ChevronRight, ChevronLeft, Check, Sparkles } from "lucide-react";
+import {
+  Loader2,
+  Clock,
+  CalendarDays,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Sparkles,
+} from "lucide-react";
 
 const ERROR_MAP: Record<string, string> = {
   CLOSED_DAY: "booking_closed_day",
@@ -39,7 +50,12 @@ export interface RescheduleTarget {
   appointment_time: string;
 }
 
-export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
+export function RescheduleDialog({
+  appointment,
+  open,
+  onOpenChange,
+  onDone,
+}: {
   appointment: RescheduleTarget | null;
   open: boolean;
   onOpenChange: (b: boolean) => void;
@@ -58,9 +74,13 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [fetchKey, setFetchKey] = useState(0);
 
+  // Same key/staleTime as the public services queries (index.tsx,
+  // services.tsx) — this dialog fetches the exact same getServices() data,
+  // so it should share that cache entry instead of always refetching fresh.
   const { data: services = [] } = useQuery({
-    queryKey: ["services"],
+    queryKey: ["services", "active"],
     queryFn: async () => (await getServices()) as Service[],
+    staleTime: 120_000,
   });
 
   const { data: settings } = useQuery({
@@ -103,11 +123,14 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
       { before: todayDate },
       ...closedWeekdays.map((day) => ({ dayOfWeek: [day] })),
       ...closedDates.map((d) => d),
-    ] as any[];
+    ] satisfies Matcher[];
   }, [settings, todayDate]);
 
   const handleDateSelect = useCallback((d: Date | undefined) => {
-    if (d) { setSelectedDate(d); setStep(3); }
+    if (d) {
+      setSelectedDate(d);
+      setStep(3);
+    }
   }, []);
 
   if (!appointment) return null;
@@ -119,14 +142,20 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
     setBusy(true);
     try {
       await rescheduleAppointment({
-        data: { id: appointment.id, service_id: serviceId, appointment_date: dateStr, appointment_time: time },
+        data: {
+          id: appointment.id,
+          service_id: serviceId,
+          appointment_date: dateStr,
+          appointment_time: time,
+        },
       });
       toast.success(t("reschedule_success"));
       onOpenChange(false);
       onDone();
-    } catch (e: any) {
-      const key = ERROR_MAP[e.message];
-      toast.error(key ? t(key) : e.message);
+    } catch (e: unknown) {
+      const message = getErrorMessage(e);
+      const key = ERROR_MAP[message];
+      toast.error(key ? t(key) : message);
     } finally {
       setBusy(false);
     }
@@ -134,14 +163,22 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] bg-card p-0 overflow-hidden gap-0 rounded-3xl border-border/20" style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.15)" }}>
+      <DialogContent
+        className="max-w-[420px] bg-card p-0 overflow-hidden gap-0 rounded-3xl border-border/20"
+        style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.15)" }}
+      >
         {/* ── Header ── */}
         <div className="bg-cream px-5 py-4 border-b border-border/15">
-          <h2 className="font-display text-lg italic text-foreground">{t("reschedule_appointment")}</h2>
+          <h2 className="font-display text-lg italic text-foreground">
+            {t("reschedule_appointment")}
+          </h2>
           {selectedService && (
             <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground">
               <span>{pickLocalized(lang, selectedService.name, selectedService.name_ar)}</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3 text-primary" />{selectedService.duration_minutes} {t("minutes")}</span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-primary" />
+                {selectedService.duration_minutes} {t("minutes")}
+              </span>
             </div>
           )}
         </div>
@@ -150,7 +187,9 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
         <div className="flex items-center gap-1.5 px-5 py-3 border-b border-border/10 bg-surface/30">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex-1">
-              <div className={`h-1 rounded-full transition-colors ${step >= s ? "bg-primary" : "bg-border/30"}`} />
+              <div
+                className={`h-1 rounded-full transition-colors ${step >= s ? "bg-primary" : "bg-border/30"}`}
+              />
             </div>
           ))}
         </div>
@@ -159,21 +198,30 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
         {step === 1 && (
           <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />{t("select_service")}
+              <Sparkles className="h-3.5 w-3.5" />
+              {t("select_service")}
             </p>
             <div className="space-y-2 max-h-[320px] overflow-y-auto">
               {services.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => { setServiceId(s.id); setStep(2); }}
+                  onClick={() => {
+                    setServiceId(s.id);
+                    setStep(2);
+                  }}
                   className={`w-full flex items-center justify-between rounded-xl border px-4 py-3 text-start transition-all ${
-                    serviceId === s.id ? "border-primary/40 bg-cream/50" : "border-border/30 bg-card hover:border-primary/40 hover:bg-cream/30"
+                    serviceId === s.id
+                      ? "border-primary/40 bg-cream/50"
+                      : "border-border/30 bg-card hover:border-primary/40 hover:bg-cream/30"
                   }`}
                 >
                   <div>
-                    <div className="text-[13px] font-medium text-foreground">{pickLocalized(lang, s.name, s.name_ar)}</div>
+                    <div className="text-[13px] font-medium text-foreground">
+                      {pickLocalized(lang, s.name, s.name_ar)}
+                    </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />{s.duration_minutes} {t("minutes")}
+                      <Clock className="h-3 w-3" />
+                      {s.duration_minutes} {t("minutes")}
                     </div>
                   </div>
                   <span className="text-[13px] font-semibold text-primary">₪{s.price}</span>
@@ -187,12 +235,17 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
         {step === 2 && (
           <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between mb-3">
-              <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                <Back className="h-3.5 w-3.5" />{t("select_service")}
+              <button
+                onClick={() => setStep(1)}
+                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Back className="h-3.5 w-3.5" />
+                {t("select_service")}
               </button>
             </div>
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5" />{t("select_date")}
+              <CalendarDays className="h-3.5 w-3.5" />
+              {t("select_date")}
             </p>
             <div className="rounded-xl border border-border/20 overflow-hidden flex justify-center">
               <Calendar
@@ -211,17 +264,23 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
         {step === 3 && (
           <div className="px-5 py-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between">
-              <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                <Back className="h-3.5 w-3.5" />{t("select_date")}
+              <button
+                onClick={() => setStep(2)}
+                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Back className="h-3.5 w-3.5" />
+                {t("select_date")}
               </button>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1 text-[11px] font-semibold text-primary border border-primary/15">
-                <CalendarDays className="h-3 w-3" />{fmtDisplay(selectedDate, lang)}
+                <CalendarDays className="h-3 w-3" />
+                {fmtDisplay(selectedDate, lang)}
               </span>
             </div>
 
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />{t("select_time")}
+                <Clock className="h-3.5 w-3.5" />
+                {t("select_time")}
               </p>
               {loadingTimes ? (
                 <div className="flex items-center justify-center py-10">
@@ -239,7 +298,9 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
                       key={tm}
                       onClick={() => setTime(tm)}
                       className={`rounded-xl border py-2 text-[13px] font-medium transition-all active:scale-95 ${
-                        time === tm ? "border-primary bg-cream text-primary" : "border-border/30 bg-card hover:border-primary/40 hover:bg-cream/50"
+                        time === tm
+                          ? "border-primary bg-cream text-primary"
+                          : "border-border/30 bg-card hover:border-primary/40 hover:bg-cream/50"
                       }`}
                     >
                       {tm}
@@ -252,11 +313,13 @@ export function RescheduleDialog({ appointment, open, onOpenChange, onDone }: {
             {time && (
               <div className="rounded-xl bg-cream border border-primary/10 px-4 py-3 flex items-center justify-center gap-4">
                 <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                  <CalendarDays className="h-3.5 w-3.5 text-primary" />{fmtDisplay(selectedDate, lang)}
+                  <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                  {fmtDisplay(selectedDate, lang)}
                 </span>
                 <span className="text-border">|</span>
                 <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-                  <Clock className="h-3.5 w-3.5" />{time}
+                  <Clock className="h-3.5 w-3.5" />
+                  {time}
                 </span>
               </div>
             )}

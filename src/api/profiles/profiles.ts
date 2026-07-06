@@ -4,7 +4,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await context.supabase.from("profiles").select("*").eq("id", context.userId).maybeSingle();
+    const { data } = await context.supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", context.userId)
+      .maybeSingle();
     return data;
   });
 
@@ -14,7 +18,11 @@ export const checkPhoneAvailable = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const cleaned = phone.replace(/\D/g, "");
     if (!cleaned) return { available: true };
-    const { data } = await supabaseAdmin.from("profiles").select("id").eq("phone", cleaned).limit(1);
+    const { data } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("phone", cleaned)
+      .limit(1);
     return { available: !data || data.length === 0 };
   });
 

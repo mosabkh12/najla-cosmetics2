@@ -1,11 +1,13 @@
 import { Heart, ShoppingBag } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useI18n, pickLocalized } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { checkFavorite, toggleFavorite } from "@/api/favorites/favorites";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 
 export interface Product {
   id: string;
@@ -42,25 +44,28 @@ export function ProductCard({ product }: { product: Product }) {
       if (!user) return;
       const favKey = ["favorite", product.id, user.id];
       const listKey = ["favorites", user.id];
-      await Promise.all([qc.cancelQueries({ queryKey: favKey }), qc.cancelQueries({ queryKey: listKey })]);
+      await Promise.all([
+        qc.cancelQueries({ queryKey: favKey }),
+        qc.cancelQueries({ queryKey: listKey }),
+      ]);
 
       const prevFav = qc.getQueryData<boolean>(favKey);
-      const prevList = qc.getQueryData<any[]>(listKey);
+      const prevList = qc.getQueryData<Product[]>(listKey);
       const nextFav = !prevFav;
 
       qc.setQueryData(favKey, nextFav);
-      qc.setQueryData<any[]>(listKey, (old = []) =>
+      qc.setQueryData<Product[]>(listKey, (old = []) =>
         nextFav ? [...old, product] : old.filter((p) => p.id !== product.id),
       );
 
       return { prevFav, prevList, favKey, listKey };
     },
-    onError: (e: any, _vars, ctx) => {
+    onError: (e: unknown, _vars, ctx) => {
       if (ctx) {
         qc.setQueryData(ctx.favKey, ctx.prevFav);
         qc.setQueryData(ctx.listKey, ctx.prevList);
       }
-      toast.error(e.message);
+      toast.error(getErrorMessage(e));
     },
     onSettled: () => {
       if (!user) return;
@@ -70,12 +75,21 @@ export function ProductCard({ product }: { product: Product }) {
   });
 
   const toggleFav = () => {
-    if (!user) { toast.info(t("sign_in")); return; }
+    if (!user) {
+      toast.info(t("sign_in"));
+      return;
+    }
     favMutation.mutate();
   };
 
   const addToCart = () => {
-    add({ product_id: product.id, name, price: product.price, image_url: product.image_url, stock: product.stock_quantity });
+    add({
+      product_id: product.id,
+      name,
+      price: product.price,
+      image_url: product.image_url,
+      stock: product.stock_quantity,
+    });
     toast.success(t("add_to_cart"));
   };
 
@@ -120,7 +134,9 @@ export function ProductCard({ product }: { product: Product }) {
           aria-label="Favorite"
           className="absolute top-4 end-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-card/90 backdrop-blur-md transition-all hover:scale-110"
         >
-          <Heart className={`h-4 w-4 transition-colors ${fav ? "fill-primary text-primary" : "text-foreground/40"}`} />
+          <Heart
+            className={`h-4 w-4 transition-colors ${fav ? "fill-primary text-primary" : "text-foreground/40"}`}
+          />
         </button>
 
         {/* Hover overlay buttons */}
@@ -153,7 +169,9 @@ export function ProductCard({ product }: { product: Product }) {
 
         {/* Price */}
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-[15px] sm:text-[16px] font-semibold text-foreground">₪{product.price}</span>
+          <span className="text-[15px] sm:text-[16px] font-semibold text-foreground">
+            ₪{product.price}
+          </span>
         </div>
       </div>
     </article>

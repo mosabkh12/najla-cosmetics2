@@ -3,7 +3,14 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAdminOrders, getOrderItems, updateOrderStatus } from "@/api/orders/orders";
 import { useI18n } from "@/lib/i18n";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -29,19 +36,51 @@ const statusDot: Record<string, string> = {
   cancelled: "bg-destructive",
 };
 
+const TIME_FILTERS = ["all", "today", "week", "month"] as const;
+type TimeFilter = (typeof TIME_FILTERS)[number];
+
+const STATUS_FILTERS = ["all", ...STATUSES] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+function isWithinTimeFilter(createdAt: string, filter: TimeFilter): boolean {
+  if (filter === "all") return true;
+  const created = new Date(createdAt);
+  const now = new Date();
+  if (filter === "today") return created.toDateString() === now.toDateString();
+  const days = filter === "week" ? 7 : 30;
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - days);
+  return created >= cutoff;
+}
+
 function Page() {
   const { lang } = useI18n();
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
   const [view, setView] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const { data: orders = [] } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => getAdminOrders(),
   });
 
-  const filtered = orders.filter((o: any) => {
+  // Time range narrows the pool first, so status tab counts reflect "how
+  // many of THESE (e.g. this week's) orders are pending" rather than the
+  // all-time total — the two filters are meant to combine, not compete.
+  const timeFiltered = orders.filter((o) => isWithinTimeFilter(o.created_at, timeFilter));
+
+  const statusCounts = STATUS_FILTERS.reduce<Record<string, number>>((acc, s) => {
+    acc[s] = s === "all" ? timeFiltered.length : timeFiltered.filter((o) => o.status === s).length;
+    return acc;
+  }, {});
+
+  const statusFilteredOrders =
+    statusFilter === "all" ? timeFiltered : timeFiltered.filter((o) => o.status === statusFilter);
+
+  const filtered = statusFilteredOrders.filter((o) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -50,6 +89,22 @@ function Page() {
       (o.customer_phone ?? "").includes(q)
     );
   });
+
+  const timeFilterLabel: Record<TimeFilter, string> = {
+    all: L("הכל", "الكل", "All Time"),
+    today: L("היום", "اليوم", "Today"),
+    week: L("השבוע", "هذا الأسبوع", "This Week"),
+    month: L("החודש", "هذا الشهر", "This Month"),
+  };
+
+  const statusFilterLabel: Record<StatusFilter, string> = {
+    all: L("הכל", "الكل", "All"),
+    pending: L("חדשות", "جديدة", "New"),
+    confirmed: L("מאושרות", "مؤكدة", "Confirmed"),
+    preparing: L("בהכנה", "قيد التحضير", "Preparing"),
+    completed: L("הושלמו", "مكتملة", "Completed"),
+    cancelled: L("בוטלו", "ملغاة", "Cancelled"),
+  };
 
   const { data: items = [] } = useQuery({
     queryKey: ["admin-order-items", view],
@@ -62,12 +117,12 @@ function Page() {
       await updateOrderStatus({ data: { id, status } });
       toast.success("Updated");
       qc.invalidateQueries({ queryKey: ["admin-orders"] });
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
     }
   };
 
-  const viewOrder = orders.find((o: any) => o.id === view);
+  const viewOrder = orders.find((o) => o.id === view);
 
   return (
     <div className="space-y-5">
@@ -75,14 +130,72 @@ function Page() {
       <Reveal direction="up">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">{L("הזמנות", "الطلبات", "Orders")}</h1>
-            <p className="text-[13px] text-muted-foreground mt-0.5">{L(`${orders.length} הזמנות`, `${orders.length} طلبات`, `${orders.length} orders`)}</p>
+            <h1 className="font-display text-[26px] sm:text-[30px] text-foreground">
+              {L("הזמנות", "الطلبات", "Orders")}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
+              {filtered.length === orders.length
+                ? L(`${orders.length} הזמנות`, `${orders.length} طلبات`, `${orders.length} orders`)
+                : L(
+                    `${filtered.length} מתוך ${orders.length} הזמנות`,
+                    `${filtered.length} من ${orders.length} طلبات`,
+                    `${filtered.length} of ${orders.length} orders`,
+                  )}
+            </p>
           </div>
         </div>
       </Reveal>
 
-      {/* Search */}
+      {/* Time range tabs */}
       <Reveal direction="up" delay={1}>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {TIME_FILTERS.map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setTimeFilter(tf)}
+              className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
+                timeFilter === tf
+                  ? "bg-foreground text-background"
+                  : "bg-surface text-muted-foreground hover:bg-surface-2"
+              }`}
+            >
+              {timeFilterLabel[tf]}
+            </button>
+          ))}
+        </div>
+      </Reveal>
+
+      {/* Status tabs */}
+      <Reveal direction="up" delay={2}>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {STATUS_FILTERS.map((sf) => (
+            <button
+              key={sf}
+              onClick={() => setStatusFilter(sf)}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
+                statusFilter === sf
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-surface text-muted-foreground hover:bg-surface-2"
+              }`}
+            >
+              {sf !== "all" && <span className={`h-1.5 w-1.5 rounded-full ${statusDot[sf]}`} />}
+              {statusFilterLabel[sf]}
+              <span
+                className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
+                  statusFilter === sf
+                    ? "bg-background/20 text-primary-foreground"
+                    : "bg-surface-3 text-muted-foreground"
+                }`}
+              >
+                {statusCounts[sf]}
+              </span>
+            </button>
+          ))}
+        </div>
+      </Reveal>
+
+      {/* Search */}
+      <Reveal direction="up" delay={3}>
         <div className="relative">
           <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -96,7 +209,7 @@ function Page() {
       </Reveal>
 
       {/* Table */}
-      <Reveal direction="up" delay={2}>
+      <Reveal direction="up" delay={4}>
         <div
           className="rounded-2xl bg-card overflow-hidden border border-border/10"
           style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
@@ -105,22 +218,41 @@ function Page() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface/60 border-b border-border/15">
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">#</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">{L("תאריך", "التاريخ", "Date")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("לקוחה", "العميلة", "Customer")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden md:table-cell">{L("טלפון", "الهاتف", "Phone")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("סך הכל", "المجموع", "Total")}</th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("סטטוס", "الحالة", "Status")}</th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    #
+                  </th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">
+                    {L("תאריך", "التاريخ", "Date")}
+                  </th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    {L("לקוחה", "العميلة", "Customer")}
+                  </th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden md:table-cell">
+                    {L("טלפון", "الهاتف", "Phone")}
+                  </th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    {L("סך הכל", "المجموع", "Total")}
+                  </th>
+                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    {L("סטטוס", "الحالة", "Status")}
+                  </th>
                   <th className="text-end p-3.5 w-[80px]"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((o: any) => (
-                  <tr key={o.id} className="border-t border-border/10 hover:bg-surface/30 transition-colors">
+                {filtered.map((o) => (
+                  <tr
+                    key={o.id}
+                    className="border-t border-border/10 hover:bg-surface/30 transition-colors"
+                  >
                     <td className="p-3.5">
-                      <span className="text-[12px] font-mono font-semibold text-primary bg-cream px-2 py-0.5 rounded">{o.order_number}</span>
+                      <span className="text-[12px] font-mono font-semibold text-primary bg-cream px-2 py-0.5 rounded">
+                        {o.order_number}
+                      </span>
                     </td>
-                    <td className="p-3.5 text-muted-foreground text-[12px] hidden sm:table-cell">{new Date(o.created_at).toLocaleDateString()}</td>
+                    <td className="p-3.5 text-muted-foreground text-[12px] hidden sm:table-cell">
+                      {new Date(o.created_at).toLocaleDateString()}
+                    </td>
                     <td className="p-3.5">
                       <div className="flex items-center gap-2.5">
                         <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
@@ -129,12 +261,25 @@ function Page() {
                         <span className="font-medium text-foreground">{o.customer_name}</span>
                       </div>
                     </td>
-                    <td className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell" dir="ltr">{o.customer_phone}</td>
+                    <td
+                      className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell"
+                      dir="ltr"
+                    >
+                      {o.customer_phone}
+                    </td>
                     <td className="p-3.5 font-semibold">₪{Number(o.total).toFixed(0)}</td>
                     <td className="p-3.5">
+                      {/* Every status is always selectable, including from completed/cancelled —
+                          this is an admin-only correction tool (e.g. undoing an accidental
+                          "completed" click), not a customer-facing flow, so there's no
+                          terminal-state restriction here or on the server. */}
                       <Select value={o.status} onValueChange={(v) => setStatus(o.id, v)}>
-                        <SelectTrigger className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[o.status] ?? "bg-muted-foreground"}`} />
+                        <SelectTrigger
+                          className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[o.status] ?? "bg-muted-foreground"}`}
+                          />
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -150,7 +295,12 @@ function Page() {
                       </Select>
                     </td>
                     <td className="p-3.5 text-end">
-                      <Button size="icon" variant="ghost" onClick={() => setView(o.id)} className="h-8 w-8 rounded-lg hover:bg-surface">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setView(o.id)}
+                        className="h-8 w-8 rounded-lg hover:bg-surface"
+                      >
                         <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </td>
@@ -160,7 +310,17 @@ function Page() {
                   <tr>
                     <td colSpan={7} className="py-16 text-center">
                       <ShoppingCart className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                      <div className="text-[14px] font-medium text-muted-foreground">{search ? L("לא נמצאו תוצאות", "لم يتم العثور على نتائج", "No results found") : L("אין הזמנות עדיין", "لا طلبات بعد", "No orders yet")}</div>
+                      <div className="text-[14px] font-medium text-muted-foreground">
+                        {search
+                          ? L("לא נמצאו תוצאות", "لم يتم العثور على نتائج", "No results found")
+                          : statusFilter !== "all" || timeFilter !== "all"
+                            ? L(
+                                "אין הזמנות התואמות לסינון",
+                                "لا توجد طلبات مطابقة للتصفية",
+                                "No orders match this filter",
+                              )
+                            : L("אין הזמנות עדיין", "لا طلبات بعد", "No orders yet")}
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -177,36 +337,51 @@ function Page() {
             <DialogTitle className="font-display flex items-center gap-2">
               {L("פריטי הזמנה", "عناصر الطلب", "Order Items")}
               {viewOrder && (
-                <span className="text-[12px] font-mono font-normal text-primary bg-cream px-2 py-0.5 rounded">#{viewOrder.order_number}</span>
+                <span className="text-[12px] font-mono font-normal text-primary bg-cream px-2 py-0.5 rounded">
+                  #{viewOrder.order_number}
+                </span>
               )}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-3 space-y-0">
-            {items.map((it: any) => (
-              <div key={it.id} className="flex items-center justify-between py-3 border-b border-border/10 last:border-0">
+            {items.map((it) => (
+              <div
+                key={it.id}
+                className="flex items-center justify-between py-3 border-b border-border/10 last:border-0"
+              >
                 <div className="flex items-center gap-3">
                   <div className="grid h-8 w-8 place-items-center rounded-lg bg-surface shrink-0">
                     <Package className="h-3.5 w-3.5 text-muted-foreground/60" />
                   </div>
                   <div>
                     <div className="text-[13px] font-medium text-foreground">{it.product_name}</div>
-                    <div className="text-[11px] text-muted-foreground">{L("כמות", "الكمية", "Qty")}: {it.quantity}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {L("כמות", "الكمية", "Qty")}: {it.quantity}
+                    </div>
                   </div>
                 </div>
-                <span className="text-[14px] font-semibold text-foreground">₪{Number(it.total_price).toFixed(0)}</span>
+                <span className="text-[14px] font-semibold text-foreground">
+                  ₪{Number(it.total_price).toFixed(0)}
+                </span>
               </div>
             ))}
             {items.length === 0 && (
               <div className="flex flex-col items-center py-8 text-center">
                 <Package className="h-8 w-8 text-muted-foreground/20 mb-2" />
-                <div className="text-[13px] text-muted-foreground">{L("אין פריטים", "لا عناصر", "No items")}</div>
+                <div className="text-[13px] text-muted-foreground">
+                  {L("אין פריטים", "لا عناصر", "No items")}
+                </div>
               </div>
             )}
           </div>
           {items.length > 0 && viewOrder && (
             <div className="flex items-center justify-between pt-3 border-t border-border/20 mt-2">
-              <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">{L("סך הכל", "المجموع", "Total")}</span>
-              <span className="text-[18px] font-display font-semibold text-foreground">₪{Number(viewOrder.total).toFixed(0)}</span>
+              <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                {L("סך הכל", "المجموع", "Total")}
+              </span>
+              <span className="text-[18px] font-display font-semibold text-foreground">
+                ₪{Number(viewOrder.total).toFixed(0)}
+              </span>
             </div>
           )}
         </DialogContent>

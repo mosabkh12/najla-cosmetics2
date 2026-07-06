@@ -18,8 +18,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Clock, CalendarDays, Coffee, Settings, CalendarOff, Loader2, Save } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  Clock,
+  CalendarDays,
+  Coffee,
+  Settings,
+  CalendarOff,
+  Loader2,
+  Save,
+} from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils";
 import { Reveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/admin/slots")({ component: Page });
@@ -32,15 +43,28 @@ for (let h = 6; h <= 23; h++) {
   }
 }
 
-function TimeSelect({ value, onChange, className = "" }: { value: string; onChange: (v: string) => void; className?: string }) {
+function TimeSelect({
+  value,
+  onChange,
+  className = "",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className={`rounded-lg border-border/30 text-[13px] font-medium ${className}`} dir="ltr">
+      <SelectTrigger
+        className={`rounded-lg border-border/30 text-[13px] font-medium ${className}`}
+        dir="ltr"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent className="max-h-[200px]">
         {TIME_OPTIONS.map((t) => (
-          <SelectItem key={t} value={t}>{t}</SelectItem>
+          <SelectItem key={t} value={t}>
+            {t}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -60,8 +84,7 @@ const DAY_NAMES: Record<string, [string, string, string]> = {
 function Page() {
   const { lang } = useI18n();
   const qc = useQueryClient();
-  const L = (he: string, ar: string, en: string) =>
-    lang === "ar" ? ar : lang === "en" ? en : he;
+  const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
   const dayName = (d: string) => {
     const n = DAY_NAMES[d];
     return n ? (lang === "ar" ? n[1] : lang === "en" ? n[2] : n[0]) : d;
@@ -101,7 +124,13 @@ function Page() {
 
   const addBreak = () => {
     if (newBreakStart >= newBreakEnd) {
-      toast.error(L("שעת סיום חייבת להיות אחרי ההתחלה", "وقت النهاية يجب أن يكون بعد البداية", "End must be after start"));
+      toast.error(
+        L(
+          "שעת סיום חייבת להיות אחרי ההתחלה",
+          "وقت النهاية يجب أن يكون بعد البداية",
+          "End must be after start",
+        ),
+      );
       return;
     }
     setBreaks((prev) => [...prev, { start: newBreakStart, end: newBreakEnd }]);
@@ -129,8 +158,8 @@ function Page() {
       });
       toast.success(L("נשמר בהצלחה", "تم الحفظ بنجاح", "Saved successfully"));
       qc.invalidateQueries({ queryKey: ["availability-settings"] });
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
     }
     setSaving(false);
   };
@@ -169,7 +198,11 @@ function Page() {
             disabled={saving}
             className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5 disabled:opacity-40"
           >
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
             {L("שמור", "حفظ", "Save")}
           </button>
         </div>
@@ -200,14 +233,24 @@ function Page() {
                     checked={day?.enabled ?? false}
                     onCheckedChange={(v) => updateDay(d, { enabled: v })}
                   />
-                  <span className={`w-16 sm:w-20 text-[13px] font-medium shrink-0 ${day?.enabled ? "text-foreground" : "text-muted-foreground"}`}>
+                  <span
+                    className={`w-16 sm:w-20 text-[13px] font-medium shrink-0 ${day?.enabled ? "text-foreground" : "text-muted-foreground"}`}
+                  >
                     {dayName(d)}
                   </span>
                   {day?.enabled ? (
                     <div className="flex items-center gap-2">
-                      <TimeSelect value={day.open} onChange={(v) => updateDay(d, { open: v })} className="h-8 w-[85px]" />
+                      <TimeSelect
+                        value={day.open}
+                        onChange={(v) => updateDay(d, { open: v })}
+                        className="h-8 w-[85px]"
+                      />
                       <span className="text-muted-foreground text-[11px]">{"—"}</span>
-                      <TimeSelect value={day.close} onChange={(v) => updateDay(d, { close: v })} className="h-8 w-[85px]" />
+                      <TimeSelect
+                        value={day.close}
+                        onChange={(v) => updateDay(d, { close: v })}
+                        className="h-8 w-[85px]"
+                      />
                     </div>
                   ) : (
                     <span className="text-[12px] text-muted-foreground/50 italic">
@@ -251,9 +294,7 @@ function Page() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label className={labelClass}>
-                {L("זמן חיץ", "وقت الفاصل", "Buffer Time")}
-              </Label>
+              <Label className={labelClass}>{L("זמן חיץ", "وقت الفاصل", "Buffer Time")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -305,8 +346,14 @@ function Page() {
           {breaks.length > 0 && (
             <div className="space-y-2 mb-4">
               {breaks.map((b, i) => (
-                <div key={i} className="flex items-center justify-between rounded-xl bg-surface/50 px-4 py-2.5">
-                  <span className="flex items-center gap-2 text-[13px] font-medium text-foreground" dir="ltr">
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded-xl bg-surface/50 px-4 py-2.5"
+                >
+                  <span
+                    className="flex items-center gap-2 text-[13px] font-medium text-foreground"
+                    dir="ltr"
+                  >
                     <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
                     {b.start} {"—"} {b.end}
                   </span>
@@ -324,7 +371,11 @@ function Page() {
           <div className="flex items-end gap-3">
             <div className="grid gap-1.5">
               <Label className={labelClass}>{L("מ", "من", "From")}</Label>
-              <TimeSelect value={newBreakStart} onChange={setNewBreakStart} className="h-9 w-[100px]" />
+              <TimeSelect
+                value={newBreakStart}
+                onChange={setNewBreakStart}
+                className="h-9 w-[100px]"
+              />
             </div>
             <span className="text-muted-foreground text-[12px] pb-2">{"—"}</span>
             <div className="grid gap-1.5">
@@ -357,8 +408,14 @@ function Page() {
           {closedDates.length > 0 && (
             <div className="space-y-2 mb-4">
               {closedDates.map((d) => (
-                <div key={d} className="flex items-center justify-between rounded-xl bg-surface/50 px-4 py-2.5">
-                  <span className="flex items-center gap-2 text-[13px] font-medium text-foreground" dir="ltr">
+                <div
+                  key={d}
+                  className="flex items-center justify-between rounded-xl bg-surface/50 px-4 py-2.5"
+                >
+                  <span
+                    className="flex items-center gap-2 text-[13px] font-medium text-foreground"
+                    dir="ltr"
+                  >
                     <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60" />
                     {d}
                   </span>

@@ -21,10 +21,14 @@ export function isValidLongitude(v: number): boolean {
   return Number.isFinite(v) && v >= LNG_RANGE.min && v <= LNG_RANGE.max;
 }
 
-function hasCoords(s?: LocationSettings | null): s is LocationSettings & { latitude: number; longitude: number } {
+function hasCoords(
+  s?: LocationSettings | null,
+): s is LocationSettings & { latitude: number; longitude: number } {
   return (
-    s?.latitude != null && s?.longitude != null &&
-    isValidLatitude(s.latitude) && isValidLongitude(s.longitude)
+    s?.latitude != null &&
+    s?.longitude != null &&
+    isValidLatitude(s.latitude) &&
+    isValidLongitude(s.longitude)
   );
 }
 
@@ -48,7 +52,8 @@ export function getMapEmbedSrc(s?: LocationSettings | null): string {
 
 /** "Get Directions" link — precise coordinates when available, otherwise the admin's own Maps link, otherwise a text search. */
 export function getGoogleMapsDirectionsUrl(s?: LocationSettings | null): string {
-  if (hasCoords(s)) return `https://www.google.com/maps/dir/?api=1&destination=${s.latitude},${s.longitude}`;
+  if (hasCoords(s))
+    return `https://www.google.com/maps/dir/?api=1&destination=${s.latitude},${s.longitude}`;
   if (s?.google_maps_url) return s.google_maps_url;
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s?.address || DEFAULT_ADDRESS)}`;
 }

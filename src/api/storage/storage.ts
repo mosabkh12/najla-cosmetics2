@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { randomUUID } from "crypto";
+import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireAdmin } from "../admin/middleware";
 
 // Only folders the app actually writes to today. Add a new entry here
@@ -120,22 +121,41 @@ function extractImagesBucketPath(url: string | null | undefined): string | null 
 // Never throws — failures are logged and swallowed so a cleanup
 // problem can never fail the admin action that triggered it.
 export async function deleteOldImageIfUnreferenced(
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseAdmin,
   oldUrl: string | null | undefined,
 ): Promise<void> {
   const path = extractImagesBucketPath(oldUrl);
-  if (!path) return;
+  // extractImagesBucketPath only ever returns a truthy path when oldUrl was
+  // itself a genuine string, but that invariant lives in a different
+  // variable than TypeScript can see — narrow oldUrl explicitly instead of
+  // asserting past it, so the `.eq()` calls below are actually type-checked.
+  if (!path || !oldUrl) return;
 
   try {
     // Plain .eq() filters only (no .or() string interpolation) — every
     // value is passed as a real query parameter, never concatenated
     // into a filter expression.
     const [productsRes, servicesRes, heroRes, aboutRes, galleryRes] = await Promise.all([
-      supabaseAdmin.from("products").select("id", { count: "exact", head: true }).eq("image_url", oldUrl),
-      supabaseAdmin.from("services").select("id", { count: "exact", head: true }).eq("image_url", oldUrl),
-      supabaseAdmin.from("business_settings").select("id", { count: "exact", head: true }).eq("hero_image_url", oldUrl),
-      supabaseAdmin.from("business_settings").select("id", { count: "exact", head: true }).eq("about_image_url", oldUrl),
-      supabaseAdmin.from("product_images").select("id", { count: "exact", head: true }).eq("image_url", oldUrl),
+      supabaseAdmin
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("image_url", oldUrl),
+      supabaseAdmin
+        .from("services")
+        .select("id", { count: "exact", head: true })
+        .eq("image_url", oldUrl),
+      supabaseAdmin
+        .from("business_settings")
+        .select("id", { count: "exact", head: true })
+        .eq("hero_image_url", oldUrl),
+      supabaseAdmin
+        .from("business_settings")
+        .select("id", { count: "exact", head: true })
+        .eq("about_image_url", oldUrl),
+      supabaseAdmin
+        .from("product_images")
+        .select("id", { count: "exact", head: true })
+        .eq("image_url", oldUrl),
     ]);
 
     const stillReferenced =

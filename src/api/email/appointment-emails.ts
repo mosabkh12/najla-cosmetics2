@@ -1,5 +1,20 @@
 import { sendMail } from "./mailer";
 
+// customerName/customerPhone originate from the booking form (trimmed and
+// length-capped, but never HTML-escaped) — everything else here
+// (serviceName, date, time, price) comes from admin-controlled data or a
+// regex-validated format. Without this, a crafted customer name could
+// inject arbitrary HTML into an email that lands in the business owner's
+// own inbox (sendAdminBookingNotification).
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface BookingDetails {
   customerName: string;
   customerPhone: string;
@@ -56,7 +71,7 @@ function detailsTable(d: BookingDetails) {
 
 export async function sendBookingConfirmation(details: BookingDetails) {
   const body = `
-    <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">Hi <strong>${details.customerName}</strong>,</p>
+    <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">Hi <strong>${escapeHtml(details.customerName)}</strong>,</p>
     <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">Your appointment has been received and is awaiting confirmation. We'll be in touch soon!</p>
     ${detailsTable(details)}
     <div style="margin-top:20px;padding:14px 16px;background:${BRAND.bg};border-radius:10px;text-align:center;">
@@ -77,8 +92,8 @@ export async function sendAdminBookingNotification(details: BookingDetails) {
   const body = `
     <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">A new appointment has been booked:</p>
     <table style="width:100%;border-collapse:collapse;">
-      ${row("Customer", details.customerName)}
-      ${row("Phone", details.customerPhone)}
+      ${row("Customer", escapeHtml(details.customerName))}
+      ${row("Phone", escapeHtml(details.customerPhone))}
       ${row("Email", details.customerEmail)}
       ${row("Service", details.serviceName)}
       ${row("Date", details.date)}
@@ -113,7 +128,7 @@ export async function sendStatusUpdateEmail(details: StatusUpdateDetails) {
   if (!label) return;
 
   const body = `
-    <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">Hi <strong>${details.customerName}</strong>,</p>
+    <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">Hi <strong>${escapeHtml(details.customerName)}</strong>,</p>
     <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">Your appointment status has been updated.</p>
     <table style="width:100%;border-collapse:collapse;">
       ${row("Service", details.serviceName)}

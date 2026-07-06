@@ -1,7 +1,12 @@
 import { Languages } from "lucide-react";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const labels: Record<Lang, string> = { he: "עברית", ar: "العربية", en: "English" };
 
@@ -17,7 +22,11 @@ export function LanguageSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[140px]">
         {(["he", "ar", "en"] as Lang[]).map((l) => (
-          <DropdownMenuItem key={l} onClick={() => setLang(l)} className={lang === l ? "font-semibold text-primary" : ""}>
+          <DropdownMenuItem
+            key={l}
+            onClick={() => setLang(l)}
+            className={lang === l ? "font-semibold text-primary" : ""}
+          >
             {labels[l]}
           </DropdownMenuItem>
         ))}
