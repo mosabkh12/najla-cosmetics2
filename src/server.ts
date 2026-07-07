@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { handleCalendarFeedRequest } from "./lib/calendar-feed";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -40,6 +41,12 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // A stable, permanent path handled before TanStack Start's own
+      // routing — server functions get a build-hashed URL that would
+      // silently break a calendar app's saved subscription on redeploy.
+      const calendarResponse = await handleCalendarFeedRequest(request);
+      if (calendarResponse) return calendarResponse;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

@@ -99,6 +99,7 @@ export type Database = {
           about_image_url: string | null;
           address: string | null;
           business_name: string;
+          calendar_feed_token: string | null;
           google_maps_url: string | null;
           hero_image_url: string | null;
           id: string;
@@ -113,6 +114,7 @@ export type Database = {
           about_image_url?: string | null;
           address?: string | null;
           business_name?: string;
+          calendar_feed_token?: string | null;
           google_maps_url?: string | null;
           hero_image_url?: string | null;
           id?: string;
@@ -127,6 +129,7 @@ export type Database = {
           about_image_url?: string | null;
           address?: string | null;
           business_name?: string;
+          calendar_feed_token?: string | null;
           google_maps_url?: string | null;
           hero_image_url?: string | null;
           id?: string;

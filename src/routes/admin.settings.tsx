@@ -2,12 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSettings, saveSettings } from "@/api/settings/settings";
+import { getCalendarFeedInfo, regenerateCalendarFeedToken } from "@/api/calendar/calendar";
 import { uploadAdminImage } from "@/api/storage/storage";
 import { resizeImageForUpload } from "@/lib/image-resize";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Upload,
   X,
@@ -20,6 +22,10 @@ import {
   ArrowRight,
   Save,
   Search,
+  CalendarClock,
+  Copy,
+  Check,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
@@ -194,10 +200,51 @@ function Page() {
   const [form, setForm] = useState<SettingsFormState>({});
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     if (data) setForm(data);
   }, [data]);
+
+  const { data: feedInfo } = useQuery({
+    queryKey: ["calendar-feed-info"],
+    queryFn: () => getCalendarFeedInfo(),
+  });
+  // window is unavailable during SSR — the URL only exists once hydrated
+  // on the client, which is fine since this is an admin-only, behind-login
+  // page never meant to render its real content server-side for a visitor.
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const feedUrl = feedInfo?.token ? `${origin}${feedInfo.path}?token=${feedInfo.token}` : "";
+
+  const copyFeedUrl = async () => {
+    if (!feedUrl) return;
+    await navigator.clipboard.writeText(feedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const regenerateFeed = async () => {
+    if (
+      !confirm(
+        L(
+          "הקישור הקודם יפסיק לעבוד. יש לעדכן את המנוי ביומן שלך אחרי כן.",
+          "الرابط السابق سيتوقف عن العمل. يجب تحديث الاشتراك في التقويم بعد ذلك.",
+          "The old link will stop working. You'll need to update the subscription in your calendar app afterward.",
+        ),
+      )
+    )
+      return;
+    setRegenerating(true);
+    try {
+      await regenerateCalendarFeedToken();
+      qc.invalidateQueries({ queryKey: ["calendar-feed-info"] });
+      toast.success(L("קישור חדש נוצר", "تم إنشاء رابط جديد", "New link generated"));
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
+    }
+    setRegenerating(false);
+  };
 
   // Debounced live preview so the pin updates a beat after typing stops,
   // instead of reloading the map iframe on every keystroke.
@@ -530,6 +577,70 @@ function Page() {
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 rtl:rotate-180 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 transition-transform" />
         </Link>
+      </Reveal>
+
+      {/* Calendar Sync — a private, permanent link the admin subscribes to
+          once in their phone's own Calendar app (Google/Apple both support
+          "subscribe by URL" natively) so appointments show up there with
+          the phone's own reminders and lock-screen alerts, instead of us
+          trying to rebuild that ourselves. */}
+      <Reveal direction="up" delay={4}>
+        <div
+          className="rounded-2xl bg-card p-5 sm:p-6 border border-border/10"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 shrink-0">
+              <CalendarClock className="h-4 w-4 text-primary" />
+            </div>
+            <h2 className="text-[14px] font-semibold text-foreground">
+              {L("סנכרון עם היומן", "مزامنة مع التقويم", "Calendar Sync")}
+            </h2>
+          </div>
+          <p className="text-[12px] text-muted-foreground mb-4 leading-relaxed">
+            {L(
+              "העתיקי את הקישור והוסיפי אותו כ'מנוי' ביומן Google Calendar או Apple Calendar בטלפון שלך — כל התורים יופיעו שם אוטומטית, כולל תזכורות ומסך נעילה.",
+              "انسخي الرابط وأضيفيه كـ'اشتراك' في تقويم Google أو Apple على هاتفك — ستظهر كل المواعيد هناك تلقائيًا، بما في ذلك التذكيرات وشاشة القفل.",
+              'Copy this link and add it as a "subscription" in Google Calendar or Apple Calendar on your phone — every appointment will show up there automatically, with reminders and lock-screen alerts.',
+            )}
+          </p>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              value={feedUrl}
+              placeholder={L("טוען...", "جارٍ التحميل...", "Loading...")}
+              dir="ltr"
+              className="h-10 rounded-xl text-xs flex-1 border-border/30 font-mono"
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={copyFeedUrl}
+              disabled={!feedUrl}
+              className="h-10 shrink-0 rounded-xl border-border/30 px-3.5"
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-sage" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
+          <button
+            type="button"
+            onClick={regenerateFeed}
+            disabled={regenerating || !feedInfo}
+            className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+          >
+            {regenerating ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+            {L("צור קישור חדש", "إنشاء رابط جديد", "Generate new link")}
+          </button>
+        </div>
       </Reveal>
 
       {/* Mobile save button */}
