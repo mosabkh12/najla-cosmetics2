@@ -72,7 +72,7 @@ function isWithinTimeFilter(createdAt: string, filter: TimeFilter, selectedMonth
 }
 
 function Page() {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
   const [view, setView] = useState<string | null>(null);
@@ -333,7 +333,7 @@ function Page() {
                             <SelectItem key={s} value={s}>
                               <span className="flex items-center gap-2">
                                 <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />
-                                {s}
+                                {t(`status_${s}`)}
                               </span>
                             </SelectItem>
                           ))}

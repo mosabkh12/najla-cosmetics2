@@ -249,73 +249,76 @@ function Home() {
       </section>
 
       {/* ═══════════ LOCATION ═══════════ */}
-      <section className="bg-surface">
-        <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-28">
+      {/* Sized to fit within one screen (viewport minus the fixed 80px
+          header) once scrolled into view, so the whole section — map, info,
+          and buttons — is visible without extra scrolling inside it. */}
+      <section className="bg-surface min-h-[calc(100dvh-80px)] flex items-center">
+        <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-8 sm:py-10 w-full">
           <Reveal direction="up">
-            <div className="text-center max-w-xl mx-auto mb-12">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-3">
+            <div className="text-center max-w-xl mx-auto mb-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary mb-2">
                 Najla Cosmetics
               </p>
-              <h2 className="font-display text-[28px] sm:text-[36px] md:text-[42px] text-foreground">
+              <h2 className="font-display text-[24px] sm:text-[30px] md:text-[34px] text-foreground">
                 {t("location_title")}
               </h2>
             </div>
           </Reveal>
-          <div className="grid gap-8 md:grid-cols-2 md:items-stretch overflow-x-hidden">
+          <div className="grid gap-5 md:grid-cols-2 md:items-stretch overflow-x-hidden">
             <Reveal direction="start">
               <div
-                className="overflow-hidden rounded-3xl min-h-[350px] h-full"
+                className="overflow-hidden rounded-3xl min-h-[260px] h-full"
                 style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.08)" }}
               >
                 <iframe
                   title="Map"
                   src={getMapEmbedSrc(settings)}
-                  className="h-full w-full min-h-[350px]"
+                  className="h-full w-full min-h-[260px]"
                   loading="lazy"
                 />
               </div>
             </Reveal>
             <Reveal direction="end" delay={2}>
               <div
-                className="rounded-3xl bg-card p-8 sm:p-10 flex flex-col h-full"
+                className="rounded-3xl bg-card p-5 sm:p-6 flex flex-col h-full"
                 style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
               >
-                <div className="space-y-6 flex-1">
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface">
-                      <MapPin className="h-5 w-5 text-primary" />
+                <div className="space-y-3.5 flex-1">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-surface">
+                      <MapPin className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                         {t("address")}
                       </p>
-                      <p className="text-[15px] text-foreground mt-1 leading-relaxed">
+                      <p className="text-[14px] text-foreground mt-0.5 leading-snug">
                         {settings?.address || "Nazareth, Israel"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface">
-                      <Phone className="h-5 w-5 text-primary" />
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-surface">
+                      <Phone className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                         {t("phone")}
                       </p>
-                      <p className="text-[15px] text-foreground mt-1 font-medium" dir="ltr">
+                      <p className="text-[14px] text-foreground mt-0.5 font-medium" dir="ltr">
                         {settings?.phone || "—"}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-surface">
-                      <Clock className="h-5 w-5 text-primary" />
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-surface">
+                      <Clock className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                         {t("working_hours")}
                       </p>
-                      <div className="mt-1 text-[15px] text-foreground space-y-0.5">
+                      <div className="mt-0.5 text-[14px] text-foreground space-y-0.5">
                         {hoursLines.map((line, i) => (
                           <p key={i}>
                             {line.label}: <span className="font-medium">{line.text}</span>
@@ -325,28 +328,28 @@ function Home() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-8 space-y-3">
+                <div className="mt-4 space-y-2">
                   <a
                     href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
                     className="block"
                   >
-                    <button className="w-full py-3.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
+                    <button className="w-full py-2.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
                       <MessageCircle className="h-4 w-4" />
                       WhatsApp
                     </button>
                   </a>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <a href={getGoogleMapsDirectionsUrl(settings)} target="_blank" rel="noreferrer">
-                      <button className="w-full py-3.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                      <button className="w-full py-2.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
                         <Navigation className="h-4 w-4" />
                         {t("get_directions")}
                       </button>
                     </a>
                     <a href={getWazeUrl(settings)} target="_blank" rel="noreferrer">
                       <button
-                        className="w-full py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        className="w-full py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                         style={{ backgroundColor: "#33CCFF" }}
                       >
                         <Navigation2 className="h-4 w-4" />

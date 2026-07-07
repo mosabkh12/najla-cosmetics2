@@ -175,24 +175,26 @@
 @utility soft-shadow { box-shadow: 0 30px 40px -10px rgba(45, 45, 45, 0.05); }
 @utility glass-card { background: rgba(252, 249, 248, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 
-/* ── Custom scrollbar (minimalist) ── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #fcf9f8; }
-::-webkit-scrollbar-thumb { background: #615e57; border-radius: 10px; }
+/* ── Page scrollbar hidden site-wide ──
+   The page still scrolls normally (mouse wheel, trackpad, keyboard) — only
+   the visible bar is removed, on every page, not just tall ones. Covers
+   Chrome/Edge/other Blink browsers (::-webkit-scrollbar) and Firefox
+   (scrollbar-width). Safari has no supported CSS-only way to hide its
+   native scrollbar, so it still shows its own there. */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+html::-webkit-scrollbar { display: none; }
 
 /* ── Scroll reveal animations ── */
-html, body { scroll-behavior: smooth; scrollbar-gutter: stable; }
-
-/* Safari fallback: keep scrollbar space reserved so opening a Select/Dialog
-   (which hides the scrollbar to lock scrolling) never shifts the page width */
-@supports not (scrollbar-gutter: stable) {
-  html { overflow-y: scroll; }
-}
+html, body { scroll-behavior: smooth; }
 
 /* Radix (Select/Dialog) locks scroll by injecting margin/padding on <body>
-   to compensate for the scrollbar it hides. That compensation is redundant
-   now that scrollbar-gutter reserves the space permanently, and it's what
-   was shifting fixed-position elements (e.g. the navbar) on open/close. */
+   to compensate for the scrollbar it hides. With the scrollbar already
+   hidden above there's nothing left to compensate for — this just keeps
+   that compensation from ever shifting fixed-position elements (e.g. the
+   navbar) if it fires anyway. */
 html body[data-scroll-locked] {
   margin-right: 0 !important;
   padding-right: 0 !important;

@@ -437,7 +437,7 @@ function Page() {
                                 <SelectItem key={s} value={s}>
                                   <span className="flex items-center gap-2">
                                     <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />
-                                    {s}
+                                    {t(`status_${s}`)}
                                   </span>
                                 </SelectItem>
                               ))}
