@@ -1,16 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireAdmin } from "./middleware";
+import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 
 export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const today = new Date().toISOString().slice(0, 10);
+    // Asia/Jerusalem, not the server's own timezone — matches every other
+    // "today" calculation in the appointments system (see jerusalem-time.ts).
+    const today = jerusalemTodayStr();
     const [appts, orders, revenue, lowStock] = await Promise.all([
       supabaseAdmin
         .from("appointments")
         .select("id,status,appointment_date,customer_name", { count: "exact" })
         .gte("appointment_date", today)
+        // "Upcoming" must mean still-actionable appointments — a cancelled
+        // or already-completed one dated today/later shouldn't count as
+        // something the admin still needs to prepare for.
+        .in("status", ["pending", "confirmed"])
         .order("appointment_date")
         .limit(5),
       supabaseAdmin

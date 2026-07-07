@@ -4,6 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireAdmin } from "../admin/middleware";
 import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
+import { jerusalemNow } from "@/lib/jerusalem-time";
+import { toMinutes, fromMinutes } from "@/lib/time-minutes";
 
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -40,43 +42,12 @@ async function purgeOldAppointments(supabaseAdmin: SupabaseAdmin) {
     .lt("appointment_date", cutoffStr);
 }
 
-function toMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return -1;
-  return h * 60 + m;
-}
-
-function fromMinutes(m: number): string {
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-}
-
 function parseDate(date: string): Date | null {
   if (!DATE_RE.test(date)) return null;
   const [y, m, d] = date.split("-").map(Number);
   const obj = new Date(y, m - 1, d);
   if (obj.getFullYear() !== y || obj.getMonth() !== m - 1 || obj.getDate() !== d) return null;
   return obj;
-}
-
-// Israel-local "now", used for presentation-sensitive checks (e.g. which
-// slots still look bookable today). Authoritative past-date/time
-// enforcement happens inside the create_appointment/reschedule_appointment
-// RPCs themselves, using the same Asia/Jerusalem timezone.
-function nowInJerusalem(): { dateStr: string; minutes: number } {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jerusalem",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-  const get = (t: string) => parts.find((p) => p.type === t)!.value;
-  return {
-    dateStr: `${get("year")}-${get("month")}-${get("day")}`,
-    minutes: Number(get("hour")) * 60 + Number(get("minute")),
-  };
 }
 
 interface ResolvedDay {
@@ -121,6 +92,12 @@ async function loadDaySettings(
     maxPerDay: data?.max_per_day ?? null,
   };
 }
+
+// Minimum notice a new/rescheduled booking must give — mirrors the same
+// 30-minute floor enforced inside the create_appointment/reschedule_appointment
+// RPCs (see the accompanying migration), so a slot hidden here for being
+// too soon is also actually rejected if booked anyway some other way.
+const MIN_BOOKING_LEAD_MINUTES = 30;
 
 // Read-only slot listing for the UI — not authoritative. The
 // create_appointment/reschedule_appointment RPCs re-validate everything
@@ -176,9 +153,9 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
       return !taken.some((t) => start < t.end && t.start < end);
     });
 
-    const { dateStr: todayStr, minutes: nowMinutes } = nowInJerusalem();
+    const { dateStr: todayStr, minutes: nowMinutes } = jerusalemNow();
     if (date === todayStr) {
-      const cutoff = nowMinutes + 30;
+      const cutoff = nowMinutes + MIN_BOOKING_LEAD_MINUTES;
       available = available.filter((slot) => toMinutes(slot) >= cutoff);
     }
 

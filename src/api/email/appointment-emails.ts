@@ -145,3 +145,35 @@ export async function sendStatusUpdateEmail(details: StatusUpdateDetails) {
     wrap("Appointment Update", body),
   );
 }
+
+interface AvailabilityCancellationDetails {
+  customerName: string;
+  customerEmail: string;
+  serviceName: string;
+  date: string;
+  time: string;
+}
+
+// Distinct from sendStatusUpdateEmail on purpose — this cancellation isn't
+// something the customer did or a normal status change, it's the business
+// closing/changing hours out from under an existing booking. Naming that
+// plainly is more honest than a generic "your appointment was cancelled".
+export async function sendAvailabilityCancellationEmail(details: AvailabilityCancellationDetails) {
+  const body = `
+    <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">Hi <strong>${escapeHtml(details.customerName)}</strong>,</p>
+    <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">We're sorry for the inconvenience — we've had to update our schedule, and the appointment below could no longer be kept. It has been cancelled at no charge. Please feel free to book a new time that works for you.</p>
+    <table style="width:100%;border-collapse:collapse;">
+      ${row("Service", escapeHtml(details.serviceName))}
+      ${row("Date", details.date)}
+      ${row("Time", details.time.slice(0, 5))}
+    </table>
+    <div style="margin-top:20px;padding:14px 16px;background:${BRAND.bg};border-radius:10px;text-align:center;">
+      <span style="font-size:13px;font-weight:700;color:#dc2626;">Cancelled — Schedule Change</span>
+    </div>`;
+
+  await sendMail(
+    details.customerEmail,
+    "Najla Cosmetics — Appointment Cancelled (Schedule Change)",
+    wrap("Appointment Cancelled", body),
+  );
+}

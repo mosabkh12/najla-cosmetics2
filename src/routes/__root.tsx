@@ -17,6 +17,7 @@ import { CartProvider } from "@/hooks/useCart";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/sonner";
+import { useKeepScrollbarVisibleForSelects } from "@/lib/keep-scrollbar-visible";
 
 // Radix UI primitives (Select, RadioGroup, Dialog, etc.) don't inherit the
 // document's dir="rtl" automatically — without this, they silently render
@@ -125,6 +126,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useKeepScrollbarVisibleForSelects();
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>

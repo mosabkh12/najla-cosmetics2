@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
 import { CalendarDays, Search, Clock } from "lucide-react";
+import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 
 export const Route = createFileRoute("/admin/appointments")({ component: Page });
 
@@ -44,24 +45,6 @@ type TimeFilter = (typeof TIME_FILTERS)[number];
 
 const STATUS_FILTERS = ["all", ...SELECTABLE_STATUSES] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
-
-// Every other date/time decision in this app (the booking RPCs,
-// nowInJerusalem() in appointments.ts) deliberately uses Asia/Jerusalem
-// rather than the viewer's local clock, specifically so "today" means the
-// same thing regardless of what timezone a browser happens to be set to.
-// This page grouping by date needs that same guarantee — an admin opening
-// this page from a device set to a different timezone must still see the
-// same "today" a customer in Israel would be booking against.
-function jerusalemTodayStr(): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jerusalem",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const get = (t: string) => parts.find((p) => p.type === t)!.value;
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
 
 // Both dateStr and fromStr are plain "YYYY-MM-DD" values (never
 // timezone-aware timestamps) — diffing them as UTC-midnight instants

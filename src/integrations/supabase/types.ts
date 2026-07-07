@@ -41,44 +41,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      appointment_slots: {
-        Row: {
-          created_at: string;
-          end_time: string;
-          id: string;
-          is_available: boolean;
-          service_id: string | null;
-          slot_date: string;
-          start_time: string;
-        };
-        Insert: {
-          created_at?: string;
-          end_time: string;
-          id?: string;
-          is_available?: boolean;
-          service_id?: string | null;
-          slot_date: string;
-          start_time: string;
-        };
-        Update: {
-          created_at?: string;
-          end_time?: string;
-          id?: string;
-          is_available?: boolean;
-          service_id?: string | null;
-          slot_date?: string;
-          start_time?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "appointment_slots_service_id_fkey";
-            columns: ["service_id"];
-            isOneToOne: false;
-            referencedRelation: "services";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       appointments: {
         Row: {
           appointment_date: string;
@@ -89,7 +51,6 @@ export type Database = {
           id: string;
           notes: string | null;
           service_id: string;
-          slot_id: string | null;
           status: Database["public"]["Enums"]["appointment_status"];
           total_price: number;
           updated_at: string;
@@ -104,7 +65,6 @@ export type Database = {
           id?: string;
           notes?: string | null;
           service_id: string;
-          slot_id?: string | null;
           status?: Database["public"]["Enums"]["appointment_status"];
           total_price?: number;
           updated_at?: string;
@@ -119,7 +79,6 @@ export type Database = {
           id?: string;
           notes?: string | null;
           service_id?: string;
-          slot_id?: string | null;
           status?: Database["public"]["Enums"]["appointment_status"];
           total_price?: number;
           updated_at?: string;
@@ -131,13 +90,6 @@ export type Database = {
             columns: ["service_id"];
             isOneToOne: false;
             referencedRelation: "services";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "appointments_slot_id_fkey";
-            columns: ["slot_id"];
-            isOneToOne: false;
-            referencedRelation: "appointment_slots";
             referencedColumns: ["id"];
           },
         ];

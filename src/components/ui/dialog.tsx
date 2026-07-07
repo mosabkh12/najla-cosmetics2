@@ -44,7 +44,12 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-foreground/5 text-foreground/70 ring-offset-background cursor-pointer transition-colors hover:bg-foreground/10 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      {/* Fixed to the physical left (not the logical "start", which would
+          flip to the right in RTL) — dialog titles/badges in this app
+          flow toward the right in Hebrew/Arabic, so pinning Close to the
+          left keeps it clear of that content and visible in every
+          language, instead of colliding with it in the same corner. */}
+      <DialogPrimitive.Close className="absolute left-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-foreground/5 text-foreground/70 ring-offset-background cursor-pointer transition-colors hover:bg-foreground/10 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

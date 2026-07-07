@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
+import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
+import { jerusalemTodayStr } from "@/lib/jerusalem-time";
+import { toMinutes } from "@/lib/time-minutes";
 
 export interface DayHours {
   enabled: boolean;
@@ -124,6 +127,124 @@ export const getAvailabilitySettings = createServerFn({ method: "GET" }).handler
   },
 );
 
+export interface ConflictingAppointment {
+  id: string;
+  user_id: string;
+  customer_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  service_name: string;
+}
+
+type ProposedAvailability = Pick<AvailabilitySettings, "weekly_hours" | "breaks" | "closed_dates">;
+
+// True when an appointment at [startMinutes, endMinutes) on dateStr would no
+// longer be bookable under the given (possibly not-yet-saved) settings —
+// the day is closed/disabled, the date is in closed_dates, the time falls
+// outside open/close, or it now overlaps a break.
+function isBlockedUnder(
+  proposed: ProposedAvailability,
+  dateStr: string,
+  startMinutes: number,
+  endMinutes: number,
+): boolean {
+  if (proposed.closed_dates.includes(dateStr)) return true;
+
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dayOfWeek = new Date(y, m - 1, d).getDay();
+  const day = proposed.weekly_hours[String(dayOfWeek)];
+  if (!day?.enabled) return true;
+
+  if (startMinutes < toMinutes(day.open) || endMinutes > toMinutes(day.close)) return true;
+
+  return proposed.breaks.some((b) => {
+    const breakStart = toMinutes(b.start);
+    const breakEnd = toMinutes(b.end);
+    return startMinutes < breakEnd && breakStart < endMinutes;
+  });
+}
+
+// Every still-active (pending/confirmed), today-or-later appointment that
+// would fall outside the given proposed settings — i.e. what saving them
+// as-is would silently orphan. Always recomputed fresh from the database
+// rather than trusting a client-supplied list, since an appointment could
+// have been created/cancelled/rescheduled between an admin previewing this
+// and actually confirming the save.
+async function findConflictingAppointments(
+  supabaseAdmin: SupabaseAdmin,
+  proposed: ProposedAvailability,
+): Promise<ConflictingAppointment[]> {
+  const { data } = await supabaseAdmin
+    .from("appointments")
+    .select(
+      "id, user_id, customer_name, appointment_date, appointment_time, services(name, duration_minutes)",
+    )
+    .in("status", ["pending", "confirmed"])
+    .gte("appointment_date", jerusalemTodayStr());
+
+  const conflicts: ConflictingAppointment[] = [];
+  for (const a of data ?? []) {
+    const start = toMinutes(String(a.appointment_time));
+    const duration = a.services?.duration_minutes ?? 30;
+    if (isBlockedUnder(proposed, a.appointment_date, start, start + duration)) {
+      conflicts.push({
+        id: a.id,
+        user_id: a.user_id,
+        customer_name: a.customer_name,
+        appointment_date: a.appointment_date,
+        appointment_time: String(a.appointment_time),
+        service_name: a.services?.name ?? "",
+      });
+    }
+  }
+  return conflicts;
+}
+
+// Read-only preview so the admin UI can warn "this will cancel N
+// appointments" and let the admin back out before anything actually
+// changes. The real, authoritative check runs again inside
+// updateAvailabilitySettings itself — this is purely advisory.
+export const previewAvailabilityConflicts = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .validator(
+    (d: {
+      weekly_hours: Record<string, DayHours>;
+      breaks: { start: string; end: string }[];
+      closed_dates: string[];
+    }) => d,
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return findConflictingAppointments(supabaseAdmin, data);
+  });
+
+async function notifyCancelledAppointments(
+  supabaseAdmin: SupabaseAdmin,
+  conflicts: ConflictingAppointment[],
+) {
+  const { sendAvailabilityCancellationEmail } = await import("@/api/email/appointment-emails");
+  for (const c of conflicts) {
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .eq("id", c.user_id)
+        .maybeSingle();
+      if (profile?.email) {
+        await sendAvailabilityCancellationEmail({
+          customerName: c.customer_name,
+          customerEmail: profile.email,
+          serviceName: c.service_name,
+          date: c.appointment_date,
+          time: c.appointment_time,
+        });
+      }
+    } catch (e) {
+      console.error("[updateAvailabilitySettings] failed to notify", c.id, e);
+    }
+  }
+}
+
 export const updateAvailabilitySettings = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator(
@@ -155,6 +276,13 @@ export const updateAvailabilitySettings = createServerFn({ method: "POST" })
       closed_dates: data.closed_dates as unknown as import("@/integrations/supabase/types").Json,
     };
 
+    // Computed BEFORE writing the new settings, against the same proposed
+    // shape the admin already saw in the preview — not re-read from the
+    // database after saving, so this can't miss anything (once the new
+    // settings are live, findConflictingAppointments would just be
+    // checking appointments against themselves).
+    const conflicts = await findConflictingAppointments(supabaseAdmin, data);
+
     if (existing) {
       const { error } = await supabaseAdmin
         .from("availability_settings")
@@ -165,5 +293,28 @@ export const updateAvailabilitySettings = createServerFn({ method: "POST" })
       const { error } = await supabaseAdmin.from("availability_settings").insert(payload);
       if (error) throw error;
     }
-    return { success: true };
+
+    let cancelledAppointments: ConflictingAppointment[] = [];
+    if (conflicts.length > 0) {
+      const { error: cancelError } = await supabaseAdmin
+        .from("appointments")
+        .update({ status: "cancelled" as const })
+        .in(
+          "id",
+          conflicts.map((c) => c.id),
+        );
+      if (cancelError) {
+        console.error(
+          "[updateAvailabilitySettings] settings saved but failed to cancel conflicting appointments",
+          cancelError,
+        );
+      } else {
+        cancelledAppointments = conflicts;
+        notifyCancelledAppointments(supabaseAdmin, conflicts).catch((e) =>
+          console.error("[updateAvailabilitySettings] notification pass failed", e),
+        );
+      }
+    }
+
+    return { success: true, cancelledAppointments };
   });

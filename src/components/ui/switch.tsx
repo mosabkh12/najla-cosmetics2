@@ -17,7 +17,12 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0",
+        // translate-x is a physical (always-rightward) transform, but under
+        // RTL the track's flex layout already rests the thumb at the right
+        // edge — sliding it further right on "checked" pushed it out past
+        // the track instead of across to the left. The rtl: variants flip
+        // the direction so it slides cleanly to the opposite edge either way.
+        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0 rtl:data-[state=checked]:-translate-x-4 rtl:data-[state=unchecked]:translate-x-0",
       )}
     />
   </SwitchPrimitives.Root>
