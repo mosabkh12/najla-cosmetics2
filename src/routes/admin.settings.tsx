@@ -246,6 +246,7 @@ function Page() {
       google_maps_url: form.google_maps_url || null,
       hero_image_url: form.hero_image_url || null,
       about_image_url: form.about_image_url || null,
+      products_hero_image_url: form.products_hero_image_url || null,
       latitude: latNum,
       longitude: lngNum,
     };
@@ -472,9 +473,13 @@ function Page() {
               {L("תמונות", "الصور", "Images")}
             </h2>
           </div>
-          <div className="grid sm:grid-cols-2 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <ImageUpload
-              label={L("תמונת Hero", "صورة الواجهة", "Hero Image")}
+              label={L(
+                "תמונת Hero (עמוד הבית)",
+                "صورة الواجهة (الصفحة الرئيسية)",
+                "Hero Image (Home Page)",
+              )}
               value={form.hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, hero_image_url: url })}
             />
@@ -482,6 +487,15 @@ function Page() {
               label={L("תמונת אודות", "صورة عنا", "About Image")}
               value={form.about_image_url ?? ""}
               onChange={(url) => setForm({ ...form, about_image_url: url })}
+            />
+            <ImageUpload
+              label={L(
+                "תמונת Hero (עמוד המוצרים)",
+                "صورة الواجهة (صفحة المنتجات)",
+                "Hero Image (Products Page)",
+              )}
+              value={form.products_hero_image_url ?? ""}
+              onChange={(url) => setForm({ ...form, products_hero_image_url: url })}
             />
           </div>
         </div>

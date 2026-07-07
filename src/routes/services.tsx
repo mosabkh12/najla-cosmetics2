@@ -27,10 +27,11 @@ function ServicesPage() {
     staleTime: 120_000,
   });
 
+  // No staleTime: branding content (hero image, etc.) should reflect an
+  // admin's change on the next page load, not stay cached for minutes.
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
-    staleTime: 300_000,
   });
 
   const categories = useMemo(

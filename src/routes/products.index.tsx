@@ -31,10 +31,11 @@ function ProductsPage() {
     staleTime: 120_000,
   });
 
+  // No staleTime: branding content (hero image, etc.) should reflect an
+  // admin's change on the next page load, not stay cached for minutes.
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
-    staleTime: 300_000,
   });
 
   const categories = useMemo(
@@ -72,7 +73,7 @@ function ProductsPage() {
       <div className="relative h-[400px] sm:h-[550px] md:h-[680px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={settings?.hero_image_url ?? "/images/brand/products-hero.png"}
+            src={settings?.products_hero_image_url ?? "/images/brand/products-hero.png"}
             alt=""
             className="w-full h-full object-cover"
           />

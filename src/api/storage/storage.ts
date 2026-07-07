@@ -135,34 +135,40 @@ export async function deleteOldImageIfUnreferenced(
     // Plain .eq() filters only (no .or() string interpolation) — every
     // value is passed as a real query parameter, never concatenated
     // into a filter expression.
-    const [productsRes, servicesRes, heroRes, aboutRes, galleryRes] = await Promise.all([
-      supabaseAdmin
-        .from("products")
-        .select("id", { count: "exact", head: true })
-        .eq("image_url", oldUrl),
-      supabaseAdmin
-        .from("services")
-        .select("id", { count: "exact", head: true })
-        .eq("image_url", oldUrl),
-      supabaseAdmin
-        .from("business_settings")
-        .select("id", { count: "exact", head: true })
-        .eq("hero_image_url", oldUrl),
-      supabaseAdmin
-        .from("business_settings")
-        .select("id", { count: "exact", head: true })
-        .eq("about_image_url", oldUrl),
-      supabaseAdmin
-        .from("product_images")
-        .select("id", { count: "exact", head: true })
-        .eq("image_url", oldUrl),
-    ]);
+    const [productsRes, servicesRes, heroRes, aboutRes, productsHeroRes, galleryRes] =
+      await Promise.all([
+        supabaseAdmin
+          .from("products")
+          .select("id", { count: "exact", head: true })
+          .eq("image_url", oldUrl),
+        supabaseAdmin
+          .from("services")
+          .select("id", { count: "exact", head: true })
+          .eq("image_url", oldUrl),
+        supabaseAdmin
+          .from("business_settings")
+          .select("id", { count: "exact", head: true })
+          .eq("hero_image_url", oldUrl),
+        supabaseAdmin
+          .from("business_settings")
+          .select("id", { count: "exact", head: true })
+          .eq("about_image_url", oldUrl),
+        supabaseAdmin
+          .from("business_settings")
+          .select("id", { count: "exact", head: true })
+          .eq("products_hero_image_url", oldUrl),
+        supabaseAdmin
+          .from("product_images")
+          .select("id", { count: "exact", head: true })
+          .eq("image_url", oldUrl),
+      ]);
 
     const stillReferenced =
       (productsRes.count ?? 0) > 0 ||
       (servicesRes.count ?? 0) > 0 ||
       (heroRes.count ?? 0) > 0 ||
       (aboutRes.count ?? 0) > 0 ||
+      (productsHeroRes.count ?? 0) > 0 ||
       (galleryRes.count ?? 0) > 0;
 
     if (stillReferenced) return;

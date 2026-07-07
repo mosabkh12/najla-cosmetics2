@@ -62,10 +62,12 @@ function Home() {
     staleTime: 120_000,
   });
 
+  // No staleTime: branding content (hero image, address, phone, hours)
+  // should reflect an admin's change on the next page load, not stay
+  // cached for minutes.
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
-    staleTime: 300_000,
   });
 
   // The real, bookable weekly hours (same source of truth the Availability

@@ -105,6 +105,7 @@ export type Database = {
           latitude: number | null;
           longitude: number | null;
           phone: string | null;
+          products_hero_image_url: string | null;
           updated_at: string;
           whatsapp_number: string | null;
         };
@@ -118,6 +119,7 @@ export type Database = {
           latitude?: number | null;
           longitude?: number | null;
           phone?: string | null;
+          products_hero_image_url?: string | null;
           updated_at?: string;
           whatsapp_number?: string | null;
         };
@@ -131,6 +133,7 @@ export type Database = {
           latitude?: number | null;
           longitude?: number | null;
           phone?: string | null;
+          products_hero_image_url?: string | null;
           updated_at?: string;
           whatsapp_number?: string | null;
         };
