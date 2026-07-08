@@ -6,6 +6,7 @@ import {
   updateAppointmentStatus,
   deleteAppointmentsAdmin,
   retryGoogleCalendarSync,
+  resyncCompletedGoogleEvents,
 } from "@/api/appointments/appointments";
 import type { AdminAppointmentRow } from "@/lib/api-types";
 import { useI18n } from "@/lib/i18n";
@@ -112,6 +113,7 @@ function Page() {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const MAX_VISIBLE_PER_DAY = 3;
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [resyncingCompleted, setResyncingCompleted] = useState(false);
 
   const { data: rows = [] } = useQuery({
     queryKey: ["admin-appointments"],
@@ -217,6 +219,28 @@ function Page() {
         next.delete(id);
         return next;
       });
+    }
+  };
+
+  // Bulk fallback for completed appointments whose Google event was synced
+  // before the checkmark/neutral-color styling existed — pushes the
+  // current style to all of them without retrying each row by hand.
+  const resyncCompleted = async () => {
+    setResyncingCompleted(true);
+    try {
+      const { count } = await resyncCompletedGoogleEvents();
+      toast.success(
+        L(
+          `${count} תורים סונכרנו מחדש`,
+          `تمت إعادة مزامنة ${count} موعدًا`,
+          `Resynced ${count} completed appointment(s)`,
+        ),
+      );
+      qc.invalidateQueries({ queryKey: ["admin-appointments"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setResyncingCompleted(false);
     }
   };
 
@@ -365,19 +389,35 @@ function Page() {
             </button>
           ))}
         </div>
-        {statusCounts.cancelled > 0 && (
-          <button
-            onClick={deleteCancelled}
-            className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Trash2 className="h-3 w-3" />
-            {L(
-              `מחק את כל התורים שבוטלו (${statusCounts.cancelled})`,
-              `حذف كل المواعيد الملغاة (${statusCounts.cancelled})`,
-              `Delete all cancelled (${statusCounts.cancelled})`,
-            )}
-          </button>
-        )}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+          {statusCounts.cancelled > 0 && (
+            <button
+              onClick={deleteCancelled}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <Trash2 className="h-3 w-3" />
+              {L(
+                `מחק את כל התורים שבוטלו (${statusCounts.cancelled})`,
+                `حذف كل المواعيد الملغاة (${statusCounts.cancelled})`,
+                `Delete all cancelled (${statusCounts.cancelled})`,
+              )}
+            </button>
+          )}
+          {statusCounts.completed > 0 && (
+            <button
+              onClick={resyncCompleted}
+              disabled={resyncingCompleted}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${resyncingCompleted ? "animate-spin" : ""}`} />
+              {L(
+                "סנכרן מחדש תורים שהושלמו ל-Google",
+                "إعادة مزامنة المواعيد المكتملة مع Google",
+                "Resync completed appointments to Google",
+              )}
+            </button>
+          )}
+        </div>
       </Reveal>
 
       {/* Search */}
@@ -506,140 +546,155 @@ function Page() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleItems.map((a) => (
-                      <tr
-                        key={a.id}
-                        className="border-t border-border/10 hover:bg-surface/30 transition-colors"
-                      >
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
-                              {(a.customer_name ?? "?")[0]}
-                            </div>
-                            <span className="font-medium text-foreground">{a.customer_name}</span>
-                          </div>
-                        </td>
-                        <td className="p-3.5">
-                          <div className="flex items-center gap-1.5 text-[12px] text-foreground">
-                            <Clock className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                            {String(a.appointment_time).slice(0, 5)}
-                          </div>
-                        </td>
-                        <td
-                          className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell"
-                          dir="ltr"
+                    {visibleItems.map((a) => {
+                      const isCompleted = a.status === "completed";
+                      return (
+                        <tr
+                          key={a.id}
+                          className={`border-t border-border/10 transition-colors ${
+                            isCompleted ? "bg-cream/60 hover:bg-cream" : "hover:bg-surface/30"
+                          }`}
                         >
-                          {a.customer_phone}
-                        </td>
-                        <td className="p-3.5 hidden sm:table-cell">
-                          <span className="text-[12px] font-medium text-foreground">
-                            {lang === "ar"
-                              ? a.service?.name_ar || a.service?.name
-                              : a.service?.name}
-                          </span>
-                        </td>
-                        <td className="p-3.5 font-semibold">₪{Number(a.total_price).toFixed(0)}</td>
-                        <td className="p-3.5">
-                          <Select value={a.status} onValueChange={(v) => setStatus(a.id, v)}>
-                            <SelectTrigger
-                              className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[a.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
-                            >
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
+                                {(a.customer_name ?? "?")[0]}
+                              </div>
                               <span
-                                className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[a.status] ?? "bg-muted-foreground"}`}
-                              />
-                              {/* A pre-migration appointment can still be 'pending'/'confirmed'
+                                className={`font-medium text-foreground ${isCompleted ? "line-through decoration-muted-foreground/60" : ""}`}
+                              >
+                                {a.customer_name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-1.5 text-[12px] text-foreground">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                              {String(a.appointment_time).slice(0, 5)}
+                            </div>
+                          </td>
+                          <td
+                            className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell"
+                            dir="ltr"
+                          >
+                            {a.customer_phone}
+                          </td>
+                          <td className="p-3.5 hidden sm:table-cell">
+                            <span
+                              className={`text-[12px] font-medium text-foreground ${isCompleted ? "line-through decoration-muted-foreground/60" : ""}`}
+                            >
+                              {lang === "ar"
+                                ? a.service?.name_ar || a.service?.name
+                                : a.service?.name}
+                            </span>
+                          </td>
+                          <td className="p-3.5 font-semibold">
+                            ₪{Number(a.total_price).toFixed(0)}
+                          </td>
+                          <td className="p-3.5">
+                            <Select value={a.status} onValueChange={(v) => setStatus(a.id, v)}>
+                              <SelectTrigger
+                                className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[a.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                              >
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[a.status] ?? "bg-muted-foreground"}`}
+                                />
+                                {/* A pre-migration appointment can still be 'pending'/'confirmed'
                                   — that's no longer a choice in the list below, so it wouldn't
                                   match any item and would otherwise render blank. Supplying it
                                   here as static text only kicks in for that legacy case; for
                                   completed/cancelled the normal item-matched label still shows. */}
-                              <SelectValue>
-                                {SELECTABLE_STATUSES.includes(
-                                  a.status as (typeof SELECTABLE_STATUSES)[number],
+                                <SelectValue>
+                                  {SELECTABLE_STATUSES.includes(
+                                    a.status as (typeof SELECTABLE_STATUSES)[number],
+                                  )
+                                    ? undefined
+                                    : t(`status_${a.status}`)}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SELECTABLE_STATUSES.map((s) => (
+                                  <SelectItem key={s} value={s}>
+                                    <span className="flex items-center gap-2">
+                                      <span
+                                        className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`}
+                                      />
+                                      {t(`status_${s}`)}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-3.5 hidden lg:table-cell">
+                            {(() => {
+                              const isSyncing = syncingIds.has(a.id);
+                              const failed = Boolean(a.google_calendar_sync_error);
+                              const synced = !failed && Boolean(a.google_calendar_synced_at);
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  {failed ? (
+                                    <span
+                                      className="flex items-center gap-1 text-[11px] font-medium text-destructive"
+                                      title={a.google_calendar_sync_error ?? undefined}
+                                    >
+                                      <CloudAlert className="h-3.5 w-3.5" />
+                                      {L("סנכרון נכשל", "فشلت المزامنة", "Sync failed")}
+                                    </span>
+                                  ) : synced ? (
+                                    <span className="flex items-center gap-1 text-[11px] font-medium text-sage">
+                                      <CloudCheck className="h-3.5 w-3.5" />
+                                      {L("מסונכרן", "تمت المزامنة", "Synced")}
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                                      <CloudOff className="h-3.5 w-3.5" />
+                                      {L("טרם סונכרן", "لم تتم المزامنة بعد", "Not synced yet")}
+                                    </span>
+                                  )}
+                                  {(failed || !synced) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => retrySync(a.id)}
+                                      disabled={isSyncing}
+                                      title={L(
+                                        "נסה לסנכרן שוב",
+                                        "إعادة محاولة المزامنة",
+                                        "Retry Google sync",
+                                      )}
+                                      className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground transition-colors disabled:opacity-50"
+                                    >
+                                      <RefreshCw
+                                        className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`}
+                                      />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td className="p-3.5 text-end">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() =>
+                                deleteIds(
+                                  [a.id],
+                                  L(
+                                    "למחוק לצמיתות את התור הזה?",
+                                    "هل تريد حذف هذا الموعد نهائيًا؟",
+                                    "Permanently delete this appointment?",
+                                  ),
                                 )
-                                  ? undefined
-                                  : t(`status_${a.status}`)}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SELECTABLE_STATUSES.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  <span className="flex items-center gap-2">
-                                    <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />
-                                    {t(`status_${s}`)}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="p-3.5 hidden lg:table-cell">
-                          {(() => {
-                            const isSyncing = syncingIds.has(a.id);
-                            const failed = Boolean(a.google_calendar_sync_error);
-                            const synced = !failed && Boolean(a.google_calendar_synced_at);
-                            return (
-                              <div className="flex items-center gap-1.5">
-                                {failed ? (
-                                  <span
-                                    className="flex items-center gap-1 text-[11px] font-medium text-destructive"
-                                    title={a.google_calendar_sync_error ?? undefined}
-                                  >
-                                    <CloudAlert className="h-3.5 w-3.5" />
-                                    {L("סנכרון נכשל", "فشلت المزامنة", "Sync failed")}
-                                  </span>
-                                ) : synced ? (
-                                  <span className="flex items-center gap-1 text-[11px] font-medium text-sage">
-                                    <CloudCheck className="h-3.5 w-3.5" />
-                                    {L("מסונכרן", "تمت المزامنة", "Synced")}
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-                                    <CloudOff className="h-3.5 w-3.5" />
-                                    {L("טרם סונכרן", "لم تتم المزامنة بعد", "Not synced yet")}
-                                  </span>
-                                )}
-                                {(failed || !synced) && (
-                                  <button
-                                    type="button"
-                                    onClick={() => retrySync(a.id)}
-                                    disabled={isSyncing}
-                                    title={L(
-                                      "נסה לסנכרן שוב",
-                                      "إعادة محاولة المزامنة",
-                                      "Retry Google sync",
-                                    )}
-                                    className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground transition-colors disabled:opacity-50"
-                                  >
-                                    <RefreshCw
-                                      className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`}
-                                    />
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <td className="p-3.5 text-end">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() =>
-                              deleteIds(
-                                [a.id],
-                                L(
-                                  "למחוק לצמיתות את התור הזה?",
-                                  "هل تريد حذف هذا الموعد نهائيًا؟",
-                                  "Permanently delete this appointment?",
-                                ),
-                              )
-                            }
-                            className="h-8 w-8 rounded-lg hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                              }
+                              className="h-8 w-8 rounded-lg hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

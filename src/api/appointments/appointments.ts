@@ -514,3 +514,28 @@ export const retryGoogleCalendarSync = createServerFn({ method: "POST" })
     await syncAppointmentToGoogleCalendar(id);
     return { success: true };
   });
+
+// Bulk fallback for existing completed appointments whose Google event was
+// already synced under an older style (before the checkmark title/neutral
+// color existed) — re-runs the same per-appointment sync so their events
+// pick up the current completed styling, without the admin needing to
+// retry each row individually.
+export const resyncCompletedGoogleEvents = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+
+    const { data, error } = await supabaseAdmin
+      .from("appointments")
+      .select("id")
+      .eq("status", "completed");
+    if (error) throw error;
+
+    const ids = (data ?? []).map((a) => a.id);
+    for (const id of ids) {
+      await syncAppointmentToGoogleCalendar(id);
+    }
+    return { count: ids.length };
+  });

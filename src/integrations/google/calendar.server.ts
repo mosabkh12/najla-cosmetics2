@@ -17,6 +17,13 @@ const STATUS_LABEL: Record<AppointmentStatus, string> = {
   cancelled: "Cancelled",
 };
 
+// Google Calendar's event colorId only supports a fixed 11-color palette
+// (no true beige/birch exists) — "8" (Graphite, a muted grey) is the
+// closest neutral tone available, used to visually de-emphasize completed
+// appointments without deleting them. See colorId reference:
+// https://developers.google.com/calendar/api/v3/reference/colors
+const COMPLETED_COLOR_ID = "8";
+
 interface CalendarClient {
   calendar: calendar_v3.Calendar;
   calendarId: string;
@@ -63,7 +70,9 @@ function buildGoogleEvent(
   customerEmail: string | null,
   businessAddress: string | null,
 ): calendar_v3.Schema$Event {
-  const label = STATUS_LABEL[appt.status as AppointmentStatus] ?? appt.status;
+  const status = appt.status as AppointmentStatus;
+  const isCompleted = status === "completed";
+  const label = STATUS_LABEL[status] ?? appt.status;
   const serviceName = appt.service?.name ?? "Appointment";
   const durationMinutes = appt.service?.duration_minutes ?? 30;
   const timeStr = String(appt.appointment_time).slice(0, 5);
@@ -81,10 +90,22 @@ function buildGoogleEvent(
     .filter((line): line is string => Boolean(line))
     .join("\n");
 
+  // Google event titles can't render CSS strikethrough — a checkmark +
+  // bracketed status is the calendar-side equivalent of the line-through
+  // treatment used for completed rows in the admin table.
+  const summary = isCompleted
+    ? `✅ [Completed] ${serviceName} — ${appt.customer_name}`
+    : `[${label}] ${serviceName} — ${appt.customer_name}`;
+
   return {
-    summary: `[${label}] ${serviceName} — ${appt.customer_name}`,
+    summary,
     description,
     location: businessAddress ?? undefined,
+    // Omitted (undefined) for anything but completed — events.update()
+    // replaces the whole resource rather than patching it, so leaving this
+    // out on a later sync automatically reverts a previously-completed
+    // event back to the calendar's default color.
+    colorId: isCompleted ? COMPLETED_COLOR_ID : undefined,
     // `dateTime` is a naive local wall-clock string; pairing it with an
     // explicit IANA `timeZone` (rather than converting to UTC ourselves)
     // lets Google resolve the correct instant, including DST, exactly
@@ -122,18 +143,29 @@ async function upsertGoogleEvent(
   return res.data.id;
 }
 
+async function deleteGoogleEventIfExists(client: CalendarClient, eventId: string | null) {
+  if (!eventId) return;
+  try {
+    await client.calendar.events.delete({ calendarId: client.calendarId, eventId });
+  } catch (err: unknown) {
+    const status = (err as { code?: number })?.code;
+    // Already gone (deleted manually, or a retry after a previous
+    // successful delete) — that's the desired end state either way.
+    if (status !== 404 && status !== 410) throw err;
+  }
+}
+
 // Reusable sync entry point, called after every appointment write
 // (create, reschedule, status change, cancellation). Never throws —
 // a Google Calendar outage or misconfiguration must never break booking,
 // so every failure is caught, logged, and recorded on the appointment row
 // instead of propagating to the caller.
 //
-// Cancelled appointments are updated (title/description changed to show
-// "Cancelled"), not deleted: deleting would lose the google_event_id
-// mapping, risk creating a duplicate event if an admin later reverts the
-// status, and destroy any reminders/notes the admin may have added to the
-// event directly in Google Calendar. Updating in place is the safer,
-// non-destructive choice for a one-way sync where Google is downstream.
+// Cancelled appointments are deleted from Google Calendar outright (not
+// just retitled) so they stop showing as busy time on the admin's actual
+// calendar. google_event_id is cleared after deletion — if the
+// appointment is later reactivated, a fresh event is created rather than
+// trying to resurrect a deleted one.
 export async function syncAppointmentToGoogleCalendar(appointmentId: string): Promise<void> {
   const client = getCalendarClient();
   if (!client) return; // Not configured — silently no-op, never blocks booking.
@@ -148,6 +180,19 @@ export async function syncAppointmentToGoogleCalendar(appointmentId: string): Pr
       .maybeSingle();
     if (error) throw error;
     if (!appt) throw new Error("APPOINTMENT_NOT_FOUND");
+
+    if (appt.status === "cancelled") {
+      await deleteGoogleEventIfExists(client, appt.google_event_id);
+      await supabaseAdmin
+        .from("appointments")
+        .update({
+          google_event_id: null,
+          google_calendar_synced_at: new Date().toISOString(),
+          google_calendar_sync_error: null,
+        })
+        .eq("id", appointmentId);
+      return;
+    }
 
     const [{ data: profile }, { data: settings }] = await Promise.all([
       supabaseAdmin.from("profiles").select("email").eq("id", appt.user_id).maybeSingle(),

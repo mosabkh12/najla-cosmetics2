@@ -73,11 +73,19 @@ normally, they just don't sync to Google).
 - The admin **Appointments** page shows a **Google Calendar** column per row:
   **Synced** / **Sync failed** / **Not synced yet**, with a retry button for the
   latter two.
-- Cancelled appointments are **not deleted** from Google Calendar — the existing event
-  is updated to show `[Cancelled] ...` in its title. This avoids losing the
-  `google_event_id` link (which would risk a duplicate event if the cancellation is
-  later reverted) and preserves anything the admin may have added to the event
-  directly in Google Calendar.
+- **Cancelled** appointments have their Google event **deleted outright**, so they stop
+  blocking time on the calendar. `google_event_id` is cleared; if the appointment is
+  later reactivated, a fresh event is created rather than reviving the deleted one.
+- **Completed** appointments keep their event (not deleted), retitled to
+  `✅ [Completed] Service — Customer` with the event color changed to a neutral grey
+  (Google Calendar has no true beige — Graphite is the closest neutral tone in its
+  fixed 11-color palette). The admin appointments table mirrors this with a soft
+  beige row background and line-through text.
+- **Pending/Confirmed** appointments keep the normal `[Status] Service — Customer`
+  title and the calendar's default color.
+- If a completed appointment's Google event was synced *before* this styling existed,
+  use **"Resync completed appointments to Google"** on the admin Appointments page to
+  push the new style to all of them at once.
 
 ## 8. Test checklist (after deploying with all 5 env vars set)
 
