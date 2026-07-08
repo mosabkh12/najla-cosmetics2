@@ -29,6 +29,11 @@ export type UserAppointmentRow = AppointmentRow & {
   services: Pick<ServiceRow, "name" | "name_ar" | "image_url"> | null;
 };
 
+/** syncAppointmentToGoogleCalendar(): appointments.select("*, service:services(name,duration_minutes)") */
+export type GoogleSyncAppointmentRow = AppointmentRow & {
+  service: Pick<ServiceRow, "name" | "duration_minutes"> | null;
+};
+
 // Admin record-dialog form-value shapes — the fields saveProduct()/
 // saveService() actually accept, plus `id` (present when editing an
 // existing row, used only to distinguish "editing" from "new" and to key

@@ -48,6 +48,9 @@ export type Database = {
           created_at: string;
           customer_name: string;
           customer_phone: string;
+          google_calendar_sync_error: string | null;
+          google_calendar_synced_at: string | null;
+          google_event_id: string | null;
           id: string;
           notes: string | null;
           service_id: string;
@@ -62,6 +65,9 @@ export type Database = {
           created_at?: string;
           customer_name: string;
           customer_phone: string;
+          google_calendar_sync_error?: string | null;
+          google_calendar_synced_at?: string | null;
+          google_event_id?: string | null;
           id?: string;
           notes?: string | null;
           service_id: string;
@@ -76,6 +82,9 @@ export type Database = {
           created_at?: string;
           customer_name?: string;
           customer_phone?: string;
+          google_calendar_sync_error?: string | null;
+          google_calendar_synced_at?: string | null;
+          google_event_id?: string | null;
           id?: string;
           notes?: string | null;
           service_id?: string;
@@ -99,7 +108,6 @@ export type Database = {
           about_image_url: string | null;
           address: string | null;
           business_name: string;
-          calendar_feed_token: string | null;
           google_maps_url: string | null;
           hero_image_url: string | null;
           id: string;
@@ -114,7 +122,6 @@ export type Database = {
           about_image_url?: string | null;
           address?: string | null;
           business_name?: string;
-          calendar_feed_token?: string | null;
           google_maps_url?: string | null;
           hero_image_url?: string | null;
           id?: string;
@@ -129,7 +136,6 @@ export type Database = {
           about_image_url?: string | null;
           address?: string | null;
           business_name?: string;
-          calendar_feed_token?: string | null;
           google_maps_url?: string | null;
           hero_image_url?: string | null;
           id?: string;

@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAdminAppointments, updateAppointmentStatus } from "@/api/appointments/appointments";
+import {
+  getAdminAppointments,
+  updateAppointmentStatus,
+  deleteAppointmentsAdmin,
+  retryGoogleCalendarSync,
+} from "@/api/appointments/appointments";
 import type { AdminAppointmentRow } from "@/lib/api-types";
 import { useI18n } from "@/lib/i18n";
 import { getErrorMessage } from "@/lib/utils";
@@ -12,9 +17,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
-import { CalendarDays, Search, Clock } from "lucide-react";
+import {
+  CalendarDays,
+  Search,
+  Clock,
+  Trash2,
+  CloudCheck,
+  CloudAlert,
+  CloudOff,
+  RefreshCw,
+} from "lucide-react";
 import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 
 export const Route = createFileRoute("/admin/appointments")({ component: Page });
@@ -91,6 +106,12 @@ function Page() {
   // admin opening this page is "who am I seeing today", not a full history dump.
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("today");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  // A busy day's full table used to always render in full, pushing every
+  // other date group off-screen — collapsed to a short preview by default,
+  // per-day, expandable on demand instead.
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const MAX_VISIBLE_PER_DAY = 3;
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
 
   const { data: rows = [] } = useQuery({
     queryKey: ["admin-appointments"],
@@ -152,6 +173,75 @@ function Page() {
     } catch (e: unknown) {
       toast.error(getErrorMessage(e));
     }
+  };
+
+  // Shared by the single-row trash icon, "delete all cancelled", and a
+  // date group's own delete button — always confirms first (this is
+  // permanent, unlike a status change) and always shows how many rows
+  // are about to go, since "delete this day" can silently take out more
+  // than the admin expects if a filter is also narrowing what's visible.
+  const deleteIds = async (ids: string[], confirmMessage: string) => {
+    if (ids.length === 0) return;
+    if (!confirm(confirmMessage)) return;
+    try {
+      await deleteAppointmentsAdmin({ data: { ids } });
+      toast.success(
+        L(
+          `${ids.length} תורים נמחקו`,
+          `تم حذف ${ids.length} موعدًا`,
+          `${ids.length} appointment(s) deleted`,
+        ),
+      );
+      qc.invalidateQueries({ queryKey: ["admin-appointments"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
+    }
+  };
+
+  // Manual fallback for the fire-and-forget sync that already ran after
+  // create/reschedule/status-change/cancel — lets the admin retry a
+  // failed sync (e.g. a transient Google API outage) without needing to
+  // touch the appointment itself again. The server call never throws (a
+  // Google failure is recorded on the row, not surfaced as an error), so
+  // the resulting badge is read from the refetched row, not this call.
+  const retrySync = async (id: string) => {
+    setSyncingIds((prev) => new Set(prev).add(id));
+    try {
+      await retryGoogleCalendarSync({ data: { id } });
+      await qc.invalidateQueries({ queryKey: ["admin-appointments"] });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setSyncingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  const deleteCancelled = () => {
+    const ids = timeFiltered.filter((a) => a.status === "cancelled").map((a) => a.id);
+    deleteIds(
+      ids,
+      L(
+        `למחוק לצמיתות ${ids.length} תורים שבוטלו?`,
+        `هل تريد حذف ${ids.length} موعدًا ملغيًا نهائيًا؟`,
+        `Permanently delete ${ids.length} cancelled appointment(s)?`,
+      ),
+    );
+  };
+
+  const deleteDay = (group: { date: string; items: AdminAppointmentRow[] }) => {
+    const ids = group.items.map((a) => a.id);
+    deleteIds(
+      ids,
+      L(
+        `למחוק לצמיתות ${ids.length} תורים מתאריך זה?`,
+        `هل تريد حذف ${ids.length} موعدًا نهائيًا من هذا التاريخ؟`,
+        `Permanently delete ${ids.length} appointment(s) from this day?`,
+      ),
+    );
   };
 
   const timeFilterLabel: Record<TimeFilter, string> = {
@@ -275,6 +365,19 @@ function Page() {
             </button>
           ))}
         </div>
+        {statusCounts.cancelled > 0 && (
+          <button
+            onClick={deleteCancelled}
+            className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Trash2 className="h-3 w-3" />
+            {L(
+              `מחק את כל התורים שבוטלו (${statusCounts.cancelled})`,
+              `حذف كل المواعيد الملغاة (${statusCounts.cancelled})`,
+              `Delete all cancelled (${statusCounts.cancelled})`,
+            )}
+          </button>
+        )}
       </Reveal>
 
       {/* Search */}
@@ -319,6 +422,12 @@ function Page() {
       {groups.map((group, gi) => {
         const { kind, badge, full } = dateGroupLabel(group.date);
         const isToday = kind === "today";
+        const isExpanded = expandedDays.has(group.date);
+        const visibleItems =
+          isExpanded || group.items.length <= MAX_VISIBLE_PER_DAY
+            ? group.items
+            : group.items.slice(0, MAX_VISIBLE_PER_DAY);
+        const hiddenCount = group.items.length - visibleItems.length;
         return (
           <Reveal direction="up" delay={gi === 0 ? 4 : 0} key={group.date}>
             <div
@@ -345,13 +454,28 @@ function Page() {
                     {full}
                   </span>
                 </div>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                  {L(
-                    `${group.items.length} תורים`,
-                    `${group.items.length} مواعيد`,
-                    `${group.items.length} appts`,
-                  )}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    {L(
+                      `${group.items.length} תורים`,
+                      `${group.items.length} مواعيد`,
+                      `${group.items.length} appts`,
+                    )}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => deleteDay(group)}
+                    className="h-7 w-7 rounded-lg hover:bg-destructive/10"
+                    title={L(
+                      "מחק את כל התורים ביום זה",
+                      "حذف كل مواعيد هذا اليوم",
+                      "Delete this day",
+                    )}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -375,10 +499,14 @@ function Page() {
                       <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                         {L("סטטוס", "الحالة", "Status")}
                       </th>
+                      <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden lg:table-cell">
+                        {L("יומן Google", "تقويم Google", "Google Calendar")}
+                      </th>
+                      <th className="text-end p-3.5 w-[52px]"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {group.items.map((a) => (
+                    {visibleItems.map((a) => (
                       <tr
                         key={a.id}
                         className="border-t border-border/10 hover:bg-surface/30 transition-colors"
@@ -444,11 +572,109 @@ function Page() {
                             </SelectContent>
                           </Select>
                         </td>
+                        <td className="p-3.5 hidden lg:table-cell">
+                          {(() => {
+                            const isSyncing = syncingIds.has(a.id);
+                            const failed = Boolean(a.google_calendar_sync_error);
+                            const synced = !failed && Boolean(a.google_calendar_synced_at);
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                {failed ? (
+                                  <span
+                                    className="flex items-center gap-1 text-[11px] font-medium text-destructive"
+                                    title={a.google_calendar_sync_error ?? undefined}
+                                  >
+                                    <CloudAlert className="h-3.5 w-3.5" />
+                                    {L("סנכרון נכשל", "فشلت المزامنة", "Sync failed")}
+                                  </span>
+                                ) : synced ? (
+                                  <span className="flex items-center gap-1 text-[11px] font-medium text-sage">
+                                    <CloudCheck className="h-3.5 w-3.5" />
+                                    {L("מסונכרן", "تمت المزامنة", "Synced")}
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                                    <CloudOff className="h-3.5 w-3.5" />
+                                    {L("טרם סונכרן", "لم تتم المزامنة بعد", "Not synced yet")}
+                                  </span>
+                                )}
+                                {(failed || !synced) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => retrySync(a.id)}
+                                    disabled={isSyncing}
+                                    title={L(
+                                      "נסה לסנכרן שוב",
+                                      "إعادة محاولة المزامنة",
+                                      "Retry Google sync",
+                                    )}
+                                    className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground transition-colors disabled:opacity-50"
+                                  >
+                                    <RefreshCw
+                                      className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`}
+                                    />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td className="p-3.5 text-end">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() =>
+                              deleteIds(
+                                [a.id],
+                                L(
+                                  "למחוק לצמיתות את התור הזה?",
+                                  "هل تريد حذف هذا الموعد نهائيًا؟",
+                                  "Permanently delete this appointment?",
+                                ),
+                              )
+                            }
+                            className="h-8 w-8 rounded-lg hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              {hiddenCount > 0 && (
+                <button
+                  onClick={() =>
+                    setExpandedDays((prev) => {
+                      const next = new Set(prev);
+                      next.add(group.date);
+                      return next;
+                    })
+                  }
+                  className="w-full py-3 text-[12px] font-semibold text-primary hover:bg-surface/50 transition-colors border-t border-border/10"
+                >
+                  {L(
+                    `הצג את כל ${group.items.length} התורים (עוד ${hiddenCount})`,
+                    `عرض كل ${group.items.length} المواعيد (${hiddenCount} إضافية)`,
+                    `Show all ${group.items.length} appointments (${hiddenCount} more)`,
+                  )}
+                </button>
+              )}
+              {isExpanded && group.items.length > MAX_VISIBLE_PER_DAY && (
+                <button
+                  onClick={() =>
+                    setExpandedDays((prev) => {
+                      const next = new Set(prev);
+                      next.delete(group.date);
+                      return next;
+                    })
+                  }
+                  className="w-full py-3 text-[12px] font-semibold text-muted-foreground hover:bg-surface/50 transition-colors border-t border-border/10"
+                >
+                  {L("הצג פחות", "عرض أقل", "Show less")}
+                </button>
+              )}
             </div>
           </Reveal>
         );

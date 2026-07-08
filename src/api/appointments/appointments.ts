@@ -240,6 +240,10 @@ export const createAppointment = createServerFn({ method: "POST" })
       sendAdminBookingNotification(details).catch(console.error);
     }
 
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+    syncAppointmentToGoogleCalendar(appointmentId).catch(console.error);
+
     return { success: true };
   });
 
@@ -315,6 +319,11 @@ export const cancelAppointment = createServerFn({ method: "POST" })
       .eq("id", id)
       .eq("user_id", context.userId);
     if (error) throw error;
+
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+    syncAppointmentToGoogleCalendar(id).catch(console.error);
+
     return { success: true };
   });
 
@@ -380,6 +389,10 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
       sendAdminBookingNotification(details).catch(console.error);
     }
 
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+    syncAppointmentToGoogleCalendar(data.id).catch(console.error);
+
     return { success: true };
   });
 
@@ -434,6 +447,10 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
       throw new Error("STATUS_UPDATE_FAILED");
     }
 
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+    syncAppointmentToGoogleCalendar(id).catch(console.error);
+
     // Only notify the customer on a genuine change — re-saving the same
     // status (e.g. a duplicate submit) must not resend the email.
     if (currentStatus !== nextStatus) {
@@ -463,5 +480,37 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
       }
     }
 
+    return { success: true };
+  });
+
+// Permanently deletes one or more appointments, admin-only, no status
+// restriction — this is a deliberate cleanup tool (clearing out old
+// cancelled clutter, or a day the admin is done with), not something a
+// customer can ever reach (their own deleteAppointment above stays scoped
+// to their own completed/cancelled rows). Accepts a batch so the UI can
+// delete "all cancelled" or "this whole day" in one round trip instead of
+// one request per row.
+export const deleteAppointmentsAdmin = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .validator((d: { ids: string[] }) => d)
+  .handler(async ({ data: { ids } }) => {
+    if (ids.length === 0) return { success: true };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("appointments").delete().in("id", ids);
+    if (error) throw error;
+    return { success: true };
+  });
+
+// Manual retry for a single appointment's Google Calendar sync, surfaced
+// next to the "sync failed" / "not synced" indicator in the admin
+// appointments table — the operator-facing fallback for the "retry
+// mechanism" requirement, since automatic sync is otherwise fire-and-forget.
+export const retryGoogleCalendarSync = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .validator((d: { id: string }) => d)
+  .handler(async ({ data: { id } }) => {
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+    await syncAppointmentToGoogleCalendar(id);
     return { success: true };
   });
