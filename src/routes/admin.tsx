@@ -200,7 +200,7 @@ function AdminLayout() {
           {/* Main content */}
           <section className="min-w-0 px-4 sm:px-6 md:px-8 py-6 md:py-8">
             {/* Breadcrumb */}
-            <div className="hidden md:flex items-center gap-2 mb-6 animate-[fadeSlideUp_0.6s_0.1s_both]">
+            <div className="hidden md:flex items-center gap-2 mb-6 animate-[fadeSlideUp_0.15s_0.03s_both]">
               <Link
                 to="/"
                 className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
@@ -213,7 +213,7 @@ function AdminLayout() {
                 {currentPage?.label ?? L("ניהול", "الإدارة", "Admin")}
               </span>
             </div>
-            <div className="animate-[fadeSlideUp_0.6s_0.15s_both]">
+            <div className="animate-[fadeSlideUp_0.15s_0.04s_both]">
               <Outlet />
             </div>
           </section>
