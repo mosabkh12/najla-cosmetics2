@@ -157,6 +157,21 @@
   [lang="ar"] h1, [lang="ar"] h2, [lang="ar"] h3, [lang="ar"] h4, [lang="ar"] .font-display {
     font-family: "Amiri", "Frank Ruhl Libre", serif;
   }
+
+  /* Site-wide keyboard focus indicator (WCAG 2.4.7 Focus Visible /
+     1.4.11 Non-text Contrast). Many components already pair
+     `focus:outline-none` with their own `focus:ring-*` (often a low-opacity
+     brand color that alone may not hit 3:1 contrast on every surface) —
+     this box-shadow ring sits on top of those as a guaranteed, high-contrast
+     fallback, using :focus-visible so it only appears for keyboard/AT focus,
+     never for a mouse click. box-shadow (not outline) so it composes with
+     any element that already sets its own outline/ring instead of colliding
+     with it. */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--foreground);
+    border-radius: 2px;
+  }
 }
 
 @utility btn-gold {
@@ -262,4 +277,18 @@ html body[data-scroll-locked] {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-base, .scroll-reveal-item { transition-duration: 0.01s !important; filter: none !important; }
+
+  /* Broader safety net beyond the two custom reveal classes above —
+     collapses every CSS transition/animation (including Tailwind's
+     animate-spin/animate-in/fade-in/slide-in-from-* utilities used by
+     dialogs, sheets, and loading spinners, and the hero parallax/hover
+     scale transforms) to effectively instant for anyone who has asked
+     their OS for reduced motion, without removing the elements or their
+     final state. */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

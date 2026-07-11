@@ -123,10 +123,11 @@ function ProductDetailPage() {
       <div className="min-h-[60vh] grid place-items-center text-center px-4">
         <div>
           <p className="text-lg text-muted-foreground mb-4">Product not found</p>
-          <Link to="/products">
-            <button className="bg-foreground text-background px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em]">
-              {t("shop_products")}
-            </button>
+          <Link
+            to="/products"
+            className="inline-block bg-foreground text-background px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em]"
+          >
+            {t("shop_products")}
           </Link>
         </div>
       </div>
@@ -187,7 +188,10 @@ function ProductDetailPage() {
               {(allImages.length > 0 ? allImages : [null]).map((url, i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => setActiveImage(i)}
+                  aria-label={`${name} ${i + 1}`}
+                  aria-pressed={activeImage === i}
                   className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all bg-surface ${
                     activeImage === i
                       ? "border-primary shadow-md"
@@ -198,7 +202,7 @@ function ProductDetailPage() {
                     <img src={url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full grid place-items-center">
-                      <Sparkles className="h-4 w-4 text-muted-foreground/20" />
+                      <Sparkles className="h-4 w-4 text-muted-foreground/20" aria-hidden="true" />
                     </div>
                   )}
                 </button>
@@ -222,7 +226,7 @@ function ProductDetailPage() {
                 />
               ) : (
                 <div className="absolute inset-0 grid place-items-center">
-                  <Sparkles className="h-14 w-14 text-muted-foreground/10" />
+                  <Sparkles className="h-14 w-14 text-muted-foreground/10" aria-hidden="true" />
                 </div>
               )}
 
@@ -277,24 +281,32 @@ function ProductDetailPage() {
               {/* Quantity selector */}
               <div className="flex items-center border border-border/40 rounded-full h-[52px] px-1.5 shrink-0">
                 <button
+                  type="button"
                   onClick={() => setQty(Math.max(1, qty - 1))}
+                  aria-label={t("decrease_quantity")}
                   className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface transition-colors"
                 >
-                  <Minus className="h-4 w-4 text-foreground" />
+                  <Minus className="h-4 w-4 text-foreground" aria-hidden="true" />
                 </button>
-                <span className="w-8 text-center text-[16px] font-medium text-foreground select-none">
+                <span
+                  className="w-8 text-center text-[16px] font-medium text-foreground select-none"
+                  aria-live="polite"
+                >
                   {qty}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setQty(Math.min(product.stock_quantity, qty + 1))}
+                  aria-label={t("increase_quantity")}
                   className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface transition-colors"
                 >
-                  <Plus className="h-4 w-4 text-foreground" />
+                  <Plus className="h-4 w-4 text-foreground" aria-hidden="true" />
                 </button>
               </div>
 
               {/* Add to Bag */}
               <button
+                type="button"
                 disabled={outOfStock}
                 onClick={addToCart}
                 className="flex-1 bg-foreground text-background h-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40"
@@ -304,10 +316,14 @@ function ProductDetailPage() {
 
               {/* Favorite */}
               <button
+                type="button"
                 onClick={toggleFav}
+                aria-label={fav ? t("remove_from_favorites") : t("add_to_favorites")}
+                aria-pressed={!!fav}
                 className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full border border-border/40 hover:bg-surface transition-colors"
               >
                 <Heart
+                  aria-hidden="true"
                   className={`h-5 w-5 transition-colors ${fav ? "fill-primary text-primary" : "text-foreground/40"}`}
                 />
               </button>
@@ -315,6 +331,7 @@ function ProductDetailPage() {
 
             {/* Buy Now */}
             <button
+              type="button"
               disabled={outOfStock}
               onClick={buyNow}
               className="mt-3 w-full bg-primary text-primary-foreground h-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40"
@@ -334,7 +351,9 @@ function ProductDetailPage() {
                 { icon: <Award className="h-[22px] w-[22px]" />, label: "SALON PROFESSIONAL" },
               ].map((badge) => (
                 <div key={badge.label} className="flex items-center gap-3">
-                  <span className="text-primary shrink-0">{badge.icon}</span>
+                  <span className="text-primary shrink-0" aria-hidden="true">
+                    {badge.icon}
+                  </span>
                   <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                     {badge.label}
                   </span>
@@ -367,7 +386,7 @@ function ProductDetailPage() {
             to="/products"
             className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             {t("continue_shopping")}
           </Link>
         </div>

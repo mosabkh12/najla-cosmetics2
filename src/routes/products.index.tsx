@@ -91,15 +91,17 @@ function ProductsPage() {
               {t("products_sub")}
             </p>
             <div className="mt-8 flex justify-center gap-4 animate-[fadeSlideUp_1.2s_0.8s_both]">
-              <Link to="/services">
-                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
-                  {t("book_appointment")}
-                </button>
+              <Link
+                to="/services"
+                className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"
+              >
+                {t("book_appointment")}
               </Link>
-              <Link to="/products">
-                <button className="bg-white/10 backdrop-blur-md border border-white/30 text-white px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-white/20 transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
-                  {t("shop_products")}
-                </button>
+              <Link
+                to="/products"
+                className="bg-white/10 backdrop-blur-md border border-white/30 text-white px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-white/20 transition-colors hover:scale-[1.02] active:scale-[0.98] transform"
+              >
+                {t("shop_products")}
               </Link>
             </div>
           </div>
@@ -114,6 +116,8 @@ function ProductsPage() {
               {categories.map((c) => (
                 <button
                   key={c}
+                  type="button"
+                  aria-pressed={cat === c}
                   onClick={() => setCat(c)}
                   className={`pb-4 text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors whitespace-nowrap ${
                     cat === c
@@ -139,13 +143,16 @@ function ProductsPage() {
           <aside className="lg:col-span-3 lg:pe-4">
             {/* Mobile toggle */}
             <button
+              type="button"
               onClick={() => setShowFilters(!showFilters)}
+              aria-expanded={showFilters}
               className="lg:hidden w-full flex items-center justify-between py-3 border-b border-border/40 mb-6"
             >
               <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground">
                 {t("sort")}
               </span>
               <span
+                aria-hidden="true"
                 className={`text-muted-foreground text-xs transition-transform ${showFilters ? "rotate-180" : ""}`}
               >
                 ▾
@@ -223,6 +230,8 @@ function ProductsPage() {
                   {SKIN_TYPES.map((st) => (
                     <button
                       key={st}
+                      type="button"
+                      aria-pressed={skinTypes.includes(st)}
                       onClick={() => toggleSkinType(st)}
                       className={`px-4 py-2 border rounded-full text-[13px] transition-all ${
                         skinTypes.includes(st)
@@ -243,6 +252,7 @@ function ProductsPage() {
                 </h3>
                 <input
                   type="range"
+                  aria-label={t("price_range")}
                   min={priceBounds.min}
                   max={Math.max(priceBounds.max, priceBounds.min + 1)}
                   value={priceCeiling}
@@ -270,10 +280,11 @@ function ProductsPage() {
                 <p className="text-[14px] text-muted-foreground text-center mb-5 leading-relaxed">
                   {t("services_sub")}
                 </p>
-                <Link to="/services" className="block">
-                  <button className="w-full py-3.5 rounded-full border border-foreground text-foreground text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all">
-                    {t("book_appointment")}
-                  </button>
+                <Link
+                  to="/services"
+                  className="block text-center w-full py-3.5 rounded-full border border-foreground text-foreground text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all"
+                >
+                  {t("book_appointment")}
                 </Link>
               </div>
             </div>

@@ -234,17 +234,19 @@ function ProfilePage() {
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
+                        type="button"
                         onClick={() => setEditing(true)}
                         className="border border-border/40 text-foreground px-4 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.06em] hover:bg-surface transition-colors flex items-center gap-1.5"
                       >
-                        <Edit2 className="h-3 w-3" />
+                        <Edit2 className="h-3 w-3" aria-hidden="true" />
                         {t("edit_profile")}
                       </button>
                       <button
+                        type="button"
                         onClick={signOut}
                         className="text-muted-foreground px-4 py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.06em] hover:text-destructive hover:bg-surface transition-colors flex items-center gap-1.5"
                       >
-                        <LogOut className="h-3 w-3" />
+                        <LogOut className="h-3 w-3" aria-hidden="true" />
                         {t("sign_out")}
                       </button>
                     </div>
@@ -253,31 +255,49 @@ function ProfilePage() {
                   <div className="space-y-3">
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">
+                        <Label
+                          htmlFor="profile-name"
+                          className="text-[11px] font-bold uppercase tracking-[0.08em]"
+                        >
                           {t("full_name")}
                         </Label>
                         <div className="relative mt-1">
-                          <User className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <User
+                            aria-hidden="true"
+                            className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
+                          />
                           <Input
+                            id="profile-name"
                             value={name}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                               setName(e.target.value)
                             }
+                            autoComplete="name"
                             className="h-10 ps-9 rounded-lg"
                           />
                         </div>
                       </div>
                       <div>
-                        <Label className="text-[11px] font-bold uppercase tracking-[0.08em]">
+                        <Label
+                          htmlFor="profile-phone"
+                          className="text-[11px] font-bold uppercase tracking-[0.08em]"
+                        >
                           {t("phone")}
                         </Label>
                         <div className="relative mt-1">
-                          <Phone className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Phone
+                            aria-hidden="true"
+                            className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
+                          />
                           <Input
+                            id="profile-phone"
+                            type="tel"
+                            inputMode="tel"
                             value={phone}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                               setPhone(e.target.value)
                             }
+                            autoComplete="tel"
                             className="h-10 ps-9 rounded-lg"
                           />
                         </div>
@@ -285,12 +305,14 @@ function ProfilePage() {
                     </div>
                     <div className="flex gap-2">
                       <button
+                        type="button"
                         onClick={saveProfile}
                         className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity"
                       >
                         {t("save")}
                       </button>
                       <button
+                        type="button"
                         onClick={() => setEditing(false)}
                         className="text-muted-foreground px-4 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:bg-surface transition-colors"
                       >
@@ -306,18 +328,35 @@ function ProfilePage() {
 
         {/* ── Section Navigation ── */}
         <Reveal direction="up" delay={1}>
-          <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
-            {sectionItems.map((item) => (
+          <div
+            role="tablist"
+            aria-label={t("account")}
+            className="mt-6 flex gap-2 overflow-x-auto pb-1"
+          >
+            {sectionItems.map((item, i) => (
               <button
                 key={item.key}
+                type="button"
+                role="tab"
+                id={`tab-${item.key}`}
+                aria-selected={section === item.key}
+                aria-controls={`panel-${item.key}`}
+                tabIndex={section === item.key ? 0 : -1}
                 onClick={() => setSection(item.key)}
+                onKeyDown={(e) => {
+                  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+                  const dir = e.key === "ArrowRight" ? 1 : -1;
+                  const next = sectionItems[(i + dir + sectionItems.length) % sectionItems.length];
+                  setSection(next.key);
+                  document.getElementById(`tab-${next.key}`)?.focus();
+                }}
                 className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-[12px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-all ${
                   section === item.key
                     ? "bg-foreground text-background"
                     : "bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-2"
                 }`}
               >
-                {item.icon}
+                <span aria-hidden="true">{item.icon}</span>
                 <span>{item.label}</span>
                 {(item.count ?? 0) > 0 && (
                   <span
@@ -337,11 +376,16 @@ function ProfilePage() {
 
         {/* ── Appointments Section ── */}
         {section === "appointments" && (
-          <div className="mt-6">
+          <div
+            className="mt-6"
+            role="tabpanel"
+            id="panel-appointments"
+            aria-labelledby="tab-appointments"
+          >
             {upcomingCount >= 2 && (
               <Reveal direction="up">
                 <div className="mb-5 rounded-2xl bg-cream border border-primary/15 px-4 py-3 flex items-start gap-2.5">
-                  <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
                   <p className="text-[12.5px] text-foreground leading-relaxed">
                     {t("max_appointments_notice")}
                   </p>
@@ -367,6 +411,8 @@ function ProfilePage() {
                   ).map(([val, label]) => (
                     <button
                       key={val}
+                      type="button"
+                      aria-pressed={apptFilter === val}
                       onClick={() => setApptFilter(val)}
                       className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
                         apptFilter === val
@@ -380,10 +426,11 @@ function ProfilePage() {
                 </div>
                 {hasApptHistory && (
                   <button
+                    type="button"
                     onClick={clearHistory}
                     className="shrink-0 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-full transition-colors"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3" aria-hidden="true" />
                     {t("clear_history")}
                   </button>
                 )}
@@ -398,12 +445,16 @@ function ProfilePage() {
             {filteredAppts.length === 0 && (
               <Reveal direction="scale">
                 <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
-                  <CalendarDays className="h-8 w-8 mx-auto text-muted-foreground/30" />
+                  <CalendarDays
+                    className="h-8 w-8 mx-auto text-muted-foreground/30"
+                    aria-hidden="true"
+                  />
                   <p className="mt-3 text-[14px] text-muted-foreground">{t("no_appointments")}</p>
-                  <Link to="/services">
-                    <button className="mt-4 bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
-                      {t("book_appointment")}
-                    </button>
+                  <Link
+                    to="/services"
+                    className="mt-4 inline-block bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity"
+                  >
+                    {t("book_appointment")}
                   </Link>
                 </div>
               </Reveal>
@@ -412,6 +463,7 @@ function ProfilePage() {
             <StaggerGrid className="space-y-3">
               {filteredAppts.map((a) => {
                 const st = STATUS_STYLE[a.status] ?? STATUS_STYLE.pending;
+                const serviceName = pickLocalized(lang, a.services?.name, a.services?.name_ar);
                 return (
                   <div
                     key={a.id}
@@ -427,28 +479,31 @@ function ProfilePage() {
                         />
                       ) : (
                         <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-surface">
-                          <CalendarDays className="h-5 w-5 text-primary" />
+                          <CalendarDays className="h-5 w-5 text-primary" aria-hidden="true" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="font-display text-[15px] text-foreground leading-tight">
-                            {pickLocalized(lang, a.services?.name, a.services?.name_ar)}
+                            {serviceName}
                           </h3>
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shrink-0 ${st.bg}`}
                           >
-                            <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${st.dot}`}
+                              aria-hidden="true"
+                            />
                             {t(`status_${a.status}`)}
                           </span>
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1">
-                            <CalendarDays className="h-3 w-3" />
+                            <CalendarDays className="h-3 w-3" aria-hidden="true" />
                             {a.appointment_date}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <Clock className="h-3 w-3" aria-hidden="true" />
                             {String(a.appointment_time).slice(0, 5)}
                           </span>
                           <span className="font-semibold text-foreground">₪{a.total_price}</span>
@@ -458,6 +513,8 @@ function ProfilePage() {
                     {["pending", "confirmed"].includes(a.status) && (
                       <div className="mt-3 pt-3 border-t border-border/20 flex justify-end gap-2">
                         <button
+                          type="button"
+                          aria-label={`${t("reschedule")}: ${serviceName}, ${a.appointment_date}`}
                           onClick={() =>
                             setReschedulingAppt({
                               id: a.id,
@@ -468,14 +525,16 @@ function ProfilePage() {
                           }
                           className="text-[11px] font-semibold uppercase tracking-[0.06em] text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
                         >
-                          <CalendarClock className="h-3 w-3" />
+                          <CalendarClock className="h-3 w-3" aria-hidden="true" />
                           {t("reschedule")}
                         </button>
                         <button
+                          type="button"
+                          aria-label={`${t("cancel")}: ${serviceName}, ${a.appointment_date}`}
                           onClick={() => cancelAppt(a.id)}
                           className="text-[11px] font-semibold uppercase tracking-[0.06em] text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3 w-3" aria-hidden="true" />
                           {t("cancel")}
                         </button>
                       </div>
@@ -483,10 +542,12 @@ function ProfilePage() {
                     {["completed", "cancelled"].includes(a.status) && (
                       <div className="mt-3 pt-3 border-t border-border/20 flex justify-end">
                         <button
+                          type="button"
+                          aria-label={`${t("delete")}: ${serviceName}, ${a.appointment_date}`}
                           onClick={() => deleteAppt(a.id)}
                           className="text-[11px] font-semibold uppercase tracking-[0.06em] text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3 w-3" aria-hidden="true" />
                           {t("delete")}
                         </button>
                       </div>
@@ -500,7 +561,7 @@ function ProfilePage() {
 
         {/* ── Orders Section ── */}
         {section === "orders" && (
-          <div className="mt-6">
+          <div className="mt-6" role="tabpanel" id="panel-orders" aria-labelledby="tab-orders">
             <Reveal direction="up">
               <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1">
                 {(
@@ -519,6 +580,8 @@ function ProfilePage() {
                 ).map(([val, label]) => (
                   <button
                     key={val}
+                    type="button"
+                    aria-pressed={orderFilter === val}
                     onClick={() => setOrderFilter(val)}
                     className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
                       orderFilter === val
@@ -535,12 +598,16 @@ function ProfilePage() {
             {filteredOrders.length === 0 && (
               <Reveal direction="scale">
                 <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
-                  <ShoppingBag className="h-8 w-8 mx-auto text-muted-foreground/30" />
+                  <ShoppingBag
+                    className="h-8 w-8 mx-auto text-muted-foreground/30"
+                    aria-hidden="true"
+                  />
                   <p className="mt-3 text-[14px] text-muted-foreground">{t("no_orders")}</p>
-                  <Link to="/products">
-                    <button className="mt-4 bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
-                      {t("shop_products")}
-                    </button>
+                  <Link
+                    to="/products"
+                    className="mt-4 inline-block bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity"
+                  >
+                    {t("shop_products")}
                   </Link>
                 </div>
               </Reveal>
@@ -590,16 +657,22 @@ function ProfilePage() {
 
         {/* ── Favorites Section ── */}
         {section === "favorites" && (
-          <div className="mt-6">
+          <div
+            className="mt-6"
+            role="tabpanel"
+            id="panel-favorites"
+            aria-labelledby="tab-favorites"
+          >
             {favs.length === 0 && (
               <Reveal direction="scale">
                 <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
-                  <Heart className="h-8 w-8 mx-auto text-muted-foreground/30" />
+                  <Heart className="h-8 w-8 mx-auto text-muted-foreground/30" aria-hidden="true" />
                   <p className="mt-3 text-[14px] text-muted-foreground">{t("no_favorites")}</p>
-                  <Link to="/products">
-                    <button className="mt-4 bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity">
-                      {t("shop_products")}
-                    </button>
+                  <Link
+                    to="/products"
+                    className="mt-4 inline-block bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity"
+                  >
+                    {t("shop_products")}
                   </Link>
                 </div>
               </Reveal>
@@ -618,7 +691,7 @@ function ProfilePage() {
                     {p.image_url && (
                       <img
                         src={p.image_url}
-                        alt={p.name}
+                        alt=""
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                       />
                     )}

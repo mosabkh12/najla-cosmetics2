@@ -93,108 +93,121 @@ export function RecordDialog<T extends Record<string, FormValue>>({
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-4">
-          {fields.map((f) => (
-            <div key={f.name} className="grid gap-2">
-              <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                {f.label}
-              </Label>
-              {f.type === "select" ? (
-                customFields.has(f.name) ? (
-                  <div className="flex gap-2">
-                    <Input
-                      autoFocus
-                      value={textInputValue(values[f.name])}
-                      placeholder={f.placeholder}
-                      onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
-                      className="h-10 rounded-xl border-border/30 text-[13px]"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setCustomFields((prev) => {
-                          const next = new Set(prev);
-                          next.delete(f.name);
-                          return next;
-                        });
-                        setValues({ ...values, [f.name]: null });
+          {fields.map((f) => {
+            const fieldId = `record-field-${f.name}`;
+            return (
+              <div key={f.name} className="grid gap-2">
+                <Label
+                  htmlFor={fieldId}
+                  className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                >
+                  {f.label}
+                </Label>
+                {f.type === "select" ? (
+                  customFields.has(f.name) ? (
+                    <div className="flex gap-2">
+                      <Input
+                        id={fieldId}
+                        autoFocus
+                        value={textInputValue(values[f.name])}
+                        placeholder={f.placeholder}
+                        onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
+                        className="h-10 rounded-xl border-border/30 text-[13px]"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setCustomFields((prev) => {
+                            const next = new Set(prev);
+                            next.delete(f.name);
+                            return next;
+                          });
+                          setValues({ ...values, [f.name]: null });
+                        }}
+                        className="h-10 shrink-0 rounded-xl border-border/30 px-3 text-[12px]"
+                      >
+                        {t("cancel")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={
+                        typeof values[f.name] === "string" ? (values[f.name] as string) : "__none"
+                      }
+                      onValueChange={(v) => {
+                        if (v === "__custom") {
+                          setCustomFields((prev) => new Set(prev).add(f.name));
+                          setValues({ ...values, [f.name]: "" });
+                          return;
+                        }
+                        setValues({ ...values, [f.name]: v === "__none" ? null : v });
                       }}
-                      className="h-10 shrink-0 rounded-xl border-border/30 px-3 text-[12px]"
                     >
-                      {t("cancel")}
-                    </Button>
+                      <SelectTrigger
+                        id={fieldId}
+                        className="h-10 rounded-xl border-border/30 text-[13px]"
+                      >
+                        <SelectValue placeholder={f.placeholder} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">{f.placeholder ?? "—"}</SelectItem>
+                        {f.options.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                        {f.allowCustom && (
+                          <SelectItem value="__custom">{f.customLabel ?? "+"}</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )
+                ) : f.type === "textarea" ? (
+                  <Textarea
+                    id={fieldId}
+                    value={textInputValue(values[f.name])}
+                    onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
+                    rows={3}
+                    className="rounded-xl border-border/30 text-[13px]"
+                  />
+                ) : f.type === "switch" ? (
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id={fieldId}
+                      checked={!!values[f.name]}
+                      onCheckedChange={(v) => setValues({ ...values, [f.name]: v })}
+                    />
+                    <span
+                      className={`text-[12px] font-medium ${values[f.name] ? "text-sage" : "text-muted-foreground"}`}
+                    >
+                      {values[f.name] ? t("is_active") : t("is_inactive")}
+                    </span>
                   </div>
                 ) : (
-                  <Select
-                    value={
-                      typeof values[f.name] === "string" ? (values[f.name] as string) : "__none"
+                  <Input
+                    id={fieldId}
+                    type={f.type ?? "text"}
+                    step={f.step}
+                    value={textInputValue(values[f.name])}
+                    placeholder={f.placeholder}
+                    onChange={(e) =>
+                      setValues({
+                        ...values,
+                        [f.name]:
+                          f.type === "number"
+                            ? e.target.value === ""
+                              ? ""
+                              : Number(e.target.value)
+                            : e.target.value,
+                      })
                     }
-                    onValueChange={(v) => {
-                      if (v === "__custom") {
-                        setCustomFields((prev) => new Set(prev).add(f.name));
-                        setValues({ ...values, [f.name]: "" });
-                        return;
-                      }
-                      setValues({ ...values, [f.name]: v === "__none" ? null : v });
-                    }}
-                  >
-                    <SelectTrigger className="h-10 rounded-xl border-border/30 text-[13px]">
-                      <SelectValue placeholder={f.placeholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">{f.placeholder ?? "—"}</SelectItem>
-                      {f.options.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                      {f.allowCustom && (
-                        <SelectItem value="__custom">{f.customLabel ?? "+"}</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                )
-              ) : f.type === "textarea" ? (
-                <Textarea
-                  value={textInputValue(values[f.name])}
-                  onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
-                  rows={3}
-                  className="rounded-xl border-border/30 text-[13px]"
-                />
-              ) : f.type === "switch" ? (
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={!!values[f.name]}
-                    onCheckedChange={(v) => setValues({ ...values, [f.name]: v })}
+                    className="h-10 rounded-xl border-border/30 text-[13px]"
                   />
-                  <span
-                    className={`text-[12px] font-medium ${values[f.name] ? "text-sage" : "text-muted-foreground"}`}
-                  >
-                    {values[f.name] ? t("is_active") : t("is_inactive")}
-                  </span>
-                </div>
-              ) : (
-                <Input
-                  type={f.type ?? "text"}
-                  step={f.step}
-                  value={textInputValue(values[f.name])}
-                  placeholder={f.placeholder}
-                  onChange={(e) =>
-                    setValues({
-                      ...values,
-                      [f.name]:
-                        f.type === "number"
-                          ? e.target.value === ""
-                            ? ""
-                            : Number(e.target.value)
-                          : e.target.value,
-                    })
-                  }
-                  className="h-10 rounded-xl border-border/30 text-[13px]"
-                />
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <DialogFooter className="px-6 pb-6 pt-0 gap-2">
@@ -206,8 +219,10 @@ export function RecordDialog<T extends Record<string, FormValue>>({
             {t("cancel")}
           </Button>
           <button
+            type="button"
             className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5 disabled:opacity-50"
             disabled={submitting}
+            aria-busy={submitting}
             onClick={() => onSubmit(values)}
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

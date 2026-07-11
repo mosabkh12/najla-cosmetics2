@@ -63,7 +63,7 @@ function AboutPage() {
           <Reveal direction="end" delay={2}>
             <div>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                <Star className="h-3 w-3" />
+                <Star className="h-3 w-3" aria-hidden="true" />
                 {t("about_eyebrow")}
               </span>
               <h1 className="mt-4 font-display text-[26px] sm:text-[32px] md:text-[38px] leading-[1.15] text-foreground italic">
@@ -76,7 +76,9 @@ function AboutPage() {
               <div className="mt-7 grid grid-cols-2 gap-4">
                 {BADGES.map((b) => (
                   <div key={b.label} className="flex items-center gap-2.5">
-                    <span className="text-primary shrink-0">{b.icon}</span>
+                    <span className="text-primary shrink-0" aria-hidden="true">
+                      {b.icon}
+                    </span>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                       {b.label}
                     </span>
@@ -85,16 +87,18 @@ function AboutPage() {
               </div>
 
               <div className="mt-7 flex flex-wrap gap-3">
-                <Link to="/services">
-                  <button className="bg-foreground text-background px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
-                    <CalendarDays className="inline-block me-2 h-4 w-4" />
-                    {t("book_appointment")}
-                  </button>
+                <Link
+                  to="/services"
+                  className="bg-foreground text-background px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"
+                >
+                  <CalendarDays className="inline-block me-2 h-4 w-4" aria-hidden="true" />
+                  {t("book_appointment")}
                 </Link>
-                <Link to="/products">
-                  <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
-                    {t("shop_products")}
-                  </button>
+                <Link
+                  to="/products"
+                  className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform"
+                >
+                  {t("shop_products")}
                 </Link>
               </div>
             </div>

@@ -124,6 +124,25 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+// WCAG 2.4.1 Bypass Blocks: a keyboard/screen-reader user landing on any
+// page would otherwise have to tab through the entire header (logo, 5 nav
+// links, language switcher, account, cart, book-now) before ever reaching
+// page content — this jumps straight to <main>. Positioned off-screen
+// until it receives focus (Tab from the very top of the page), matching
+// the same sr-only/focus:not-sr-only pattern used for icon-only labels
+// elsewhere, so it's invisible to everyone else.
+function SkipLink() {
+  const { t } = useI18n();
+  return (
+    <a
+      href="#main-content"
+      className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-[100] focus:rounded-full focus:bg-foreground focus:px-5 focus:py-2.5 focus:text-[12px] focus:font-semibold focus:text-background"
+    >
+      {t("skip_to_content")}
+    </a>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useKeepScrollbarVisibleForSelects();
@@ -134,8 +153,13 @@ function RootComponent() {
           <AuthProvider>
             <CartProvider>
               <div className="flex min-h-screen flex-col">
+                <SkipLink />
                 <Header />
-                <main className="flex-1 pt-20">
+                {/* tabIndex=-1: not a normal tab stop, only a programmatic
+                    focus target — the skip link above moves focus here so
+                    a screen reader announces "main" and continues reading
+                    from page content instead of restarting at the top. */}
+                <main id="main-content" tabIndex={-1} className="flex-1 pt-20 focus:outline-none">
                   <Outlet />
                 </main>
                 <Footer />

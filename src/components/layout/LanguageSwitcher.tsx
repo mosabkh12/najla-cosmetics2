@@ -11,13 +11,20 @@ import {
 const labels: Record<Lang, string> = { he: "עברית", ar: "العربية", en: "English" };
 
 export function LanguageSwitcher() {
-  const { lang, setLang } = useI18n();
+  const { lang, setLang, t } = useI18n();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-secondary-foreground">
-          <Languages className="h-4 w-4" />
-          <span className="hidden sm:inline text-xs font-medium">{labels[lang]}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`${t("language")}: ${labels[lang]}`}
+          className="gap-1.5 text-secondary-foreground"
+        >
+          <Languages className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden sm:inline text-xs font-medium" aria-hidden="true">
+            {labels[lang]}
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[140px]">
@@ -25,6 +32,7 @@ export function LanguageSwitcher() {
           <DropdownMenuItem
             key={l}
             onClick={() => setLang(l)}
+            aria-current={lang === l ? "true" : undefined}
             className={lang === l ? "font-semibold text-primary" : ""}
           >
             {labels[l]}

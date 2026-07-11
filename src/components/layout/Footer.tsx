@@ -119,10 +119,11 @@ export function Footer() {
             <p className="text-[14px] text-muted-foreground leading-relaxed mb-4">
               {settings?.address || "Nazareth, Israel"}
             </p>
-            <Link to="/services">
-              <button className="bg-primary text-primary-foreground px-6 py-2.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity">
-                {t("nav_services")}
-              </button>
+            <Link
+              to="/services"
+              className="inline-block bg-primary text-primary-foreground px-6 py-2.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity"
+            >
+              {t("nav_services")}
             </Link>
           </div>
         </div>

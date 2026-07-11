@@ -27,10 +27,11 @@ function CartPage() {
             {t("products_sub")}
           </p>
           <div className="animate-[fadeSlideUp_0.8s_0.6s_both]">
-            <Link to="/products">
-              <button className="mt-8 bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
-                {t("continue_shopping")}
-              </button>
+            <Link
+              to="/products"
+              className="mt-8 inline-block bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"
+            >
+              {t("continue_shopping")}
             </Link>
           </div>
         </div>
@@ -56,7 +57,7 @@ function CartPage() {
               to="/products"
               className="inline-flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               {t("continue_shopping")}
             </Link>
           </div>
@@ -86,14 +87,16 @@ function CartPage() {
                       <div className="flex gap-4">
                         <div className="h-[100px] w-[80px] sm:h-[120px] sm:w-[96px] shrink-0 overflow-hidden rounded-xl bg-surface">
                           {it.image_url ? (
-                            <img
-                              src={it.image_url}
-                              alt={it.name}
-                              className="h-full w-full object-cover"
-                            />
+                            // alt="": the product name is already right beside this
+                            // as visible text (the h3 below) — repeating it in alt
+                            // would make a screen reader announce it twice.
+                            <img src={it.image_url} alt="" className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full grid place-items-center">
-                              <ShoppingBag className="h-6 w-6 text-muted-foreground/15" />
+                              <ShoppingBag
+                                className="h-6 w-6 text-muted-foreground/15"
+                                aria-hidden="true"
+                              />
                             </div>
                           )}
                         </div>
@@ -109,19 +112,26 @@ function CartPage() {
                       <div className="flex justify-center mt-3 sm:mt-0">
                         <div className="flex items-center border border-border/40 rounded-full h-10 px-1">
                           <button
+                            type="button"
                             onClick={() => setQty(it.product_id, it.quantity - 1)}
+                            aria-label={`${t("decrease_quantity")}: ${it.name}`}
                             className="grid h-8 w-8 place-items-center rounded-full hover:bg-surface transition-colors"
                           >
-                            <Minus className="h-3.5 w-3.5 text-foreground" />
+                            <Minus className="h-3.5 w-3.5 text-foreground" aria-hidden="true" />
                           </button>
-                          <span className="w-8 text-center text-[14px] font-medium text-foreground select-none">
+                          <span
+                            className="w-8 text-center text-[14px] font-medium text-foreground select-none"
+                            aria-live="polite"
+                          >
                             {it.quantity}
                           </span>
                           <button
+                            type="button"
                             onClick={() => setQty(it.product_id, it.quantity + 1)}
+                            aria-label={`${t("increase_quantity")}: ${it.name}`}
                             className="grid h-8 w-8 place-items-center rounded-full hover:bg-surface transition-colors"
                           >
-                            <Plus className="h-3.5 w-3.5 text-foreground" />
+                            <Plus className="h-3.5 w-3.5 text-foreground" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -136,10 +146,12 @@ function CartPage() {
                       {/* Remove */}
                       <div className="hidden sm:flex justify-center">
                         <button
+                          type="button"
                           onClick={() => remove(it.product_id)}
+                          aria-label={`${t("remove")}: ${it.name}`}
                           className="grid h-9 w-9 place-items-center rounded-full hover:bg-surface transition-colors text-muted-foreground hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
 
@@ -149,10 +161,12 @@ function CartPage() {
                           ₪{(it.price * it.quantity).toFixed(2)}
                         </span>
                         <button
+                          type="button"
                           onClick={() => remove(it.product_id)}
+                          aria-label={`${t("remove")}: ${it.name}`}
                           className="text-muted-foreground hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
@@ -193,27 +207,29 @@ function CartPage() {
                   </span>
                 </div>
 
-                <Link to="/checkout" className="block">
-                  <button className="w-full bg-foreground text-background h-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.01] active:scale-[0.99] transform">
-                    {t("checkout")}
-                  </button>
+                <Link
+                  to="/checkout"
+                  className="block text-center w-full bg-foreground text-background h-[52px] leading-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.01] active:scale-[0.99] transform"
+                >
+                  {t("checkout")}
                 </Link>
 
-                <Link to="/products" className="block mt-3">
-                  <button className="w-full bg-primary text-primary-foreground h-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.01] active:scale-[0.99] transform">
-                    {t("continue_shopping")}
-                  </button>
+                <Link
+                  to="/products"
+                  className="block text-center w-full bg-primary text-primary-foreground h-[52px] leading-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.01] active:scale-[0.99] transform mt-3"
+                >
+                  {t("continue_shopping")}
                 </Link>
 
                 <div className="mt-8 pt-6 border-t border-border/20 grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-primary shrink-0" />
+                    <Truck className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                     <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
                       FREE SHIPPING
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                    <ShieldCheck className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                     <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
                       SECURE CHECKOUT
                     </span>

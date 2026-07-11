@@ -75,6 +75,8 @@ function ServicesPage() {
               {categories.map((c) => (
                 <button
                   key={c}
+                  type="button"
+                  aria-pressed={cat === c}
                   onClick={() => setCat(c)}
                   className={`pb-4 text-[11px] sm:text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors whitespace-nowrap ${
                     cat === c
@@ -197,15 +199,17 @@ function ServicesPage() {
             {t("hero_sub")}
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Link to="/products">
-              <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
-                {t("shop_products")}
-              </button>
+            <Link
+              to="/products"
+              className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"
+            >
+              {t("shop_products")}
             </Link>
-            <Link to="/location">
-              <button className="bg-card/50 border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-surface transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
-                {t("get_directions")}
-              </button>
+            <Link
+              to="/location"
+              className="bg-card/50 border border-border/30 text-foreground px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-surface transition-colors hover:scale-[1.02] active:scale-[0.98] transform"
+            >
+              {t("get_directions")}
             </Link>
           </div>
         </div>

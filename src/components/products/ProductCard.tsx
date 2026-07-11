@@ -119,7 +119,7 @@ export function ProductCard({ product }: { product: Product }) {
             />
           ) : (
             <div className="w-full h-full grid place-items-center bg-surface-2">
-              <ShoppingBag className="h-12 w-12 text-muted-foreground/10" />
+              <ShoppingBag className="h-12 w-12 text-muted-foreground/10" aria-hidden="true" />
             </div>
           )}
         </Link>
@@ -138,20 +138,27 @@ export function ProductCard({ product }: { product: Product }) {
 
         {/* Favorite */}
         <button
+          type="button"
           onClick={toggleFav}
-          aria-label="Favorite"
+          aria-label={fav ? t("remove_from_favorites") : t("add_to_favorites")}
+          aria-pressed={!!fav}
           className="absolute top-4 end-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-card/90 backdrop-blur-md transition-all hover:scale-110"
         >
           <Heart
+            aria-hidden="true"
             className={`h-4 w-4 transition-colors ${fav ? "fill-primary text-primary" : "text-foreground/40"}`}
           />
         </button>
 
-        {/* Hover overlay buttons */}
-        <div className="absolute bottom-5 start-4 end-4 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-400">
+        {/* Hover overlay buttons — group-focus-within (not just group-hover)
+            so keyboard focus reveals this instead of leaving a focused but
+            invisible control (WCAG 2.4.7 Focus Visible). */}
+        <div className="absolute bottom-5 start-4 end-4 z-10 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-400">
           <button
+            type="button"
             disabled={outOfStock}
             onClick={addToCart}
+            aria-label={`${t("add_to_cart")}: ${name}`}
             className="flex-1 bg-foreground/90 backdrop-blur-md text-background py-3 rounded-full text-[10px] font-semibold uppercase tracking-[0.06em] hover:bg-foreground transition-colors disabled:opacity-40"
           >
             {t("add_to_cart")}

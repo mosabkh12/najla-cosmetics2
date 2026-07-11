@@ -183,24 +183,44 @@ function Page() {
         >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                {L("רשימת שירותים", "قائمة الخدمات", "Services list")}
+              </caption>
               <thead>
                 <tr className="bg-surface/60 border-b border-border/15">
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
                     {L("שם", "الاسم", "Name")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell"
+                  >
                     {L("קטגוריה", "الفئة", "Category")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
                     {L("מחיר", "السعر", "Price")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell"
+                  >
                     {L("משך", "المدة", "Duration")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell"
+                  >
                     {L("סטטוס", "الحالة", "Status")}
                   </th>
-                  <th className="text-end p-3.5 w-[120px]"></th>
+                  <th scope="col" className="text-end p-3.5 w-[120px]">
+                    <span className="sr-only">{L("פעולות", "الإجراءات", "Actions")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -237,7 +257,7 @@ function Page() {
                     <td className="p-3.5 font-semibold">₪{Number(s.price).toFixed(0)}</td>
                     <td className="p-3.5 hidden sm:table-cell">
                       <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                        <Clock className="h-3 w-3" />
+                        <Clock className="h-3 w-3" aria-hidden="true" />
                         {s.duration_minutes}
                         {L("ד'", "د", "m")}
                       </span>
@@ -248,6 +268,7 @@ function Page() {
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${s.is_active ? "bg-sage" : "bg-muted-foreground/50"}`}
+                          aria-hidden="true"
                         />
                         {s.is_active ? t("is_active") : t("is_inactive")}
                       </span>
@@ -258,29 +279,38 @@ function Page() {
                           size="icon"
                           variant="ghost"
                           onClick={() => toggle(s)}
+                          aria-label={`${s.is_active ? t("is_inactive") : t("is_active")}: ${pickLocalized(lang, s.name, s.name_ar, s.name_en)}`}
                           className="h-8 w-8 rounded-lg hover:bg-surface"
                         >
                           {s.is_active ? (
-                            <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                            <EyeOff
+                              className="h-3.5 w-3.5 text-muted-foreground"
+                              aria-hidden="true"
+                            />
                           ) : (
-                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                           )}
                         </Button>
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => setDlg({ open: true, row: s })}
+                          aria-label={`${L("עריכה", "تعديل", "Edit")}: ${pickLocalized(lang, s.name, s.name_ar, s.name_en)}`}
                           className="h-8 w-8 rounded-lg hover:bg-surface"
                         >
-                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Pencil
+                            className="h-3.5 w-3.5 text-muted-foreground"
+                            aria-hidden="true"
+                          />
                         </Button>
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => del(s.id)}
+                          aria-label={`${t("delete")}: ${pickLocalized(lang, s.name, s.name_ar, s.name_en)}`}
                           className="h-8 w-8 rounded-lg hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                         </Button>
                       </div>
                     </td>

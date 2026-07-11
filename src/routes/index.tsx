@@ -109,15 +109,17 @@ function Home() {
               {t("hero_sub")}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4 animate-[fadeSlideUp_1.2s_0.8s_both]">
-              <Link to="/services">
-                <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
-                  {t("book_appointment")}
-                </button>
+              <Link
+                to="/services"
+                className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"
+              >
+                {t("book_appointment")}
               </Link>
-              <Link to="/products">
-                <button className="bg-white/10 backdrop-blur-md border border-white/30 text-white px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-white/20 transition-colors hover:scale-[1.02] active:scale-[0.98] transform">
-                  {t("shop_products")}
-                </button>
+              <Link
+                to="/products"
+                className="bg-white/10 backdrop-blur-md border border-white/30 text-white px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-white/20 transition-colors hover:scale-[1.02] active:scale-[0.98] transform"
+              >
+                {t("shop_products")}
               </Link>
             </div>
           </div>
@@ -139,10 +141,12 @@ function Home() {
                 {t("services_sub")}
               </p>
             </div>
-            <Link to="/services" className="shrink-0">
-              <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
-                {t("nav_services")} <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" />
-              </button>
+            <Link
+              to="/services"
+              className="shrink-0 border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform"
+            >
+              {t("nav_services")}{" "}
+              <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
         </Reveal>
@@ -169,10 +173,12 @@ function Home() {
                   {t("products_sub")}
                 </p>
               </div>
-              <Link to="/products" className="shrink-0">
-                <button className="border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform">
-                  {t("view_all_products")} <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" />
-                </button>
+              <Link
+                to="/products"
+                className="shrink-0 border border-foreground text-foreground px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all hover:scale-[1.02] active:scale-[0.98] transform"
+              >
+                {t("view_all_products")}{" "}
+                <ArrowRight className="inline-block ms-2 h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             </div>
           </Reveal>
@@ -230,7 +236,9 @@ function Home() {
                   { icon: <Award className="h-5 w-5" />, label: "Certified Professional" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center gap-3">
-                    <span className="text-primary">{item.icon}</span>
+                    <span className="text-primary" aria-hidden="true">
+                      {item.icon}
+                    </span>
                     <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                       {item.label}
                     </span>
@@ -239,10 +247,11 @@ function Home() {
               </div>
 
               <div className="mt-10">
-                <Link to="/about">
-                  <button className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform">
-                    {t("discover_story")}
-                  </button>
+                <Link
+                  to="/about"
+                  className="inline-block bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"
+                >
+                  {t("discover_story")}
                 </Link>
               </div>
             </div>
@@ -335,28 +344,30 @@ function Home() {
                     href={`https://wa.me/${(settings?.whatsapp_number ?? "").replace(/\D/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="block"
+                    className="w-full py-2.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2"
                   >
-                    <button className="w-full py-2.5 rounded-full border border-border/40 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground hover:bg-surface transition-colors flex items-center justify-center gap-2">
-                      <MessageCircle className="h-4 w-4" />
-                      WhatsApp
-                    </button>
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    WhatsApp
                   </a>
                   <div className="grid grid-cols-2 gap-2">
-                    <a href={getGoogleMapsDirectionsUrl(settings)} target="_blank" rel="noreferrer">
-                      <button className="w-full py-2.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-                        <Navigation className="h-4 w-4" />
-                        {t("get_directions")}
-                      </button>
+                    <a
+                      href={getGoogleMapsDirectionsUrl(settings)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2.5 rounded-full bg-foreground text-background text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    >
+                      <Navigation className="h-4 w-4" aria-hidden="true" />
+                      {t("get_directions")}
                     </a>
-                    <a href={getWazeUrl(settings)} target="_blank" rel="noreferrer">
-                      <button
-                        className="w-full py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                        style={{ backgroundColor: "#33CCFF" }}
-                      >
-                        <Navigation2 className="h-4 w-4" />
-                        {t("waze")}
-                      </button>
+                    <a
+                      href={getWazeUrl(settings)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                      style={{ backgroundColor: "#33CCFF" }}
+                    >
+                      <Navigation2 className="h-4 w-4" aria-hidden="true" />
+                      {t("waze")}
                     </a>
                   </div>
                 </div>

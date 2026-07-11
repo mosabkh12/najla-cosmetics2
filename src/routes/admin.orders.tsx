@@ -262,27 +262,51 @@ function Page() {
         >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                {L("רשימת הזמנות", "قائمة الطلبات", "Orders list")}
+              </caption>
               <thead>
                 <tr className="bg-surface/60 border-b border-border/15">
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                    #
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
+                    <span aria-hidden="true">#</span>
+                    <span className="sr-only">{L("מספר הזמנה", "رقم الطلب", "Order number")}</span>
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden sm:table-cell"
+                  >
                     {L("תאריך", "التاريخ", "Date")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
                     {L("לקוחה", "العميلة", "Customer")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden md:table-cell">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground hidden md:table-cell"
+                  >
                     {L("טלפון", "الهاتف", "Phone")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
                     {L("סך הכל", "المجموع", "Total")}
                   </th>
-                  <th className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  <th
+                    scope="col"
+                    className="text-start p-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
                     {L("סטטוס", "الحالة", "Status")}
                   </th>
-                  <th className="text-end p-3.5 w-[80px]"></th>
+                  <th scope="col" className="text-end p-3.5 w-[80px]">
+                    <span className="sr-only">{L("פעולות", "الإجراءات", "Actions")}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -321,9 +345,11 @@ function Page() {
                           terminal-state restriction here or on the server. */}
                       <Select value={o.status} onValueChange={(v) => setStatus(o.id, v)}>
                         <SelectTrigger
+                          aria-label={`${t("orders")} #${o.order_number}: ${L("סטטוס", "الحالة", "Status")}`}
                           className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
                         >
                           <span
+                            aria-hidden="true"
                             className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[o.status] ?? "bg-muted-foreground"}`}
                           />
                           <SelectValue />
@@ -332,7 +358,10 @@ function Page() {
                           {STATUSES.map((s) => (
                             <SelectItem key={s} value={s}>
                               <span className="flex items-center gap-2">
-                                <span className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`} />
+                                <span
+                                  className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`}
+                                  aria-hidden="true"
+                                />
                                 {t(`status_${s}`)}
                               </span>
                             </SelectItem>
@@ -345,9 +374,10 @@ function Page() {
                         size="icon"
                         variant="ghost"
                         onClick={() => setView(o.id)}
+                        aria-label={`${t("view")}: ${o.customer_name}, #${o.order_number}`}
                         className="h-8 w-8 rounded-lg hover:bg-surface"
                       >
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                        <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                       </Button>
                     </td>
                   </tr>
@@ -355,7 +385,10 @@ function Page() {
                 {filtered.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-16 text-center">
-                      <ShoppingCart className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                      <ShoppingCart
+                        className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3"
+                        aria-hidden="true"
+                      />
                       <div className="text-[14px] font-medium text-muted-foreground">
                         {search
                           ? L("לא נמצאו תוצאות", "لم يتم العثور على نتائج", "No results found")

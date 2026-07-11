@@ -7,6 +7,7 @@ type Dict = Record<string, string>;
 
 const HE: Dict = {
   brand: "Najla Cosmetics",
+  skip_to_content: "דלגי לתוכן הראשי",
   nav_home: "בית",
   nav_services: "שירותים",
   nav_products: "מוצרים",
@@ -166,10 +167,23 @@ const HE: Dict = {
   err_signup_failed: "יצירת החשבון נכשלה",
   err_verification_failed: "האימות נכשל, נסי שוב",
   or_continue_with: "או",
+  main_navigation: "ניווט ראשי",
+  mobile_navigation: "ניווט",
+  footer_navigation: "ניווט בתחתית העמוד",
+  menu: "תפריט",
+  close_menu: "סגירת תפריט",
+  add_to_favorites: "הוספה למועדפים",
+  remove_from_favorites: "הסרה מהמועדפים",
+  show_password: "הצגת הסיסמה",
+  hide_password: "הסתרת הסיסמה",
+  decrease_quantity: "הפחתת כמות",
+  increase_quantity: "הוספת כמות",
+  otp_digit: "ספרה",
 };
 
 const AR: Dict = {
   brand: "Najla Cosmetics",
+  skip_to_content: "الانتقال إلى المحتوى الرئيسي",
   nav_home: "الرئيسية",
   nav_services: "الخدمات",
   nav_products: "المنتجات",
@@ -329,10 +343,23 @@ const AR: Dict = {
   err_signup_failed: "فشل إنشاء الحساب",
   err_verification_failed: "فشل التحقق، حاولي مرة أخرى",
   or_continue_with: "أو",
+  main_navigation: "التنقل الرئيسي",
+  mobile_navigation: "التنقل",
+  footer_navigation: "روابط تذييل الصفحة",
+  menu: "القائمة",
+  close_menu: "إغلاق القائمة",
+  add_to_favorites: "إضافة إلى المفضلة",
+  remove_from_favorites: "إزالة من المفضلة",
+  show_password: "إظهار كلمة المرور",
+  hide_password: "إخفاء كلمة المرور",
+  decrease_quantity: "تقليل الكمية",
+  increase_quantity: "زيادة الكمية",
+  otp_digit: "الرقم",
 };
 
 const EN: Dict = {
   brand: "Najla Cosmetics",
+  skip_to_content: "Skip to main content",
   nav_home: "Home",
   nav_services: "Services",
   nav_products: "Products",
@@ -494,6 +521,18 @@ const EN: Dict = {
   err_signup_failed: "Account creation failed",
   err_verification_failed: "Verification failed, please try again",
   or_continue_with: "or",
+  main_navigation: "Main navigation",
+  mobile_navigation: "Navigation",
+  footer_navigation: "Footer",
+  menu: "Menu",
+  close_menu: "Close menu",
+  add_to_favorites: "Add to favorites",
+  remove_from_favorites: "Remove from favorites",
+  show_password: "Show password",
+  hide_password: "Hide password",
+  decrease_quantity: "Decrease quantity",
+  increase_quantity: "Increase quantity",
+  otp_digit: "Digit",
 };
 
 const BUNDLES: Record<Lang, Dict> = { he: HE, ar: AR, en: EN };

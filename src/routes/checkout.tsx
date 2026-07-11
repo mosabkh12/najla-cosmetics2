@@ -35,6 +35,7 @@ function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [delivery, setDelivery] = useState("pickup");
   const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -54,17 +55,18 @@ function CheckoutPage() {
     return (
       <section className="container-page py-16 text-center">
         <h1 className="font-display text-2xl">{t("empty_cart")}</h1>
-        <Link to="/products">
-          <Button className="btn-gold mt-4">{t("continue_shopping")}</Button>
-        </Link>
+        <Button asChild className="btn-gold mt-4">
+          <Link to="/products">{t("continue_shopping")}</Link>
+        </Button>
       </section>
     );
 
   const placeOrder = async () => {
-    if (!name || !phone) {
-      toast.error("Required fields missing");
-      return;
-    }
+    const e: { name?: string; phone?: string } = {};
+    if (!name.trim()) e.name = t("err_name_required");
+    if (!phone.trim()) e.phone = t("err_phone_required");
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
     setBusy(true);
     try {
       await createOrder({
@@ -99,31 +101,84 @@ function CheckoutPage() {
         <h1 className="font-display text-[28px] italic text-foreground">{t("checkout")}</h1>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs">{t("full_name")}</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 h-10" />
+            <Label htmlFor="checkout-name" className="text-xs">
+              {t("full_name")}
+            </Label>
+            <Input
+              id="checkout-name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
+              }}
+              autoComplete="name"
+              aria-invalid={errors.name ? true : undefined}
+              aria-describedby={errors.name ? "checkout-name-error" : undefined}
+              className="mt-1 h-10"
+            />
+            {errors.name && (
+              <p
+                id="checkout-name-error"
+                role="alert"
+                className="mt-1 text-[12px] text-destructive"
+              >
+                {errors.name}
+              </p>
+            )}
           </div>
           <div>
-            <Label className="text-xs">{t("phone")}</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 h-10" />
+            <Label htmlFor="checkout-phone" className="text-xs">
+              {t("phone")}
+            </Label>
+            <Input
+              id="checkout-phone"
+              type="tel"
+              inputMode="tel"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (errors.phone) setErrors((p) => ({ ...p, phone: undefined }));
+              }}
+              autoComplete="tel"
+              aria-invalid={errors.phone ? true : undefined}
+              aria-describedby={errors.phone ? "checkout-phone-error" : undefined}
+              className="mt-1 h-10"
+            />
+            {errors.phone && (
+              <p
+                id="checkout-phone-error"
+                role="alert"
+                className="mt-1 text-[12px] text-destructive"
+              >
+                {errors.phone}
+              </p>
+            )}
           </div>
         </div>
         <div>
-          <Label className="text-xs mb-2 block">{t("delivery_pickup")}</Label>
+          <Label id="delivery-label" className="text-xs mb-2 block">
+            {t("delivery_pickup")}
+          </Label>
           <RadioGroup
             value={delivery}
             onValueChange={setDelivery}
+            aria-labelledby="delivery-label"
             className="grid grid-cols-2 gap-2"
           >
             <label
+              htmlFor="delivery-pickup"
               className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer text-sm ${delivery === "pickup" ? "border-primary bg-surface" : "border-border"}`}
             >
-              <RadioGroupItem value="pickup" /> {t("delivery_pickup")}
+              <RadioGroupItem id="delivery-pickup" value="pickup" /> {t("delivery_pickup")}
             </label>
           </RadioGroup>
         </div>
         <div>
-          <Label className="text-xs">{t("notes_optional")}</Label>
+          <Label htmlFor="checkout-notes" className="text-xs">
+            {t("notes_optional")}
+          </Label>
           <Textarea
+            id="checkout-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
@@ -155,8 +210,10 @@ function CheckoutPage() {
           <span className="font-semibold text-foreground text-lg">₪{subtotal.toFixed(2)}</span>
         </div>
         <button
+          type="button"
           onClick={placeOrder}
           disabled={busy}
+          aria-busy={busy}
           className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-4"
         >
           {t("place_order")}

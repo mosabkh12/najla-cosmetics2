@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import type { Matcher } from "react-day-picker";
 import { useI18n } from "@/lib/i18n";
@@ -100,6 +100,15 @@ export function RescheduleDialog({
     }
   }, [open, appointment]);
 
+  // Moves focus to the new step's heading whenever the wizard advances or
+  // goes back, so a screen reader announces the step change (WCAG 2.4.3 /
+  // focus management after dynamic updates) instead of leaving focus on a
+  // control that just disappeared.
+  const stepHeadingRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (open) stepHeadingRef.current?.focus();
+  }, [step, open]);
+
   useEffect(() => {
     if (!appointment || !serviceId || !dateStr) return;
     setTime("");
@@ -175,9 +184,12 @@ export function RescheduleDialog({
       >
         {/* ── Header ── */}
         <div className="bg-cream px-5 py-4 border-b border-border/15">
-          <h2 className="font-display text-lg italic text-foreground">
-            {t("reschedule_appointment")}
-          </h2>
+          <DialogTitle asChild>
+            <h2 className="font-display text-lg italic text-foreground">
+              {t("reschedule_appointment")}
+            </h2>
+          </DialogTitle>
+          <DialogDescription className="sr-only">{t("reschedule_appointment")}</DialogDescription>
           {selectedService && (
             <div className="flex items-center gap-3 mt-1 text-[12px] text-muted-foreground">
               <span>
@@ -189,7 +201,7 @@ export function RescheduleDialog({
                 )}
               </span>
               <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3 text-primary" />
+                <Clock className="h-3 w-3 text-primary" aria-hidden="true" />
                 {selectedService.duration_minutes} {t("minutes")}
               </span>
             </div>
@@ -197,7 +209,10 @@ export function RescheduleDialog({
         </div>
 
         {/* ── Progress ── */}
-        <div className="flex items-center gap-1.5 px-5 py-3 border-b border-border/10 bg-surface/30">
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-1.5 px-5 py-3 border-b border-border/10 bg-surface/30"
+        >
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex-1">
               <div
@@ -210,14 +225,20 @@ export function RescheduleDialog({
         {/* ── Step 1: Service ── */}
         {step === 1 && (
           <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5" />
+            <p
+              ref={stepHeadingRef as React.RefObject<HTMLParagraphElement>}
+              tabIndex={-1}
+              className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5 focus:outline-none"
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               {t("select_service")}
             </p>
             <div className="space-y-2 max-h-[320px] overflow-y-auto">
               {services.map((s) => (
                 <button
                   key={s.id}
+                  type="button"
+                  aria-pressed={serviceId === s.id}
                   onClick={() => {
                     setServiceId(s.id);
                     setStep(2);
@@ -233,7 +254,7 @@ export function RescheduleDialog({
                       {pickLocalized(lang, s.name, s.name_ar, s.name_en)}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
+                      <Clock className="h-3 w-3" aria-hidden="true" />
                       {s.duration_minutes} {t("minutes")}
                     </div>
                   </div>
@@ -249,15 +270,20 @@ export function RescheduleDialog({
           <div className="px-5 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between mb-3">
               <button
+                type="button"
                 onClick={() => setStep(1)}
                 className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Back className="h-3.5 w-3.5" />
+                <Back className="h-3.5 w-3.5" aria-hidden="true" />
                 {t("select_service")}
               </button>
             </div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5" />
+            <p
+              ref={stepHeadingRef as React.RefObject<HTMLParagraphElement>}
+              tabIndex={-1}
+              className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5 focus:outline-none"
+            >
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               {t("select_date")}
             </p>
             <div className="rounded-xl border border-border/20 overflow-hidden flex justify-center">
@@ -278,30 +304,43 @@ export function RescheduleDialog({
           <div className="px-5 py-4 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center justify-between">
               <button
+                type="button"
+                ref={stepHeadingRef as React.RefObject<HTMLButtonElement>}
                 onClick={() => setStep(2)}
-                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors focus:outline-none"
               >
-                <Back className="h-3.5 w-3.5" />
+                <Back className="h-3.5 w-3.5" aria-hidden="true" />
                 {t("select_date")}
               </button>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1 text-[11px] font-semibold text-primary border border-primary/15">
-                <CalendarDays className="h-3 w-3" />
+                <CalendarDays className="h-3 w-3" aria-hidden="true" />
                 {fmtDisplay(selectedDate, lang)}
               </span>
             </div>
 
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mb-3 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                 {t("select_time")}
               </p>
               {loadingTimes ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center justify-center py-10"
+                >
+                  <Loader2
+                    className="h-5 w-5 animate-spin text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">{t("select_time")}…</span>
                 </div>
               ) : available.length === 0 ? (
-                <div className="rounded-2xl bg-cream/50 border border-primary/10 py-8 text-center">
-                  <Clock className="h-5 w-5 mx-auto text-primary/30 mb-2" />
+                <div
+                  role="status"
+                  className="rounded-2xl bg-cream/50 border border-primary/10 py-8 text-center"
+                >
+                  <Clock className="h-5 w-5 mx-auto text-primary/30 mb-2" aria-hidden="true" />
                   <p className="text-[13px] text-muted-foreground">{t("booking_no_times")}</p>
                 </div>
               ) : (
@@ -309,6 +348,8 @@ export function RescheduleDialog({
                   {available.map((tm) => (
                     <button
                       key={tm}
+                      type="button"
+                      aria-pressed={time === tm}
                       onClick={() => setTime(tm)}
                       className={`rounded-xl border py-2 text-[13px] font-medium transition-all active:scale-95 ${
                         time === tm
@@ -326,23 +367,29 @@ export function RescheduleDialog({
             {time && (
               <div className="rounded-xl bg-cream border border-primary/10 px-4 py-3 flex items-center justify-center gap-4">
                 <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                  <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                  <CalendarDays className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   {fmtDisplay(selectedDate, lang)}
                 </span>
                 <span className="text-border">|</span>
                 <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-                  <Clock className="h-3.5 w-3.5" />
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                   {time}
                 </span>
               </div>
             )}
 
             <button
+              type="button"
               onClick={submit}
               disabled={busy || !time}
+              aria-busy={busy}
               className="btn-gold w-full h-12 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] disabled:opacity-40 flex items-center justify-center gap-2"
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              )}
               {t("reschedule")}
             </button>
           </div>

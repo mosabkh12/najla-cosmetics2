@@ -81,7 +81,10 @@ function AdminLayout() {
       <div className="mx-4 h-px bg-border/40" />
 
       {/* Nav links */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav
+        className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto"
+        aria-label={L("תפריט ניהול", "قائمة الإدارة", "Admin navigation")}
+      >
         <div className="px-2 pb-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/60">
             {L("תפריט", "القائمة", "Menu")}
@@ -95,6 +98,7 @@ function AdminLayout() {
               key={it.to}
               to={it.to}
               onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
               className={`
                 group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] transition-all relative
                 ${
@@ -105,6 +109,7 @@ function AdminLayout() {
               `}
             >
               <div
+                aria-hidden="true"
                 className={`
                 grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors
                 ${active ? "bg-primary/10 text-primary" : "bg-transparent text-muted-foreground group-hover:bg-surface-2 group-hover:text-foreground"}
@@ -144,15 +149,17 @@ function AdminLayout() {
       <div className="md:hidden sticky top-20 z-30 bg-background/95 backdrop-blur-md border-b border-border/30">
         <div className="flex items-center justify-between px-4 h-14">
           <button
+            type="button"
             onClick={() => setMobileOpen(true)}
+            aria-label={L("תפריט ניהול", "قائمة الإدارة", "Admin menu")}
             className="grid h-10 w-10 place-items-center rounded-xl bg-surface hover:bg-surface-2 transition-colors"
           >
-            <Menu className="h-5 w-5 text-foreground" />
+            <Menu className="h-5 w-5 text-foreground" aria-hidden="true" />
           </button>
           <div className="flex items-center gap-2">
             {currentPage && (
               <>
-                <currentPage.icon className="h-4 w-4 text-primary" />
+                <currentPage.icon className="h-4 w-4 text-primary" aria-hidden="true" />
                 <span className="text-[13px] font-medium">{currentPage.label}</span>
               </>
             )}
@@ -198,7 +205,7 @@ function AdminLayout() {
                 to="/"
                 className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
-                <ChevronLeft className="h-3 w-3" />
+                <ChevronLeft className="h-3 w-3" aria-hidden="true" />
                 {L("אתר", "الموقع", "Site")}
               </Link>
               <span className="text-border">/</span>
