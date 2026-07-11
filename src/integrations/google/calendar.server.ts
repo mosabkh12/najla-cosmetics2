@@ -155,6 +155,23 @@ async function deleteGoogleEventIfExists(client: CalendarClient, eventId: string
   }
 }
 
+// Standalone cleanup for when an appointment ROW itself is permanently
+// deleted (admin bulk/single delete, a customer clearing their own
+// history) — as opposed to just being cancelled. There's no appointment
+// left to read at that point, so the caller passes the event id it already
+// had on hand before deleting. Never throws, matching every other Google
+// Calendar entry point: a stale/orphaned Google event is a cosmetic
+// problem, not one worth surfacing as a failed delete in the app.
+export async function deleteGoogleCalendarEvent(eventId: string): Promise<void> {
+  const client = getCalendarClient();
+  if (!client) return;
+  try {
+    await deleteGoogleEventIfExists(client, eventId);
+  } catch (err) {
+    console.error("[deleteGoogleCalendarEvent] failed for event", eventId, err);
+  }
+}
+
 // Reusable sync entry point, called after every appointment write
 // (create, reschedule, status change, cancellation). Never throws —
 // a Google Calendar outage or misconfiguration must never break booking,

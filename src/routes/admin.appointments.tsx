@@ -35,13 +35,11 @@ import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 
 export const Route = createFileRoute("/admin/appointments")({ component: Page });
 
-// Bookings are created directly as 'confirmed' — there's no admin
-// approval step, so the dashboard never offers 'pending'/'confirmed' as
-// something to filter by or set by hand; the only actions an admin ever
-// takes are marking an appointment completed or cancelled. Colors are
-// still kept for all 4 in case an older row is still in one of those
-// states, so its badge/dot render sensibly until it's moved forward.
-const SELECTABLE_STATUSES = ["completed", "cancelled"] as const;
+// Bookings are created directly as 'confirmed' — there's no approval step,
+// so 'pending' is never offered as something to filter by or set by hand.
+// 'confirmed' IS offered despite that: it's the only way back if an
+// appointment gets marked completed/cancelled by mistake.
+const SELECTABLE_STATUSES = ["confirmed", "completed", "cancelled"] as const;
 
 const statusColor: Record<string, string> = {
   pending: "bg-gold-deep/10 text-gold-deep border-gold-deep/20",
@@ -277,6 +275,7 @@ function Page() {
 
   const statusFilterLabel: Record<StatusFilter, string> = {
     all: L("הכל", "الكل", "All"),
+    confirmed: L("מאושרים", "مؤكدة", "Confirmed"),
     completed: L("הושלמו", "مكتملة", "Completed"),
     cancelled: L("בוטלו", "ملغاة", "Cancelled"),
   };

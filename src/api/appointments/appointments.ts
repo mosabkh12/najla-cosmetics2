@@ -166,10 +166,10 @@ const VALID_STATUSES = ["pending", "confirmed", "completed", "cancelled"] as con
 type AppointmentStatus = (typeof VALID_STATUSES)[number];
 
 // Bookings are created directly as 'confirmed' (see create_appointment RPC)
-// — there's no admin approval step, so the admin dashboard never needs to
-// set (or offer) 'pending'/'confirmed' again. The only two transitions an
-// admin ever makes by hand are marking an appointment done or cancelled.
-const ADMIN_SETTABLE_STATUSES = ["completed", "cancelled"] as const;
+// — there's no approval step, so 'pending' is never offered. 'confirmed' IS
+// offered despite that, purely as an undo: marking an appointment
+// 'completed' (or 'cancelled') by mistake needs a way back to normal.
+const ADMIN_SETTABLE_STATUSES = ["confirmed", "completed", "cancelled"] as const;
 
 // The browser may only ever specify WHAT it wants (service_id, date,
 // time) and its own customer details. Duration, price, availability,
@@ -268,7 +268,7 @@ export const deleteAppointment = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: appt } = await supabaseAdmin
       .from("appointments")
-      .select("status, user_id")
+      .select("status, user_id, google_event_id")
       .eq("id", id)
       .single();
 
@@ -282,6 +282,12 @@ export const deleteAppointment = createServerFn({ method: "POST" })
       .eq("id", id)
       .eq("user_id", context.userId);
     if (error) throw error;
+
+    if (appt.google_event_id) {
+      const { deleteGoogleCalendarEvent } = await import("@/integrations/google/calendar.server");
+      deleteGoogleCalendarEvent(appt.google_event_id).catch(console.error);
+    }
+
     return { success: true };
   });
 
@@ -289,12 +295,29 @@ export const clearAppointmentHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: toDelete } = await supabaseAdmin
+      .from("appointments")
+      .select("google_event_id")
+      .eq("user_id", context.userId)
+      .in("status", ["completed", "cancelled"]);
+
     const { error } = await supabaseAdmin
       .from("appointments")
       .delete()
       .eq("user_id", context.userId)
       .in("status", ["completed", "cancelled"]);
     if (error) throw error;
+
+    const eventIds = (toDelete ?? [])
+      .map((a) => a.google_event_id)
+      .filter((eventId): eventId is string => Boolean(eventId));
+    if (eventIds.length > 0) {
+      const { deleteGoogleCalendarEvent } = await import("@/integrations/google/calendar.server");
+      Promise.all(eventIds.map((eventId) => deleteGoogleCalendarEvent(eventId))).catch(
+        console.error,
+      );
+    }
+
     return { success: true };
   });
 
@@ -496,8 +519,30 @@ export const deleteAppointmentsAdmin = createServerFn({ method: "POST" })
   .handler(async ({ data: { ids } }) => {
     if (ids.length === 0) return { success: true };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: toDelete } = await supabaseAdmin
+      .from("appointments")
+      .select("google_event_id")
+      .in("id", ids);
+
     const { error } = await supabaseAdmin.from("appointments").delete().in("id", ids);
     if (error) throw error;
+
+    // Completed appointments keep their Google event around (that's the
+    // whole point of the "completed" styling), so deleting the
+    // appointment row itself here — e.g. clearing history — is the point
+    // where that event actually needs to go too, or it'd sit there
+    // forever with no appointment behind it.
+    const eventIds = (toDelete ?? [])
+      .map((a) => a.google_event_id)
+      .filter((eventId): eventId is string => Boolean(eventId));
+    if (eventIds.length > 0) {
+      const { deleteGoogleCalendarEvent } = await import("@/integrations/google/calendar.server");
+      Promise.all(eventIds.map((eventId) => deleteGoogleCalendarEvent(eventId))).catch(
+        console.error,
+      );
+    }
+
     return { success: true };
   });
 
