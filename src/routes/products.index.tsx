@@ -81,16 +81,16 @@ function ProductsPage() {
         </div>
         <div className="relative z-10 w-full flex justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-2xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.3s_0.05s_both]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_1.2s_0.2s_both]">
               Najla Cosmetics
             </p>
-            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.3s_0.1s_both]">
+            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_1.2s_0.4s_both]">
               {t("products_title")}
             </h1>
-            <p className="mt-4 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.3s_0.15s_both]">
+            <p className="mt-4 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_1.2s_0.6s_both]">
               {t("products_sub")}
             </p>
-            <div className="mt-8 flex justify-center gap-4 animate-[fadeSlideUp_0.3s_0.2s_both]">
+            <div className="mt-8 flex justify-center gap-4 animate-[fadeSlideUp_1.2s_0.8s_both]">
               <Link
                 to="/services"
                 className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"

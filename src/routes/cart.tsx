@@ -17,16 +17,16 @@ function CartPage() {
     return (
       <section className="min-h-[calc(100vh-160px)] bg-background">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-20 sm:py-32 text-center">
-          <div className="animate-[fadeSlideUp_0.2s_0.05s_both]">
+          <div className="animate-[fadeSlideUp_0.8s_0.2s_both]">
             <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground/20" />
           </div>
-          <h1 className="mt-6 font-display text-[28px] sm:text-[36px] text-foreground animate-[fadeSlideUp_0.2s_0.1s_both]">
+          <h1 className="mt-6 font-display text-[28px] sm:text-[36px] text-foreground animate-[fadeSlideUp_0.8s_0.4s_both]">
             {t("empty_cart")}
           </h1>
-          <p className="mt-3 text-[15px] text-muted-foreground animate-[fadeSlideUp_0.2s_0.12s_both]">
+          <p className="mt-3 text-[15px] text-muted-foreground animate-[fadeSlideUp_0.8s_0.5s_both]">
             {t("products_sub")}
           </p>
-          <div className="animate-[fadeSlideUp_0.2s_0.15s_both]">
+          <div className="animate-[fadeSlideUp_0.8s_0.6s_both]">
             <Link
               to="/products"
               className="mt-8 inline-block bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"

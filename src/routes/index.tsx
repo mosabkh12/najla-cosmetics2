@@ -101,14 +101,14 @@ function Home() {
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative flex h-full items-center justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-2xl pt-20">
-            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[72px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.3s_0.05s_both]">
+            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[72px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_1.2s_0.2s_both]">
               {t("hero_title").split(".")[0]}.{" "}
               <em className="italic">{t("hero_title").split(".")[1] || ""}</em>
             </h1>
-            <p className="mt-5 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.3s_0.12s_both]">
+            <p className="mt-5 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_1.2s_0.5s_both]">
               {t("hero_sub")}
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4 animate-[fadeSlideUp_0.3s_0.2s_both]">
+            <div className="mt-8 flex flex-wrap justify-center gap-4 animate-[fadeSlideUp_1.2s_0.8s_both]">
               <Link
                 to="/services"
                 className="bg-foreground text-background px-10 py-4 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity hover:scale-[1.02] active:scale-[0.98] transform"

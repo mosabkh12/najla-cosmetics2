@@ -54,13 +54,13 @@ function ServicesPage() {
         </div>
         <div className="relative z-10 w-full flex justify-center text-center px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto">
           <div className="max-w-2xl pt-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.2s_0.05s_both]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70 mb-4 animate-[fadeSlideUp_0.8s_0.2s_both]">
               Najla Cosmetics
             </p>
-            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.2s_0.1s_both]">
+            <h1 className="font-display text-[36px] sm:text-[52px] md:text-[64px] leading-[1.05] tracking-tight text-white animate-[fadeSlideUp_0.8s_0.4s_both]">
               {t("services_title")}
             </h1>
-            <p className="mt-4 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.2s_0.15s_both]">
+            <p className="mt-4 text-[15px] sm:text-[17px] text-white/80 max-w-lg mx-auto leading-[1.7] animate-[fadeSlideUp_0.8s_0.6s_both]">
               {t("services_sub")}
             </p>
           </div>

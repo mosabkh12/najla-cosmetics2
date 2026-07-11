@@ -26,7 +26,7 @@ export function Reveal({
 
 function RevealItem({ children, index }: { children: ReactNode; index: number }) {
   const { ref, visible } = useScrollReveal(0.08);
-  const staggerDelay = Math.min(index * 0.03, 0.3);
+  const staggerDelay = index * 0.1;
   return (
     <div
       ref={ref}
