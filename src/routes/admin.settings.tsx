@@ -32,7 +32,25 @@ import {
 import { getErrorMessage } from "@/lib/utils";
 import type { BusinessSettingsRow } from "@/lib/api-types";
 
-export const Route = createFileRoute("/admin/settings")({ component: Page });
+export const Route = createFileRoute("/admin/settings")({
+  // See admin.index.tsx for why this loader exists and why it swallows errors.
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.ensureQueryData({
+        queryKey: ["admin-settings"],
+        queryFn: () => getSettings(),
+      });
+    } catch {
+      // handled by AdminLayout's redirect
+    }
+  },
+  pendingComponent: () => (
+    <div className="min-h-[40vh] grid place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+  component: Page,
+});
 
 // Mirrors BusinessSettingsRow, except latitude/longitude are held as the
 // raw string the number input produces while being edited (parsed back to

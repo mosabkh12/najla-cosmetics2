@@ -17,7 +17,25 @@ import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
 import { ShoppingCart, Search, Package, Eye, Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/admin/orders")({ component: Page });
+export const Route = createFileRoute("/admin/orders")({
+  // See admin.index.tsx for why this loader exists and why it swallows errors.
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.ensureQueryData({
+        queryKey: ["admin-orders"],
+        queryFn: () => getAdminOrders(),
+      });
+    } catch {
+      // handled by AdminLayout's redirect
+    }
+  },
+  pendingComponent: () => (
+    <div className="min-h-[40vh] grid place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+  component: Page,
+});
 
 const STATUSES = ["pending", "confirmed", "preparing", "completed", "cancelled"] as const;
 

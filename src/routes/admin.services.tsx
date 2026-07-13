@@ -17,7 +17,25 @@ import { toast } from "sonner";
 import { RecordDialog, type Field } from "@/components/admin/RecordDialog";
 import { Reveal } from "@/components/ScrollReveal";
 
-export const Route = createFileRoute("/admin/services")({ component: Page });
+export const Route = createFileRoute("/admin/services")({
+  // See admin.index.tsx for why this loader exists and why it swallows errors.
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.ensureQueryData({
+        queryKey: ["admin-services"],
+        queryFn: () => getAdminServices(),
+      });
+    } catch {
+      // handled by AdminLayout's redirect
+    }
+  },
+  pendingComponent: () => (
+    <div className="min-h-[40vh] grid place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+  component: Page,
+});
 
 function Page() {
   const { lang, t } = useI18n();

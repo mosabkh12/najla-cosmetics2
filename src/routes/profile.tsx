@@ -15,6 +15,7 @@ import {
   CalendarClock,
   Info,
   Trash2,
+  Loader2,
 } from "lucide-react";
 
 import { getProfile, updateProfile } from "@/api/profiles/profiles";
@@ -85,19 +86,19 @@ function ProfilePage() {
     }
   }, [profile]);
 
-  const { data: appts = [] } = useQuery({
+  const { data: appts = [], isLoading: apptsLoading } = useQuery({
     queryKey: ["appointments", user?.id],
     enabled: !!user,
     queryFn: () => getUserAppointments(),
   });
 
-  const { data: orders = [] } = useQuery({
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ["orders", user?.id],
     enabled: !!user,
     queryFn: () => getUserOrders(),
   });
 
-  const { data: favs = [] } = useQuery({
+  const { data: favs = [], isLoading: favsLoading } = useQuery({
     queryKey: ["favorites", user?.id],
     enabled: !!user,
     queryFn: async () => (await getUserFavorites()) as Product[],
@@ -442,7 +443,16 @@ function ProfilePage() {
               )}
             </Reveal>
 
-            {filteredAppts.length === 0 && (
+            {apptsLoading && (
+              <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
+                <Loader2
+                  className="h-6 w-6 animate-spin text-muted-foreground/40 mx-auto"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
+
+            {!apptsLoading && filteredAppts.length === 0 && (
               <Reveal direction="scale">
                 <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
                   <CalendarDays
@@ -595,7 +605,16 @@ function ProfilePage() {
               </div>
             </Reveal>
 
-            {filteredOrders.length === 0 && (
+            {ordersLoading && (
+              <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
+                <Loader2
+                  className="h-6 w-6 animate-spin text-muted-foreground/40 mx-auto"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
+
+            {!ordersLoading && filteredOrders.length === 0 && (
               <Reveal direction="scale">
                 <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
                   <ShoppingBag
@@ -663,7 +682,16 @@ function ProfilePage() {
             id="panel-favorites"
             aria-labelledby="tab-favorites"
           >
-            {favs.length === 0 && (
+            {favsLoading && (
+              <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
+                <Loader2
+                  className="h-6 w-6 animate-spin text-muted-foreground/40 mx-auto"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
+
+            {!favsLoading && favs.length === 0 && (
               <Reveal direction="scale">
                 <div className="rounded-2xl border border-dashed border-border/40 py-14 text-center">
                   <Heart className="h-8 w-8 mx-auto text-muted-foreground/30" aria-hidden="true" />

@@ -34,7 +34,25 @@ import {
 } from "lucide-react";
 import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 
-export const Route = createFileRoute("/admin/appointments")({ component: Page });
+export const Route = createFileRoute("/admin/appointments")({
+  // See admin.index.tsx for why this loader exists and why it swallows errors.
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.ensureQueryData({
+        queryKey: ["admin-appointments"],
+        queryFn: () => getAdminAppointments(),
+      });
+    } catch {
+      // handled by AdminLayout's redirect
+    }
+  },
+  pendingComponent: () => (
+    <div className="min-h-[40vh] grid place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+  component: Page,
+});
 
 // Bookings are created directly as 'confirmed' — there's no approval step,
 // so 'pending' is never offered as something to filter by or set by hand.

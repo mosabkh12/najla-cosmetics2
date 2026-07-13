@@ -16,6 +16,27 @@ import {
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/admin/")({
+  // Warms the query cache before the route finishes navigating, so by the
+  // time Overview mounts, useQuery below already has data and skips its
+  // loading state — the numbers are correct on first paint instead of
+  // appearing a beat after the spinner. Swallows errors on purpose: a
+  // non-admin/unauthenticated hit is caught and redirected by AdminLayout's
+  // own auth check, this loader is only a best-effort cache warm-up.
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.ensureQueryData({
+        queryKey: ["admin-overview"],
+        queryFn: () => getAdminOverview(),
+      });
+    } catch {
+      // handled by AdminLayout's redirect
+    }
+  },
+  pendingComponent: () => (
+    <div className="min-h-[40vh] grid place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
   component: Overview,
 });
 

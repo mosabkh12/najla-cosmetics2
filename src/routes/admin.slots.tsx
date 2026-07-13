@@ -38,7 +38,25 @@ import { getErrorMessage } from "@/lib/utils";
 import { Reveal } from "@/components/ScrollReveal";
 import { dayName } from "@/lib/business-hours";
 
-export const Route = createFileRoute("/admin/slots")({ component: Page });
+export const Route = createFileRoute("/admin/slots")({
+  // See admin.index.tsx for why this loader exists and why it swallows errors.
+  loader: async ({ context }) => {
+    try {
+      await context.queryClient.ensureQueryData({
+        queryKey: ["availability-settings"],
+        queryFn: () => getAvailabilitySettings(),
+      });
+    } catch {
+      // handled by AdminLayout's redirect
+    }
+  },
+  pendingComponent: () => (
+    <div className="min-h-[40vh] grid place-items-center">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  ),
+  component: Page,
+});
 
 const TIME_OPTIONS: string[] = [];
 for (let h = 6; h <= 23; h++) {
