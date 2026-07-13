@@ -30,6 +30,7 @@ import {
   CloudAlert,
   CloudOff,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 
@@ -113,7 +114,7 @@ function Page() {
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
   const [resyncingCompleted, setResyncingCompleted] = useState(false);
 
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isLoading } = useQuery({
     queryKey: ["admin-appointments"],
     queryFn: () => getAdminAppointments(),
   });
@@ -434,7 +435,16 @@ function Page() {
       </Reveal>
 
       {/* Date groups */}
-      {groups.length === 0 && (
+      {isLoading && (
+        <div
+          className="rounded-2xl bg-card overflow-hidden border border-border/10 py-16 text-center"
+          style={{ boxShadow: "0 4px 20px -8px rgba(45, 45, 45, 0.06)" }}
+        >
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40 mx-auto" />
+        </div>
+      )}
+
+      {!isLoading && groups.length === 0 && (
         <Reveal direction="up" delay={4}>
           <div
             className="rounded-2xl bg-card overflow-hidden border border-border/10 py-16 text-center"

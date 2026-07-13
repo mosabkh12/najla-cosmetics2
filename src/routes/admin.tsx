@@ -1,7 +1,15 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/lib/i18n";
+import { getAdminOverview } from "@/api/admin/overview";
+import { getAdminServices } from "@/api/services/services";
+import { getAdminProducts } from "@/api/products/products";
+import { getAdminAppointments } from "@/api/appointments/appointments";
+import { getAvailabilitySettings } from "@/api/slots/slots";
+import { getAdminOrders } from "@/api/orders/orders";
+import { getSettings } from "@/api/settings/settings";
 import {
   LayoutDashboard,
   Scissors,
@@ -30,12 +38,32 @@ function AdminLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/auth" });
     else if (!isAdmin) navigate({ to: "/" });
   }, [user, isAdmin, loading, navigate]);
+
+  // Warms every tab's query cache as soon as the admin check resolves, so
+  // clicking a sidebar link almost always finds the data already cached
+  // instead of mounting empty and fetching from scratch — that gap between
+  // "renders with no data yet" and "the query resolves" is what showed each
+  // screen's empty state (e.g. "0 services") for a beat on every navigation.
+  useEffect(() => {
+    if (loading || !user || !isAdmin) return;
+    qc.prefetchQuery({ queryKey: ["admin-overview"], queryFn: () => getAdminOverview() });
+    qc.prefetchQuery({ queryKey: ["admin-services"], queryFn: () => getAdminServices() });
+    qc.prefetchQuery({ queryKey: ["admin-products"], queryFn: () => getAdminProducts() });
+    qc.prefetchQuery({ queryKey: ["admin-appointments"], queryFn: () => getAdminAppointments() });
+    qc.prefetchQuery({
+      queryKey: ["availability-settings"],
+      queryFn: () => getAvailabilitySettings(),
+    });
+    qc.prefetchQuery({ queryKey: ["admin-orders"], queryFn: () => getAdminOrders() });
+    qc.prefetchQuery({ queryKey: ["admin-settings"], queryFn: () => getSettings() });
+  }, [loading, user, isAdmin, qc]);
 
   if (loading || !user || !isAdmin) {
     return (

@@ -12,7 +12,7 @@ import { pickLocalized } from "@/lib/pick-localized";
 import { getErrorMessage } from "@/lib/utils";
 import type { ProductRow, ProductFormValues } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Eye, EyeOff, Search, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, EyeOff, Search, Package, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { RecordDialog, type Field } from "@/components/admin/RecordDialog";
 import { Reveal } from "@/components/ScrollReveal";
@@ -29,7 +29,7 @@ function Page() {
   });
   const [search, setSearch] = useState("");
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-products"],
     queryFn: () => getAdminProducts(),
   });
@@ -253,104 +253,112 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => {
-                  const low = p.stock_quantity <= (p.low_stock_threshold ?? 5);
-                  return (
-                    <tr
-                      key={p.id}
-                      className="border-t border-border/10 hover:bg-surface/30 transition-colors"
-                    >
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-3">
-                          {p.image_url ? (
-                            <img
-                              src={p.image_url}
-                              alt=""
-                              className="h-9 w-9 rounded-lg object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="h-9 w-9 rounded-lg bg-surface grid place-items-center shrink-0">
-                              <Package className="h-4 w-4 text-muted-foreground/40" />
-                            </div>
-                          )}
-                          <span className="font-medium text-foreground">
-                            {pickLocalized(lang, p.name, p.name_ar, p.name_en)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3.5 text-muted-foreground hidden sm:table-cell">
-                        {p.category && (
-                          <span className="text-[11px] font-medium bg-surface px-2.5 py-1 rounded-lg">
-                            {p.category}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3.5 font-semibold">₪{Number(p.price).toFixed(0)}</td>
-                      <td className="p-3.5">
-                        <span
-                          className={`text-[12px] font-semibold px-2.5 py-1 rounded-lg ${low ? "bg-destructive/10 text-destructive" : "bg-sage-soft text-sage"}`}
-                        >
-                          {p.stock_quantity}
-                        </span>
-                      </td>
-                      <td className="p-3.5 hidden sm:table-cell">
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${p.is_active ? "bg-sage-soft text-sage border-sage/20" : "bg-surface text-muted-foreground border-border/30"}`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${p.is_active ? "bg-sage" : "bg-muted-foreground/50"}`}
-                          />
-                          {p.is_active ? t("is_active") : t("is_inactive")}
-                        </span>
-                      </td>
-                      <td className="p-3.5 text-end">
-                        <div className="inline-flex gap-0.5">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => toggle(p)}
-                            aria-label={`${p.is_active ? t("is_inactive") : t("is_active")}: ${pickLocalized(lang, p.name, p.name_ar, p.name_en)}`}
-                            className="h-8 w-8 rounded-lg hover:bg-surface"
-                          >
-                            {p.is_active ? (
-                              <EyeOff
-                                className="h-3.5 w-3.5 text-muted-foreground"
-                                aria-hidden="true"
+                {isLoading && (
+                  <tr>
+                    <td colSpan={6} className="py-16 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40 mx-auto" />
+                    </td>
+                  </tr>
+                )}
+                {!isLoading &&
+                  filtered.map((p) => {
+                    const low = p.stock_quantity <= (p.low_stock_threshold ?? 5);
+                    return (
+                      <tr
+                        key={p.id}
+                        className="border-t border-border/10 hover:bg-surface/30 transition-colors"
+                      >
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-3">
+                            {p.image_url ? (
+                              <img
+                                src={p.image_url}
+                                alt=""
+                                className="h-9 w-9 rounded-lg object-cover shrink-0"
                               />
                             ) : (
-                              <Eye
+                              <div className="h-9 w-9 rounded-lg bg-surface grid place-items-center shrink-0">
+                                <Package className="h-4 w-4 text-muted-foreground/40" />
+                              </div>
+                            )}
+                            <span className="font-medium text-foreground">
+                              {pickLocalized(lang, p.name, p.name_ar, p.name_en)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3.5 text-muted-foreground hidden sm:table-cell">
+                          {p.category && (
+                            <span className="text-[11px] font-medium bg-surface px-2.5 py-1 rounded-lg">
+                              {p.category}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3.5 font-semibold">₪{Number(p.price).toFixed(0)}</td>
+                        <td className="p-3.5">
+                          <span
+                            className={`text-[12px] font-semibold px-2.5 py-1 rounded-lg ${low ? "bg-destructive/10 text-destructive" : "bg-sage-soft text-sage"}`}
+                          >
+                            {p.stock_quantity}
+                          </span>
+                        </td>
+                        <td className="p-3.5 hidden sm:table-cell">
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border ${p.is_active ? "bg-sage-soft text-sage border-sage/20" : "bg-surface text-muted-foreground border-border/30"}`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${p.is_active ? "bg-sage" : "bg-muted-foreground/50"}`}
+                            />
+                            {p.is_active ? t("is_active") : t("is_inactive")}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-end">
+                          <div className="inline-flex gap-0.5">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => toggle(p)}
+                              aria-label={`${p.is_active ? t("is_inactive") : t("is_active")}: ${pickLocalized(lang, p.name, p.name_ar, p.name_en)}`}
+                              className="h-8 w-8 rounded-lg hover:bg-surface"
+                            >
+                              {p.is_active ? (
+                                <EyeOff
+                                  className="h-3.5 w-3.5 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <Eye
+                                  className="h-3.5 w-3.5 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setDlg({ open: true, row: p })}
+                              aria-label={`${L("עריכה", "تعديل", "Edit")}: ${pickLocalized(lang, p.name, p.name_ar, p.name_en)}`}
+                              className="h-8 w-8 rounded-lg hover:bg-surface"
+                            >
+                              <Pencil
                                 className="h-3.5 w-3.5 text-muted-foreground"
                                 aria-hidden="true"
                               />
-                            )}
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setDlg({ open: true, row: p })}
-                            aria-label={`${L("עריכה", "تعديل", "Edit")}: ${pickLocalized(lang, p.name, p.name_ar, p.name_en)}`}
-                            className="h-8 w-8 rounded-lg hover:bg-surface"
-                          >
-                            <Pencil
-                              className="h-3.5 w-3.5 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => del(p.id)}
-                            aria-label={`${t("delete")}: ${pickLocalized(lang, p.name, p.name_ar, p.name_en)}`}
-                            className="h-8 w-8 rounded-lg hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => del(p.id)}
+                              aria-label={`${t("delete")}: ${pickLocalized(lang, p.name, p.name_ar, p.name_en)}`}
+                              className="h-8 w-8 rounded-lg hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {!isLoading && filtered.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-16 text-center">
                       <Package className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />

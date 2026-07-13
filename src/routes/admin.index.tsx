@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Clock,
   Package,
+  Loader2,
 } from "lucide-react";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 
@@ -118,7 +119,11 @@ function Overview() {
               </div>
               <div className="mt-4">
                 <div className="font-display text-[28px] sm:text-[32px] text-foreground leading-none">
-                  {s.value}
+                  {isLoading ? (
+                    <span className="inline-block h-7 w-12 rounded-md bg-surface animate-pulse" />
+                  ) : (
+                    s.value
+                  )}
                 </div>
                 <div className="text-[12px] text-muted-foreground mt-1.5 font-medium">
                   {s.label}
@@ -154,36 +159,42 @@ function Overview() {
               </Link>
             </div>
             <div className="divide-y divide-border/10">
-              {(data?.upcomingAppts ?? []).map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-surface/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-9 w-9 place-items-center rounded-full bg-surface text-[12px] font-semibold text-foreground shrink-0">
-                      {(a.customer_name ?? "?")[0]}
-                    </div>
-                    <div>
-                      <div className="text-[13px] font-medium text-foreground">
-                        {a.customer_name}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                        <Clock className="h-3 w-3" />
-                        {a.appointment_date}
-                      </div>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-[11px] px-2.5 py-1 rounded-full border font-medium ${statusColor[a.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
-                  >
-                    <span
-                      className={`inline-block h-1.5 w-1.5 rounded-full me-1.5 ${statusDot[a.status] ?? "bg-muted-foreground"}`}
-                    />
-                    {a.status}
-                  </span>
+              {isLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
                 </div>
-              ))}
-              {(!data?.upcomingAppts || data.upcomingAppts.length === 0) && (
+              )}
+              {!isLoading &&
+                (data?.upcomingAppts ?? []).map((a) => (
+                  <div
+                    key={a.id}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-surface/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-9 w-9 place-items-center rounded-full bg-surface text-[12px] font-semibold text-foreground shrink-0">
+                        {(a.customer_name ?? "?")[0]}
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-medium text-foreground">
+                          {a.customer_name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {a.appointment_date}
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[11px] px-2.5 py-1 rounded-full border font-medium ${statusColor[a.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                    >
+                      <span
+                        className={`inline-block h-1.5 w-1.5 rounded-full me-1.5 ${statusDot[a.status] ?? "bg-muted-foreground"}`}
+                      />
+                      {a.status}
+                    </span>
+                  </div>
+                ))}
+              {!isLoading && (!data?.upcomingAppts || data.upcomingAppts.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <CalendarDays className="h-8 w-8 text-muted-foreground/30 mb-2" />
                   <div className="text-[13px] text-muted-foreground">
@@ -218,40 +229,46 @@ function Overview() {
               </Link>
             </div>
             <div className="divide-y divide-border/10">
-              {(data?.recentOrders ?? []).map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-surface/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-9 w-9 place-items-center rounded-full bg-surface text-[12px] font-semibold text-foreground shrink-0">
-                      {(o.customer_name ?? "?")[0]}
-                    </div>
-                    <div>
-                      <div className="text-[13px] font-medium text-foreground">
-                        {o.customer_name}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
-                        #{o.order_number}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-end">
-                    <div className="text-[14px] font-semibold text-foreground">
-                      ₪{Number(o.total).toFixed(0)}
-                    </div>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full border font-medium inline-flex items-center gap-1 mt-0.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${statusDot[o.status] ?? "bg-muted-foreground"}`}
-                      />
-                      {o.status}
-                    </span>
-                  </div>
+              {isLoading && (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
                 </div>
-              ))}
-              {(!data?.recentOrders || data.recentOrders.length === 0) && (
+              )}
+              {!isLoading &&
+                (data?.recentOrders ?? []).map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-surface/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-9 w-9 place-items-center rounded-full bg-surface text-[12px] font-semibold text-foreground shrink-0">
+                        {(o.customer_name ?? "?")[0]}
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-medium text-foreground">
+                          {o.customer_name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          #{o.order_number}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-end">
+                      <div className="text-[14px] font-semibold text-foreground">
+                        ₪{Number(o.total).toFixed(0)}
+                      </div>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full border font-medium inline-flex items-center gap-1 mt-0.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${statusDot[o.status] ?? "bg-muted-foreground"}`}
+                        />
+                        {o.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              {!isLoading && (!data?.recentOrders || data.recentOrders.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <ShoppingCart className="h-8 w-8 text-muted-foreground/30 mb-2" />
                   <div className="text-[13px] text-muted-foreground">
@@ -286,7 +303,11 @@ function Overview() {
               {L("כל המוצרים", "جميع المنتجات", "All products")}
             </Link>
           </div>
-          {(data?.lowStock ?? []).length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/40" />
+            </div>
+          ) : (data?.lowStock ?? []).length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border/10">
               {(data?.lowStock ?? []).map((p) => (
                 <div

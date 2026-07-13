@@ -186,7 +186,7 @@ function Page() {
   const qc = useQueryClient();
   const L = (he: string, ar: string, en: string) => (lang === "ar" ? ar : lang === "en" ? en : he);
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin-settings"],
     queryFn: () => getSettings(),
   });
@@ -263,6 +263,17 @@ function Page() {
       setSaving(false);
     }
   };
+
+  // Loads straight into a spinner instead of the form briefly appearing
+  // empty — filling the fields in only for the useEffect above to
+  // overwrite them a beat later with the real values once `data` arrives.
+  if (isLoading) {
+    return (
+      <div className="min-h-[40vh] grid place-items-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Reveal } from "@/components/ScrollReveal";
-import { ShoppingCart, Search, Package, Eye } from "lucide-react";
+import { ShoppingCart, Search, Package, Eye, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/orders")({ component: Page });
 
@@ -81,7 +81,7 @@ function Page() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>(() => monthKey(new Date()));
 
-  const { data: orders = [] } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => getAdminOrders(),
   });
@@ -310,79 +310,87 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((o) => (
-                  <tr
-                    key={o.id}
-                    className="border-t border-border/10 hover:bg-surface/30 transition-colors"
-                  >
-                    <td className="p-3.5">
-                      <span className="text-[12px] font-mono font-semibold text-primary bg-cream px-2 py-0.5 rounded">
-                        {o.order_number}
-                      </span>
+                {isLoading && (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40 mx-auto" />
                     </td>
-                    <td className="p-3.5 text-muted-foreground text-[12px] hidden sm:table-cell">
-                      {new Date(o.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
-                          {(o.customer_name ?? "?")[0]}
-                        </div>
-                        <span className="font-medium text-foreground">{o.customer_name}</span>
-                      </div>
-                    </td>
-                    <td
-                      className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell"
-                      dir="ltr"
+                  </tr>
+                )}
+                {!isLoading &&
+                  filtered.map((o) => (
+                    <tr
+                      key={o.id}
+                      className="border-t border-border/10 hover:bg-surface/30 transition-colors"
                     >
-                      {o.customer_phone}
-                    </td>
-                    <td className="p-3.5 font-semibold">₪{Number(o.total).toFixed(0)}</td>
-                    <td className="p-3.5">
-                      {/* Every status is always selectable, including from completed/cancelled —
+                      <td className="p-3.5">
+                        <span className="text-[12px] font-mono font-semibold text-primary bg-cream px-2 py-0.5 rounded">
+                          {o.order_number}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-muted-foreground text-[12px] hidden sm:table-cell">
+                        {new Date(o.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="grid h-8 w-8 place-items-center rounded-full bg-surface text-[11px] font-semibold text-foreground shrink-0">
+                            {(o.customer_name ?? "?")[0]}
+                          </div>
+                          <span className="font-medium text-foreground">{o.customer_name}</span>
+                        </div>
+                      </td>
+                      <td
+                        className="p-3.5 text-muted-foreground text-[12px] hidden md:table-cell"
+                        dir="ltr"
+                      >
+                        {o.customer_phone}
+                      </td>
+                      <td className="p-3.5 font-semibold">₪{Number(o.total).toFixed(0)}</td>
+                      <td className="p-3.5">
+                        {/* Every status is always selectable, including from completed/cancelled —
                           this is an admin-only correction tool (e.g. undoing an accidental
                           "completed" click), not a customer-facing flow, so there's no
                           terminal-state restriction here or on the server. */}
-                      <Select value={o.status} onValueChange={(v) => setStatus(o.id, v)}>
-                        <SelectTrigger
-                          aria-label={`${t("orders")} #${o.order_number}: ${L("סטטוס", "الحالة", "Status")}`}
-                          className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                        <Select value={o.status} onValueChange={(v) => setStatus(o.id, v)}>
+                          <SelectTrigger
+                            aria-label={`${t("orders")} #${o.order_number}: ${L("סטטוס", "الحالة", "Status")}`}
+                            className={`h-8 w-[130px] rounded-full border text-[11px] font-medium gap-1.5 ${statusColor[o.status] ?? "bg-surface text-muted-foreground border-border/30"}`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[o.status] ?? "bg-muted-foreground"}`}
+                            />
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                <span className="flex items-center gap-2">
+                                  <span
+                                    className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`}
+                                    aria-hidden="true"
+                                  />
+                                  {t(`status_${s}`)}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="p-3.5 text-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setView(o.id)}
+                          aria-label={`${t("view")}: ${o.customer_name}, #${o.order_number}`}
+                          className="h-8 w-8 rounded-lg hover:bg-surface"
                         >
-                          <span
-                            aria-hidden="true"
-                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot[o.status] ?? "bg-muted-foreground"}`}
-                          />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STATUSES.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`h-1.5 w-1.5 rounded-full ${statusDot[s]}`}
-                                  aria-hidden="true"
-                                />
-                                {t(`status_${s}`)}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="p-3.5 text-end">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => setView(o.id)}
-                        aria-label={`${t("view")}: ${o.customer_name}, #${o.order_number}`}
-                        className="h-8 w-8 rounded-lg hover:bg-surface"
-                      >
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
+                          <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                {!isLoading && filtered.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-16 text-center">
                       <ShoppingCart
