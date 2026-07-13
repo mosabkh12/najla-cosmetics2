@@ -118,12 +118,14 @@ function Page() {
     { name: "is_active", label: t("is_active"), type: "switch" },
   ];
 
-  const filtered = products.filter((p) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    const name = pickLocalized(lang, p.name, p.name_ar, p.name_en);
-    return name.toLowerCase().includes(q) || (p.category ?? "").toLowerCase().includes(q);
-  });
+  const filtered = products
+    .filter((p) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      const name = pickLocalized(lang, p.name, p.name_ar, p.name_en);
+      return name.toLowerCase().includes(q) || (p.category ?? "").toLowerCase().includes(q);
+    })
+    .sort((a, b) => Number(b.is_active) - Number(a.is_active));
 
   // The public product queries (products.index.tsx: ["products","all"],
   // index.tsx: ["products","featured"], products.$id.tsx: ["product", id])
@@ -150,11 +152,11 @@ function Page() {
 
   const toggle = async (r: ProductRow) => {
     const key = ["admin-products"];
-    await qc.cancelQueries({ queryKey: key });
     const prev = qc.getQueryData<ProductRow[]>(key);
     qc.setQueryData<ProductRow[]>(key, (old = []) =>
       old.map((p) => (p.id === r.id ? { ...p, is_active: !p.is_active } : p)),
     );
+    qc.cancelQueries({ queryKey: key });
     try {
       await toggleProduct({ data: { id: r.id, currentActive: r.is_active } });
     } catch (e: unknown) {

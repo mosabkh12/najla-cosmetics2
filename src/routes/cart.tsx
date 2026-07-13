@@ -225,13 +225,13 @@ function CartPage() {
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                     <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-                      FREE SHIPPING
+                      {t("free_shipping")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
                     <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-                      SECURE CHECKOUT
+                      {t("secure_checkout")}
                     </span>
                   </div>
                 </div>

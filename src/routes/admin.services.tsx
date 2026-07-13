@@ -97,12 +97,14 @@ function Page() {
     { name: "is_active", label: t("is_active"), type: "switch" },
   ];
 
-  const filtered = services.filter((s) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    const name = pickLocalized(lang, s.name, s.name_ar, s.name_en);
-    return name.toLowerCase().includes(q) || (s.category ?? "").toLowerCase().includes(q);
-  });
+  const filtered = services
+    .filter((s) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      const name = pickLocalized(lang, s.name, s.name_ar, s.name_en);
+      return name.toLowerCase().includes(q) || (s.category ?? "").toLowerCase().includes(q);
+    })
+    .sort((a, b) => Number(b.is_active) - Number(a.is_active));
 
   // The public services queries (index.tsx and services.tsx both read
   // ["services","active"]) now carry a 120s staleTime, so without this an
@@ -126,11 +128,11 @@ function Page() {
 
   const toggle = async (r: ServiceRow) => {
     const key = ["admin-services"];
-    await qc.cancelQueries({ queryKey: key });
     const prev = qc.getQueryData<ServiceRow[]>(key);
     qc.setQueryData<ServiceRow[]>(key, (old = []) =>
       old.map((s) => (s.id === r.id ? { ...s, is_active: !s.is_active } : s)),
     );
+    qc.cancelQueries({ queryKey: key });
     try {
       await toggleService({ data: { id: r.id, currentActive: r.is_active } });
     } catch (e: unknown) {

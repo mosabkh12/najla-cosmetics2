@@ -122,7 +122,7 @@ function ProductDetailPage() {
     return (
       <div className="min-h-[60vh] grid place-items-center text-center px-4">
         <div>
-          <p className="text-lg text-muted-foreground mb-4">Product not found</p>
+          <p className="text-lg text-muted-foreground mb-4">{t("product_not_found")}</p>
           <Link
             to="/products"
             className="inline-block bg-foreground text-background px-8 py-3 rounded-full text-[11px] font-semibold uppercase tracking-[0.1em]"
@@ -261,7 +261,7 @@ function ProductDetailPage() {
                 <Star key={i} className="h-4 w-4 fill-primary text-primary" />
               ))}
               <Star className="h-4 w-4 fill-primary/30 text-primary/30" />
-              <span className="text-[13px] text-muted-foreground ms-2">4.9 Stars</span>
+              <span className="text-[13px] text-muted-foreground ms-2">{t("product_rating")}</span>
             </div>
 
             {/* Price */}
@@ -311,7 +311,7 @@ function ProductDetailPage() {
                 onClick={addToCart}
                 className="flex-1 bg-foreground text-background h-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40"
               >
-                ADD TO BAG
+                {t("add_to_cart")}
               </button>
 
               {/* Favorite */}
@@ -336,19 +336,19 @@ function ProductDetailPage() {
               onClick={buyNow}
               className="mt-3 w-full bg-primary text-primary-foreground h-[52px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40"
             >
-              BUY NOW
+              {t("buy_now")}
             </button>
 
             {/* ── Trust Badges ── */}
             <div className="mt-12 grid grid-cols-2 gap-x-6 gap-y-5">
               {[
-                { icon: <Truck className="h-[22px] w-[22px]" />, label: "FREE SHIPPING" },
-                { icon: <Sparkles className="h-[22px] w-[22px]" />, label: "VEGAN & ETHICAL" },
+                { icon: <Truck className="h-[22px] w-[22px]" />, label: t("free_shipping") },
+                { icon: <Sparkles className="h-[22px] w-[22px]" />, label: t("vegan_ethical") },
                 {
                   icon: <ShieldCheck className="h-[22px] w-[22px]" />,
-                  label: "DERMATOLOGY APPROVED",
+                  label: t("dermatology_approved"),
                 },
-                { icon: <Award className="h-[22px] w-[22px]" />, label: "SALON PROFESSIONAL" },
+                { icon: <Award className="h-[22px] w-[22px]" />, label: t("salon_professional") },
               ].map((badge) => (
                 <div key={badge.label} className="flex items-center gap-3">
                   <span className="text-primary shrink-0" aria-hidden="true">
