@@ -3,6 +3,7 @@ import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireAdmin } from "../admin/middleware";
+import { enforceRateLimit, getClientIp } from "@/api/rate-limit/rate-limit.server";
 import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
 import { jerusalemNow } from "@/lib/jerusalem-time";
 import { toMinutes, fromMinutes } from "@/lib/time-minutes";
@@ -112,6 +113,13 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
     // be stored by a browser or shared CDN cache, even by accident.
     setResponseHeader("Cache-Control", "no-store");
 
+    await enforceRateLimit({
+      action: "get_available_times",
+      identifier: getClientIp(),
+      windowSeconds: 5 * 60,
+      max: 60,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: service }, settings] = await Promise.all([
@@ -188,6 +196,13 @@ export const createAppointment = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      action: "create_appointment",
+      identifier: context.userId,
+      windowSeconds: 60 * 60,
+      max: 10,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const customerName = (data.customer_name ?? "").trim();
@@ -361,6 +376,13 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
       d,
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      action: "reschedule_appointment",
+      identifier: context.userId,
+      windowSeconds: 60 * 60,
+      max: 10,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");

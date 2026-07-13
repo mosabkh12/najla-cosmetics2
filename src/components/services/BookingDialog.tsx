@@ -29,6 +29,7 @@ const ERROR_MAP: Record<string, string> = {
   INVALID_SLOT_TIME: "booking_invalid_slot",
   INVALID_INPUT: "booking_fields_required",
   BOOKING_FAILED: "booking_failed",
+  RATE_LIMITED: "err_rate_limited",
 };
 
 function fmtDate(d: Date): string {

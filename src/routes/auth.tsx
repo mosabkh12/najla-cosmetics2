@@ -25,6 +25,7 @@ const OTP_ERROR_MAP: Record<string, string> = {
   INVALID_OTP: "err_otp_invalid",
   OTP_COOLDOWN: "err_otp_cooldown",
   OTP_RATE_LIMITED: "err_otp_rate_limited",
+  RATE_LIMITED: "err_rate_limited",
   VERIFICATION_REQUIRED: "err_verification_required",
   SIGNUP_FAILED: "err_signup_failed",
   VERIFICATION_FAILED: "err_verification_failed",

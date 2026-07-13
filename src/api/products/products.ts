@@ -39,26 +39,50 @@ export const getFeaturedProducts = createServerFn({ method: "GET" }).handler(asy
   return data ?? [];
 });
 
+// Public: only ever returns an active product. A disabled/hidden
+// product's id is not a secret (it may still be linked from an old
+// share/bookmark), so this must not leak its data just because the
+// caller knows its id. No inactive-product equivalent exists because
+// nothing in the admin UI fetches a single product by id today (it
+// works off the full getAdminProducts list) — add one deliberately if
+// that ever changes, rather than relaxing this filter.
 export const getProductById = createServerFn({ method: "GET" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data: { id } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("products").select("*").eq("id", id).single();
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .select("*")
+      .eq("id", id)
+      .eq("is_active", true)
+      .maybeSingle();
     if (error) throw error;
     setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     return data;
   });
 
+// Public: images for an inactive product are exactly as sensitive as
+// the product itself, so this checks is_active before returning
+// anything from product_images rather than trusting the caller to
+// only ever ask about active products.
 export const getProductImages = createServerFn({ method: "GET" })
   .validator((d: { productId: string }) => d)
   .handler(async ({ data: { productId } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: product } = await supabaseAdmin
+      .from("products")
+      .select("id")
+      .eq("id", productId)
+      .eq("is_active", true)
+      .maybeSingle();
+    setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
+    if (!product) return [];
+
     const { data } = await supabaseAdmin
       .from("product_images")
       .select("*")
       .eq("product_id", productId)
       .order("sort_order");
-    setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     return data ?? [];
   });
 

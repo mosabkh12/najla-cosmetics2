@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { randomUUID } from "crypto";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireAdmin } from "../admin/middleware";
+import { enforceRateLimit } from "@/api/rate-limit/rate-limit.server";
 
 // Only folders the app actually writes to today. Add a new entry here
 // (and a matching feature) before any code can target it — the browser
@@ -30,7 +31,14 @@ const IMAGES_BUCKET = "images";
 export const uploadAdminImage = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { folder: string; contentType: string; base64: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      action: "upload_admin_image",
+      identifier: context.userId,
+      windowSeconds: 60 * 60,
+      max: 30,
+    });
+
     if (!ALLOWED_FOLDERS.includes(data.folder as AllowedFolder)) {
       throw new Error("INVALID_FOLDER");
     }

@@ -77,6 +77,7 @@ const UPLOAD_ERROR_MAP: Record<string, string> = {
   INVALID_FOLDER: "Upload failed",
   INVALID_FILE: "Please select a valid image file",
   UPLOAD_FAILED: "Upload failed, please try again",
+  RATE_LIMITED: "Too many uploads. Please try again later.",
 };
 
 function blobToBase64(blob: Blob): Promise<string> {

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "../admin/middleware";
+import { enforceRateLimit } from "@/api/rate-limit/rate-limit.server";
 
 const MAX_QTY_PER_ITEM = 100;
 const MAX_UNIQUE_PRODUCTS = 50;
@@ -41,6 +42,13 @@ export const createOrder = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      action: "create_order",
+      identifier: context.userId,
+      windowSeconds: 60 * 60,
+      max: 10,
+    });
+
     const customerName = (data.customer_name ?? "").trim();
     const customerPhone = (data.customer_phone ?? "").trim();
     if (!customerName || !customerPhone) throw new Error("INVALID_ORDER");

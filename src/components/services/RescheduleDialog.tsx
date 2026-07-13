@@ -32,6 +32,7 @@ const ERROR_MAP: Record<string, string> = {
   NOT_FOUND: "reschedule_not_eligible",
   NOT_RESCHEDULABLE: "reschedule_not_eligible",
   RESCHEDULE_FAILED: "reschedule_failed",
+  RATE_LIMITED: "err_rate_limited",
 };
 
 function fmtDate(d: Date): string {

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { randomInt } from "crypto";
+import { enforceRateLimit, getClientIp } from "@/api/rate-limit/rate-limit.server";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const TOKEN_TTL_MS = 10 * 60 * 1000;
@@ -10,6 +11,13 @@ const MAX_FAILED_ATTEMPTS = 5;
 export const sendOtp = createServerFn({ method: "POST" })
   .validator((d: { email: string }) => d)
   .handler(async ({ data: { email } }) => {
+    await enforceRateLimit({
+      action: "otp_send",
+      identifier: getClientIp(),
+      windowSeconds: 10 * 60,
+      max: 8,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sendMail } = await import("@/api/email/mailer");
     const { hashOtp } = await import("@/api/auth/crypto.server");
@@ -64,6 +72,13 @@ export const sendOtp = createServerFn({ method: "POST" })
 export const verifyOtp = createServerFn({ method: "POST" })
   .validator((d: { email: string; otp: string }) => d)
   .handler(async ({ data: { email, otp } }) => {
+    await enforceRateLimit({
+      action: "otp_verify",
+      identifier: getClientIp(),
+      windowSeconds: 10 * 60,
+      max: 15,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { hashOtp, hashToken, generateToken } = await import("@/api/auth/crypto.server");
 

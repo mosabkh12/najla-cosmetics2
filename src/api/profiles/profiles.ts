@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { enforceRateLimit, getClientIp } from "@/api/rate-limit/rate-limit.server";
 
 export const getProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -15,6 +16,13 @@ export const getProfile = createServerFn({ method: "GET" })
 export const checkPhoneAvailable = createServerFn({ method: "GET" })
   .validator((d: { phone: string }) => d)
   .handler(async ({ data: { phone } }) => {
+    await enforceRateLimit({
+      action: "check_phone_available",
+      identifier: getClientIp(),
+      windowSeconds: 5 * 60,
+      max: 30,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const cleaned = phone.replace(/\D/g, "");
     if (!cleaned) return { available: true };
@@ -29,6 +37,13 @@ export const checkPhoneAvailable = createServerFn({ method: "GET" })
 export const checkEmailAvailable = createServerFn({ method: "GET" })
   .validator((d: { email: string }) => d)
   .handler(async ({ data: { email } }) => {
+    await enforceRateLimit({
+      action: "check_email_available",
+      identifier: getClientIp(),
+      windowSeconds: 5 * 60,
+      max: 30,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin.auth.admin.listUsers();
     const exists = (data?.users ?? []).some((u) => u.email?.toLowerCase() === email.toLowerCase());

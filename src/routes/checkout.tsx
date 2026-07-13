@@ -25,6 +25,7 @@ const ORDER_ERROR_MAP: Record<string, string> = {
   PRODUCT_NOT_AVAILABLE: "order_product_unavailable",
   INVALID_ORDER: "order_invalid",
   ORDER_CREATION_FAILED: "order_creation_failed",
+  RATE_LIMITED: "err_rate_limited",
 };
 
 function CheckoutPage() {
