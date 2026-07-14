@@ -437,35 +437,43 @@ function Page() {
 
       {/* Order items dialog */}
       <Dialog open={!!view} onOpenChange={(v) => !v && setView(null)}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-w-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
               {L("פריטי הזמנה", "عناصر الطلب", "Order Items")}
               {viewOrder && (
-                <span className="text-[12px] font-mono font-normal text-primary bg-cream px-2 py-0.5 rounded">
+                <span className="text-[13px] font-mono font-normal text-primary bg-cream px-2.5 py-1 rounded">
                   #{viewOrder.order_number}
                 </span>
               )}
             </DialogTitle>
           </DialogHeader>
-          <div className="mt-3 space-y-0">
+          <div className="mt-3 divide-y divide-border/10">
             {items.map((it) => (
-              <div
-                key={it.id}
-                className="flex items-center justify-between py-3 border-b border-border/10 last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="grid h-8 w-8 place-items-center rounded-lg bg-surface shrink-0">
-                    <Package className="h-3.5 w-3.5 text-muted-foreground/60" />
-                  </div>
-                  <div>
-                    <div className="text-[13px] font-medium text-foreground">{it.product_name}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {L("כמות", "الكمية", "Qty")}: {it.quantity}
+              <div key={it.id} className="flex items-center gap-5 py-5 first:pt-0 last:pb-0">
+                <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-surface">
+                  {it.products?.image_url ? (
+                    <img
+                      src={it.products.image_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full grid place-items-center">
+                      <Package className="h-8 w-8 text-muted-foreground/30" aria-hidden="true" />
                     </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[18px] font-medium text-foreground truncate">
+                    {it.product_name}
+                  </div>
+                  <div className="text-[14px] text-muted-foreground mt-1">
+                    ₪{Number(it.unit_price).toFixed(2)} · {L("כמות", "الكمية", "Qty")} {it.quantity}
                   </div>
                 </div>
-                <span className="text-[14px] font-semibold text-foreground">
+                <span className="text-[20px] font-semibold text-foreground shrink-0">
                   ₪{Number(it.total_price).toFixed(0)}
                 </span>
               </div>
@@ -480,8 +488,8 @@ function Page() {
             )}
           </div>
           {items.length > 0 && viewOrder && (
-            <div className="pt-3 border-t border-border/20 mt-2 space-y-1.5">
-              <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+            <div className="pt-4 border-t border-border/20 mt-2 space-y-2">
+              <div className="flex items-center justify-between text-[14px] text-muted-foreground">
                 <span>{L("משלוח", "التوصيل", "Delivery")}</span>
                 <span>
                   {viewOrder.delivery_method === "delivery"
@@ -490,16 +498,16 @@ function Page() {
                 </span>
               </div>
               {viewOrder.delivery_method === "delivery" && viewOrder.delivery_street && (
-                <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+                <div className="flex items-center justify-between text-[14px] text-muted-foreground">
                   <span>{t("street_address")}</span>
                   <span className="text-foreground text-end">{viewOrder.delivery_street}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between pt-1.5 border-t border-border/10">
-                <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              <div className="flex items-center justify-between pt-2 border-t border-border/10">
+                <span className="text-[13px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                   {L("סך הכל", "المجموع", "Total")}
                 </span>
-                <span className="text-[18px] font-display font-semibold text-foreground">
+                <span className="text-[22px] font-display font-semibold text-foreground">
                   ₪{Number(viewOrder.total).toFixed(0)}
                 </span>
               </div>

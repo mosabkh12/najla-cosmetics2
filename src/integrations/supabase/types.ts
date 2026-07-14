@@ -53,7 +53,9 @@ export type Database = {
           google_event_id: string | null;
           id: string;
           notes: string | null;
-          service_id: string;
+          service_id: string | null;
+          service_name: string | null;
+          service_name_ar: string | null;
           status: Database["public"]["Enums"]["appointment_status"];
           total_price: number;
           updated_at: string;
@@ -70,7 +72,9 @@ export type Database = {
           google_event_id?: string | null;
           id?: string;
           notes?: string | null;
-          service_id: string;
+          service_id?: string | null;
+          service_name?: string | null;
+          service_name_ar?: string | null;
           status?: Database["public"]["Enums"]["appointment_status"];
           total_price?: number;
           updated_at?: string;
@@ -87,7 +91,9 @@ export type Database = {
           google_event_id?: string | null;
           id?: string;
           notes?: string | null;
-          service_id?: string;
+          service_id?: string | null;
+          service_name?: string | null;
+          service_name_ar?: string | null;
           status?: Database["public"]["Enums"]["appointment_status"];
           total_price?: number;
           updated_at?: string;

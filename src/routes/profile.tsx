@@ -473,7 +473,16 @@ function ProfilePage() {
             <StaggerGrid className="space-y-3">
               {filteredAppts.map((a) => {
                 const st = STATUS_STYLE[a.status] ?? STATUS_STYLE.pending;
-                const serviceName = pickLocalized(lang, a.services?.name, a.services?.name_ar);
+                const serviceName = pickLocalized(
+                  lang,
+                  a.services?.name || a.service_name,
+                  a.services?.name_ar || a.service_name_ar,
+                );
+                // Rescheduling requires picking a currently-existing
+                // service, so it's simply unavailable once the original
+                // service has been deleted (service_id null) — there's
+                // nothing to reschedule into.
+                const serviceId = a.service_id;
                 return (
                   <div
                     key={a.id}
@@ -520,7 +529,7 @@ function ProfilePage() {
                         </div>
                       </div>
                     </div>
-                    {["pending", "confirmed"].includes(a.status) && (
+                    {["pending", "confirmed"].includes(a.status) && serviceId && (
                       <div className="mt-3 pt-3 border-t border-border/20 flex justify-end gap-2">
                         <button
                           type="button"
@@ -528,7 +537,7 @@ function ProfilePage() {
                           onClick={() =>
                             setReschedulingAppt({
                               id: a.id,
-                              service_id: a.service_id,
+                              service_id: serviceId,
                               appointment_date: a.appointment_date,
                               appointment_time: String(a.appointment_time).slice(0, 5),
                             })

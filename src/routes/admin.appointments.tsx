@@ -611,8 +611,11 @@ function Page() {
                               className={`text-[12px] font-medium text-foreground ${isCompleted ? "line-through decoration-muted-foreground/60" : ""}`}
                             >
                               {lang === "ar"
-                                ? a.service?.name_ar || a.service?.name
-                                : a.service?.name}
+                                ? a.service?.name_ar ||
+                                  a.service?.name ||
+                                  a.service_name_ar ||
+                                  a.service_name
+                                : a.service?.name || a.service_name}
                             </span>
                           </td>
                           <td className="p-3.5 font-semibold">

@@ -501,22 +501,26 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
     if (currentStatus !== nextStatus) {
       const { data: appt } = await supabaseAdmin
         .from("appointments")
-        .select("customer_name, appointment_date, appointment_time, user_id, service_id")
+        .select("customer_name, appointment_date, appointment_time, user_id, service_name")
         .eq("id", id)
         .single();
 
       if (appt) {
-        const [profileRes, serviceRes] = await Promise.all([
-          supabaseAdmin.from("profiles").select("email").eq("id", appt.user_id).maybeSingle(),
-          supabaseAdmin.from("services").select("name").eq("id", appt.service_id).single(),
-        ]);
+        // Uses the name snapshotted at booking time (never a live lookup)
+        // — correct even if the service was since renamed or deleted, and
+        // consistent with how order_items.product_name already works.
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("email")
+          .eq("id", appt.user_id)
+          .maybeSingle();
 
-        if (profileRes.data?.email && serviceRes.data) {
+        if (profile?.email && appt.service_name) {
           const { sendStatusUpdateEmail } = await import("@/api/email/appointment-emails");
           sendStatusUpdateEmail({
             customerName: appt.customer_name,
-            customerEmail: profileRes.data.email,
-            serviceName: serviceRes.data.name,
+            customerEmail: profile.email,
+            serviceName: appt.service_name,
             date: appt.appointment_date,
             time: String(appt.appointment_time),
             status,

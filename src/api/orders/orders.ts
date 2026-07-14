@@ -149,6 +149,12 @@ export const getAdminOrders = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+// Joins the product's current image purely for display (admin order
+// detail view) — best-effort only, never the source of truth for what
+// was ordered. product_name/unit_price/total_price already snapshot
+// what mattered at order time; the image join simply comes back null
+// if the product was since deleted (product_id is ON DELETE SET NULL),
+// which the UI falls back to a placeholder icon for.
 export const getOrderItems = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .validator((d: { orderId: string }) => d)
@@ -156,7 +162,7 @@ export const getOrderItems = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("order_items")
-      .select("*")
+      .select("*, products(image_url)")
       .eq("order_id", orderId);
     if (error) throw error;
     return data ?? [];

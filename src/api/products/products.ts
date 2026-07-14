@@ -254,7 +254,13 @@ export const deleteProduct = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const { error } = await supabaseAdmin.from("products").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      // Thrown as a plain Error (not the raw PostgrestError) so the
+      // message survives the server-function RPC boundary intact and
+      // never leaks raw DB internals to the client.
+      console.error("[deleteProduct] failed", id, error);
+      throw new Error("Failed to delete product. Please try again.");
+    }
 
     if (existing?.image_url) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, existing.image_url);

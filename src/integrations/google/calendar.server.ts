@@ -73,7 +73,7 @@ function buildGoogleEvent(
   const status = appt.status as AppointmentStatus;
   const isCompleted = status === "completed";
   const label = STATUS_LABEL[status] ?? appt.status;
-  const serviceName = appt.service?.name ?? "Appointment";
+  const serviceName = appt.service?.name ?? appt.service_name ?? "Appointment";
   const durationMinutes = appt.service?.duration_minutes ?? 30;
   const timeStr = String(appt.appointment_time).slice(0, 5);
   const end = addMinutesToWallTime(appt.appointment_date, timeStr, durationMinutes);

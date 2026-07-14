@@ -20,6 +20,11 @@ export type DeliveryAreaRow = Tables<"delivery_areas">;
 /** getUserOrders(): orders.select("*, order_items(*)") */
 export type UserOrderRow = OrderRow & { order_items: OrderItemRow[] };
 
+/** getOrderItems(): order_items.select("*, products(image_url)") */
+export type AdminOrderItemRow = OrderItemRow & {
+  products: Pick<ProductRow, "image_url"> | null;
+};
+
 /** getAdminAppointments(): appointments.select("*, service:services(name,name_ar)") */
 export type AdminAppointmentRow = AppointmentRow & {
   service: Pick<ServiceRow, "name" | "name_ar"> | null;
