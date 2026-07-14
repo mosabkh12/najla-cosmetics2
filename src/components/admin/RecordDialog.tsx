@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 
 export type Field =
   | {
@@ -42,6 +43,14 @@ export type Field =
       // that isn't in the list yet.
       allowCustom?: boolean;
       customLabel?: string;
+    }
+  | {
+      name: string;
+      label: string;
+      type: "image";
+      // Storage folder passed straight through to uploadAdminImage —
+      // must be one of storage.ts's ALLOWED_FOLDERS.
+      folder: string;
     };
 
 // The only value shapes any field type in this generic dialog ever
@@ -97,13 +106,22 @@ export function RecordDialog<T extends Record<string, FormValue>>({
             const fieldId = `record-field-${f.name}`;
             return (
               <div key={f.name} className="grid gap-2">
-                <Label
-                  htmlFor={fieldId}
-                  className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
-                >
-                  {f.label}
-                </Label>
-                {f.type === "select" ? (
+                {f.type !== "image" && (
+                  <Label
+                    htmlFor={fieldId}
+                    className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
+                    {f.label}
+                  </Label>
+                )}
+                {f.type === "image" ? (
+                  <ImageUploadField
+                    label={f.label}
+                    value={typeof values[f.name] === "string" ? (values[f.name] as string) : ""}
+                    onChange={(url) => setValues({ ...values, [f.name]: url })}
+                    folder={f.folder}
+                  />
+                ) : f.type === "select" ? (
                   customFields.has(f.name) ? (
                     <div className="flex gap-2">
                       <Input

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
+import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 
 // Fixed, honest 60s ceiling — no stale-while-revalidate. swr would let a
 // shared cache keep serving a stale copy for minutes after the 60s mark
@@ -123,6 +124,46 @@ export const getAdminProducts = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+// Emails everyone who favorited this product that it's available again.
+// Fire-and-forget from saveProduct — a failure here must never fail the
+// admin's actual save, so every step is wrapped and logged rather than
+// thrown. Runs one favoriter at a time (same pattern as
+// notifyCancelledAppointments in slots.ts) since sendMail has no built-in
+// batching and a partial failure shouldn't stop the rest from sending.
+async function notifyRestockedFavoriters(
+  supabaseAdmin: SupabaseAdmin,
+  productId: string,
+  productName: string,
+  productImageUrl: string | null,
+) {
+  const { data: favorites } = await supabaseAdmin
+    .from("favorites")
+    .select("user_id")
+    .eq("product_id", productId);
+  if (!favorites || favorites.length === 0) return;
+
+  const { sendBackInStockEmail } = await import("@/api/email/product-emails");
+  for (const fav of favorites) {
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", fav.user_id)
+        .maybeSingle();
+      if (profile?.email) {
+        await sendBackInStockEmail({
+          customerName: profile.full_name ?? "",
+          customerEmail: profile.email,
+          productName,
+          productImageUrl,
+        });
+      }
+    } catch (e) {
+      console.error("[saveProduct] failed to notify favoriter", fav.user_id, e);
+    }
+  }
+}
+
 export const saveProduct = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { id?: string; payload: Record<string, unknown> }) => d)
@@ -131,13 +172,15 @@ export const saveProduct = createServerFn({ method: "POST" })
     const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
 
     let previousImageUrl: string | null = null;
+    let previousStockQuantity: number | null = null;
     if (id) {
       const { data } = await supabaseAdmin
         .from("products")
-        .select("image_url")
+        .select("image_url, stock_quantity")
         .eq("id", id)
         .maybeSingle();
       previousImageUrl = data?.image_url ?? null;
+      previousStockQuantity = data?.stock_quantity ?? null;
     }
 
     const clean = {
@@ -158,10 +201,27 @@ export const saveProduct = createServerFn({ method: "POST" })
     const op = id
       ? await supabaseAdmin.from("products").update(clean).eq("id", id)
       : await supabaseAdmin.from("products").insert(clean);
-    if (op.error) throw op.error;
+    if (op.error) {
+      // Thrown as a plain Error (not the raw PostgrestError) so the
+      // message survives the server-function RPC boundary intact and
+      // never leaks raw DB internals to the client — same reasoning as
+      // the order/appointment RPCs' clean-code mapping.
+      console.error("[saveProduct] failed", op.error);
+      throw new Error("Failed to save product. Please check the details and try again.");
+    }
 
     if (previousImageUrl && previousImageUrl !== clean.image_url) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, previousImageUrl);
+    }
+
+    // Only on the 0-or-less → positive transition, i.e. genuinely just
+    // restocked — not on every save of an already-in-stock product, and
+    // not on first insert (there are no favorites for a product that
+    // doesn't exist yet).
+    if (id && (previousStockQuantity ?? 0) <= 0 && clean.stock_quantity > 0) {
+      notifyRestockedFavoriters(supabaseAdmin, id, clean.name, clean.image_url).catch((e) =>
+        console.error("[saveProduct] restock notification pass failed", e),
+      );
     }
 
     return { success: true };

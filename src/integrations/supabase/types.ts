@@ -148,6 +148,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      delivery_areas: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          name_ar: string | null;
+          name_en: string | null;
+          price: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          name_ar?: string | null;
+          name_en?: string | null;
+          price?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          name_ar?: string | null;
+          name_en?: string | null;
+          price?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       favorites: {
         Row: {
           created_at: string;
@@ -228,7 +261,11 @@ export type Database = {
           created_at: string;
           customer_name: string;
           customer_phone: string;
+          delivery_area_id: string | null;
+          delivery_area_name: string | null;
+          delivery_fee: number;
           delivery_method: string;
+          delivery_street: string | null;
           id: string;
           notes: string | null;
           order_number: string;
@@ -244,7 +281,11 @@ export type Database = {
           created_at?: string;
           customer_name: string;
           customer_phone: string;
+          delivery_area_id?: string | null;
+          delivery_area_name?: string | null;
+          delivery_fee?: number;
           delivery_method?: string;
+          delivery_street?: string | null;
           id?: string;
           notes?: string | null;
           order_number?: string;
@@ -260,7 +301,11 @@ export type Database = {
           created_at?: string;
           customer_name?: string;
           customer_phone?: string;
+          delivery_area_id?: string | null;
+          delivery_area_name?: string | null;
+          delivery_fee?: number;
           delivery_method?: string;
+          delivery_street?: string | null;
           id?: string;
           notes?: string | null;
           order_number?: string;
@@ -271,7 +316,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "orders_delivery_area_id_fkey";
+            columns: ["delivery_area_id"];
+            isOneToOne: false;
+            referencedRelation: "delivery_areas";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       product_images: {
         Row: {
@@ -540,6 +593,8 @@ export type Database = {
           p_customer_phone: string;
           p_notes: string | null;
           p_delivery_method: string;
+          p_delivery_area_id: string | null;
+          p_delivery_street: string | null;
           p_items: Json;
         };
         Returns: string;

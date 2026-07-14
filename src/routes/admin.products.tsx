@@ -112,8 +112,9 @@ function Page() {
     },
     {
       name: "image_url",
-      label: L("קישור לתמונה ראשית", "رابط الصورة الرئيسية", "Main Image URL"),
-      type: "url",
+      label: L("תמונה ראשית", "الصورة الرئيسية", "Main Image"),
+      type: "image",
+      folder: "products",
     },
     { name: "is_active", label: t("is_active"), type: "switch" },
   ];

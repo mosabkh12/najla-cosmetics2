@@ -8,14 +8,19 @@ const MAX_UNIQUE_PRODUCTS = 50;
 const MAX_NAME_LENGTH = 100;
 const MAX_PHONE_LENGTH = 30;
 const MAX_NOTES_LENGTH = 1000;
-// The only delivery methods the app actually offers today (checkout.tsx
-// only ever sends "pickup"). Must match the CHECK constraint on
-// public.orders.delivery_method.
-const ALLOWED_DELIVERY_METHODS = ["pickup"];
+const MAX_STREET_LENGTH = 200;
+// The only delivery methods the app offers. Must match the CHECK
+// constraint on public.orders.delivery_method.
+const ALLOWED_DELIVERY_METHODS = ["pickup", "delivery"];
 // Prefixes the create_order() RPC raises on validation failure — mapped
 // to clean, translatable codes so raw Postgres error text never reaches
 // the browser.
-const ORDER_ERROR_CODES = ["OUT_OF_STOCK", "PRODUCT_NOT_AVAILABLE", "INVALID_ORDER"];
+const ORDER_ERROR_CODES = [
+  "OUT_OF_STOCK",
+  "PRODUCT_NOT_AVAILABLE",
+  "DELIVERY_AREA_UNAVAILABLE",
+  "INVALID_ORDER",
+];
 
 export const ORDER_STATUSES = [
   "pending",
@@ -38,6 +43,8 @@ export const createOrder = createServerFn({ method: "POST" })
       customer_phone: string;
       notes: string | null;
       delivery_method: string;
+      delivery_area_id: string | null;
+      delivery_street: string | null;
       items: { product_id: string; quantity: number }[];
     }) => d,
   )
@@ -61,6 +68,22 @@ export const createOrder = createServerFn({ method: "POST" })
 
     const deliveryMethod = data.delivery_method || "pickup";
     if (!ALLOWED_DELIVERY_METHODS.includes(deliveryMethod)) throw new Error("INVALID_ORDER");
+
+    // A delivery area is only meaningful (and only trusted) when the
+    // method is actually "delivery" — pickup always ignores whatever
+    // the client sent here, rather than trusting it to already be null.
+    const deliveryAreaId =
+      deliveryMethod === "delivery" ? (data.delivery_area_id ?? "").trim() : "";
+    if (deliveryMethod === "delivery" && !deliveryAreaId) throw new Error("INVALID_ORDER");
+
+    // Same trust boundary as the area id above — pickup never carries a
+    // street, and delivery always requires one (the courier needs an
+    // actual address, not just a priced zone).
+    const deliveryStreet = deliveryMethod === "delivery" ? (data.delivery_street ?? "").trim() : "";
+    if (deliveryMethod === "delivery") {
+      if (!deliveryStreet) throw new Error("INVALID_ORDER");
+      if (deliveryStreet.length > MAX_STREET_LENGTH) throw new Error("INVALID_ORDER");
+    }
 
     if (!Array.isArray(data.items) || data.items.length === 0) throw new Error("INVALID_ORDER");
 
@@ -88,6 +111,8 @@ export const createOrder = createServerFn({ method: "POST" })
       p_customer_phone: customerPhone,
       p_notes: notes,
       p_delivery_method: deliveryMethod,
+      p_delivery_area_id: deliveryAreaId || null,
+      p_delivery_street: deliveryStreet || null,
       p_items: items,
     });
 

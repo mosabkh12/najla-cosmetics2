@@ -6,7 +6,7 @@ import { sendMail } from "./mailer";
 // regex-validated format. Without this, a crafted customer name could
 // inject arbitrary HTML into an email that lands in the business owner's
 // own inbox (sendAdminBookingNotification).
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -26,7 +26,7 @@ interface BookingDetails {
   price: number;
 }
 
-const BRAND = {
+export const BRAND = {
   bg: "#faf8f6",
   card: "#ffffff",
   text: "#1b1c1c",
@@ -35,14 +35,14 @@ const BRAND = {
   border: "#ece8e3",
 };
 
-function row(label: string, value: string) {
+export function row(label: string, value: string) {
   return `<tr>
     <td style="padding:10px 16px;font-size:13px;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">${label}</td>
     <td style="padding:10px 16px;font-size:14px;font-weight:600;color:${BRAND.text};border-bottom:1px solid ${BRAND.border};text-align:end;">${value}</td>
   </tr>`;
 }
 
-function wrap(title: string, body: string) {
+export function wrap(title: string, body: string) {
   return `<div style="background:${BRAND.bg};padding:40px 16px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:480px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">

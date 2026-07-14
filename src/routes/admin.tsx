@@ -9,6 +9,7 @@ import { getAdminProducts } from "@/api/products/products";
 import { getAdminAppointments } from "@/api/appointments/appointments";
 import { getAvailabilitySettings } from "@/api/slots/slots";
 import { getAdminOrders } from "@/api/orders/orders";
+import { getAdminDeliveryAreas } from "@/api/delivery-areas/delivery-areas";
 import { getSettings } from "@/api/settings/settings";
 import {
   LayoutDashboard,
@@ -17,6 +18,7 @@ import {
   CalendarDays,
   Clock,
   ShoppingCart,
+  Truck,
   Settings,
   Menu,
   LogOut,
@@ -62,6 +64,10 @@ function AdminLayout() {
       queryFn: () => getAvailabilitySettings(),
     });
     qc.prefetchQuery({ queryKey: ["admin-orders"], queryFn: () => getAdminOrders() });
+    qc.prefetchQuery({
+      queryKey: ["admin-delivery-areas"],
+      queryFn: () => getAdminDeliveryAreas(),
+    });
     qc.prefetchQuery({ queryKey: ["admin-settings"], queryFn: () => getSettings() });
   }, [loading, user, isAdmin, qc]);
 
@@ -86,6 +92,11 @@ function AdminLayout() {
     },
     { to: "/admin/slots", icon: Clock, label: L("זמינות", "التوفر", "Availability") },
     { to: "/admin/orders", icon: ShoppingCart, label: L("הזמנות", "الطلبات", "Orders") },
+    {
+      to: "/admin/delivery-areas",
+      icon: Truck,
+      label: L("אזורי משלוח", "مناطق التوصيل", "Delivery Areas"),
+    },
     { to: "/admin/settings", icon: Settings, label: L("הגדרות", "الإعدادات", "Settings") },
   ];
 

@@ -12,6 +12,7 @@ export type ProfileRow = Tables<"profiles">;
 export type BusinessSettingsRow = Tables<"business_settings">;
 export type AvailabilitySettingsRow = Tables<"availability_settings">;
 export type FavoriteRow = Tables<"favorites">;
+export type DeliveryAreaRow = Tables<"delivery_areas">;
 
 // Composite shapes matching specific joined selects used across the app —
 // named after the query that produces them, not the table alone.
@@ -76,4 +77,8 @@ export type ServiceFormValues = Partial<
     | "duration_minutes"
     | "is_active"
   >
+>;
+
+export type DeliveryAreaFormValues = Partial<
+  Pick<DeliveryAreaRow, "id" | "name" | "name_ar" | "name_en" | "price" | "is_active">
 >;

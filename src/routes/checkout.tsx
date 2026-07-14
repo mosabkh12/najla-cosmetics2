@@ -1,18 +1,27 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getProfile } from "@/api/profiles/profiles";
 import { createOrder } from "@/api/orders/orders";
+import { getDeliveryAreas } from "@/api/delivery-areas/delivery-areas";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useI18n } from "@/lib/i18n";
+import { pickLocalized } from "@/lib/pick-localized";
 import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Store, Truck, Banknote, CreditCard, ShoppingBag } from "lucide-react";
 import { Reveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/checkout")({
@@ -23,22 +32,42 @@ export const Route = createFileRoute("/checkout")({
 const ORDER_ERROR_MAP: Record<string, string> = {
   OUT_OF_STOCK: "out_of_stock",
   PRODUCT_NOT_AVAILABLE: "order_product_unavailable",
+  DELIVERY_AREA_UNAVAILABLE: "order_delivery_area_unavailable",
   INVALID_ORDER: "order_invalid",
   ORDER_CREATION_FAILED: "order_creation_failed",
   RATE_LIMITED: "err_rate_limited",
 };
 
 function CheckoutPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, loading } = useAuth();
   const { items, subtotal, clear } = useCart();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
-  const [delivery, setDelivery] = useState("pickup");
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryAreaId, setDeliveryAreaId] = useState<string | null>(null);
+  const [street, setStreet] = useState("");
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [errors, setErrors] = useState<{
+    name?: string;
+    phone?: string;
+    area?: string;
+    street?: string;
+  }>({});
+
+  const { data: deliveryAreas = [] } = useQuery({
+    queryKey: ["delivery-areas"],
+    queryFn: () => getDeliveryAreas(),
+    staleTime: 60_000,
+  });
+  const selectedArea =
+    deliveryMethod === "delivery" ? deliveryAreas.find((a) => a.id === deliveryAreaId) : undefined;
+  const deliveryFee = selectedArea ? Number(selectedArea.price) : 0;
+  const total = subtotal + deliveryFee;
+  const cheapestAreaPrice =
+    deliveryAreas.length > 0 ? Math.min(...deliveryAreas.map((a) => Number(a.price))) : null;
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -65,9 +94,11 @@ function CheckoutPage() {
     );
 
   const placeOrder = async () => {
-    const e: { name?: string; phone?: string } = {};
+    const e: { name?: string; phone?: string; area?: string; street?: string } = {};
     if (!name.trim()) e.name = t("err_name_required");
     if (!phone.trim()) e.phone = t("err_phone_required");
+    if (deliveryMethod === "delivery" && !deliveryAreaId) e.area = t("err_delivery_area_required");
+    if (deliveryMethod === "delivery" && !street.trim()) e.street = t("err_street_required");
     setErrors(e);
     if (Object.keys(e).length > 0) return;
     setBusy(true);
@@ -77,7 +108,9 @@ function CheckoutPage() {
           customer_name: name,
           customer_phone: phone,
           notes: notes || null,
-          delivery_method: delivery,
+          delivery_method: deliveryMethod,
+          delivery_area_id: deliveryMethod === "delivery" ? deliveryAreaId : null,
+          delivery_street: deliveryMethod === "delivery" ? street : null,
           items: items.map((it) => ({
             product_id: it.product_id,
             quantity: it.quantity,
@@ -96,7 +129,7 @@ function CheckoutPage() {
   };
 
   return (
-    <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+    <section className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-10 grid gap-8 lg:grid-cols-[1fr_380px] overflow-x-hidden">
       <Reveal direction="start">
         <div
           className="rounded-2xl border border-border/30 bg-card p-6 space-y-5"
@@ -160,23 +193,99 @@ function CheckoutPage() {
             </div>
           </div>
           <div>
-            <Label id="delivery-label" className="text-xs mb-2 block">
-              {t("delivery_pickup")}
-            </Label>
-            <RadioGroup
-              value={delivery}
-              onValueChange={setDelivery}
-              aria-labelledby="delivery-label"
-              className="grid grid-cols-2 gap-2"
-            >
-              <label
-                htmlFor="delivery-pickup"
-                className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer text-sm ${delivery === "pickup" ? "border-primary bg-surface" : "border-border"}`}
+            <Label className="text-xs mb-2 block">{t("delivery_method")}</Label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDeliveryMethod("pickup")}
+                aria-pressed={deliveryMethod === "pickup"}
+                className={`text-start rounded-xl border p-4 transition-colors ${deliveryMethod === "pickup" ? "border-primary bg-surface" : "border-border/60 hover:bg-surface/50"}`}
               >
-                <RadioGroupItem id="delivery-pickup" value="pickup" /> {t("delivery_pickup")}
-              </label>
-            </RadioGroup>
+                <Store className="h-5 w-5 text-primary mb-2" aria-hidden="true" />
+                <p className="text-sm font-semibold text-foreground">{t("delivery_pickup")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("delivery_pickup_desc")}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryMethod("delivery")}
+                aria-pressed={deliveryMethod === "delivery"}
+                className={`text-start rounded-xl border p-4 transition-colors ${deliveryMethod === "delivery" ? "border-primary bg-surface" : "border-border/60 hover:bg-surface/50"}`}
+              >
+                <Truck className="h-5 w-5 text-primary mb-2" aria-hidden="true" />
+                <p className="text-sm font-semibold text-foreground">{t("delivery_to_door")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("delivery_to_door_desc")}</p>
+                {cheapestAreaPrice !== null && (
+                  <p className="text-xs font-medium text-primary mt-1">
+                    {t("starting_at")}₪{cheapestAreaPrice.toFixed(0)}
+                  </p>
+                )}
+              </button>
+            </div>
           </div>
+          {deliveryMethod === "delivery" && (
+            <>
+              <div>
+                <Label htmlFor="delivery-city" className="text-xs">
+                  {t("select_delivery_area")}
+                </Label>
+                <Select
+                  value={deliveryAreaId ?? ""}
+                  onValueChange={(v) => {
+                    setDeliveryAreaId(v);
+                    if (errors.area) setErrors((p) => ({ ...p, area: undefined }));
+                  }}
+                >
+                  <SelectTrigger
+                    id="delivery-city"
+                    className="mt-1 h-10"
+                    aria-invalid={errors.area ? true : undefined}
+                  >
+                    <SelectValue placeholder={t("select_delivery_area")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deliveryAreas.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {pickLocalized(lang, area.name, area.name_ar, area.name_en)} · ₪
+                        {Number(area.price).toFixed(0)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.area && (
+                  <p role="alert" className="mt-1 text-[12px] text-destructive">
+                    {errors.area}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="checkout-street" className="text-xs">
+                  {t("street_address")}
+                </Label>
+                <Input
+                  id="checkout-street"
+                  value={street}
+                  onChange={(e) => {
+                    setStreet(e.target.value);
+                    if (errors.street) setErrors((p) => ({ ...p, street: undefined }));
+                  }}
+                  placeholder={t("street_address_placeholder")}
+                  autoComplete="street-address"
+                  aria-invalid={errors.street ? true : undefined}
+                  aria-describedby={errors.street ? "checkout-street-error" : undefined}
+                  className="mt-1 h-10"
+                />
+                {errors.street && (
+                  <p
+                    id="checkout-street-error"
+                    role="alert"
+                    className="mt-1 text-[12px] text-destructive"
+                  >
+                    {errors.street}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
           <div>
             <Label htmlFor="checkout-notes" className="text-xs">
               {t("notes_optional")}
@@ -189,9 +298,28 @@ function CheckoutPage() {
               className="mt-1"
             />
           </div>
-          <div className="rounded-lg border border-border/60 bg-surface p-3 text-sm">
-            <p className="font-medium text-foreground">{t("pay_at_store")}</p>
-            <p className="text-xs text-muted-foreground mt-1">Online payments coming soon.</p>
+          <div>
+            <Label className="text-xs mb-2 block">{t("payment_method")}</Label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="text-start rounded-xl border border-primary bg-surface p-4">
+                <Banknote className="h-5 w-5 text-primary mb-2" aria-hidden="true" />
+                <p className="text-sm font-semibold text-foreground">{t("payment_cash")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("payment_cash_desc")}</p>
+              </div>
+              <div
+                aria-disabled="true"
+                className="text-start rounded-xl border border-border/40 p-4 opacity-50 cursor-not-allowed"
+              >
+                <div className="flex items-center justify-between">
+                  <CreditCard className="h-5 w-5 text-muted-foreground mb-2" aria-hidden="true" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-surface px-2 py-0.5 rounded-full">
+                    {t("coming_soon")}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-foreground">{t("payment_card")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("payment_card_desc")}</p>
+              </div>
+            </div>
           </div>
         </div>
       </Reveal>
@@ -201,19 +329,92 @@ function CheckoutPage() {
           style={{ boxShadow: "0 20px 40px -15px rgba(45, 45, 45, 0.06)" }}
         >
           <h2 className="font-display text-[22px] text-foreground">{t("cart")}</h2>
-          <ul className="mt-3 space-y-2 text-sm">
+          <ul className="mt-4 divide-y divide-border/10">
             {items.map((i) => (
-              <li key={i.product_id} className="flex justify-between">
-                <span className="text-secondary-foreground truncate me-2">
-                  {i.name} × {i.quantity}
+              <li key={i.product_id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface">
+                  {i.image_url ? (
+                    <img
+                      src={i.image_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full grid place-items-center">
+                      <ShoppingBag
+                        className="h-6 w-6 text-muted-foreground/30"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-foreground truncate">{i.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    ₪{i.price.toFixed(2)} × {i.quantity}
+                  </p>
+                </div>
+                <span className="text-[15px] font-semibold text-foreground shrink-0">
+                  ₪{(i.price * i.quantity).toFixed(2)}
                 </span>
-                <span className="font-medium">₪{(i.price * i.quantity).toFixed(2)}</span>
               </li>
             ))}
           </ul>
-          <div className="mt-4 pt-3 border-t flex justify-between">
-            <span className="text-secondary-foreground">{t("total")}</span>
-            <span className="font-semibold text-foreground text-lg">₪{subtotal.toFixed(2)}</span>
+
+          <div className="mt-4 pt-4 border-t space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cream text-primary">
+                {deliveryMethod === "delivery" ? (
+                  <Truck className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Store className="h-4 w-4" aria-hidden="true" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  {deliveryMethod === "delivery" ? t("delivery_to_door") : t("delivery_pickup")}
+                </p>
+                {deliveryMethod === "delivery" && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {[
+                      selectedArea &&
+                        pickLocalized(
+                          lang,
+                          selectedArea.name,
+                          selectedArea.name_ar,
+                          selectedArea.name_en,
+                        ),
+                      street,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-cream text-primary">
+                <Banknote className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <p className="text-sm font-medium text-foreground">{t("payment_cash")}</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-secondary-foreground">{t("subtotal")}</span>
+              <span className="font-medium">₪{subtotal.toFixed(2)}</span>
+            </div>
+            {deliveryMethod === "delivery" && (
+              <div className="flex justify-between">
+                <span className="text-secondary-foreground">{t("delivery_fee")}</span>
+                <span className="font-medium">₪{deliveryFee.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1.5 border-t">
+              <span className="text-secondary-foreground">{t("total")}</span>
+              <span className="font-semibold text-foreground text-lg">₪{total.toFixed(2)}</span>
+            </div>
           </div>
           <button
             type="button"

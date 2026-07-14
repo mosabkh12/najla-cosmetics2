@@ -42,6 +42,7 @@ export function Header() {
             <SheetContent
               side={dir === "rtl" ? "right" : "left"}
               className="w-[300px] p-0 bg-background"
+              hideClose
             >
               <div className="flex items-center justify-between border-b border-border/20 px-6 h-20">
                 <SheetTitle className="font-display text-xl italic font-medium text-foreground">

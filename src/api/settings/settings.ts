@@ -58,7 +58,13 @@ export const saveSettings = createServerFn({ method: "POST" })
     const op = id
       ? await supabaseAdmin.from("business_settings").update(clean).eq("id", id)
       : await supabaseAdmin.from("business_settings").insert(clean);
-    if (op.error) throw op.error;
+    if (op.error) {
+      // Thrown as a plain Error (not the raw PostgrestError) so the
+      // message survives the server-function RPC boundary intact and
+      // never leaks raw DB internals to the client.
+      console.error("[saveSettings] failed", op.error);
+      throw new Error("Failed to save settings. Please check the details and try again.");
+    }
 
     // Only after the update has committed: clean up any replaced image
     // that's no longer referenced anywhere.

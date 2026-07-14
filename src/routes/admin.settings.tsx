@@ -1,16 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSettings, saveSettings } from "@/api/settings/settings";
-import { uploadAdminImage } from "@/api/storage/storage";
-import { resizeImageForUpload } from "@/lib/image-resize";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import { useI18n } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Upload,
-  X,
   Loader2,
   Building2,
   Phone,
@@ -59,146 +56,6 @@ type SettingsFormState = Partial<Omit<BusinessSettingsRow, "latitude" | "longitu
   latitude?: string | number | null;
   longitude?: string | number | null;
 };
-
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-// This is the SOURCE file size cap, before client-side resizing — generous
-// because resizeImageForUpload downscales/recompresses before anything is
-// sent to the server, so the actual upload payload ends up small and
-// reliable regardless of how large the original photo was. Without that
-// resize step, a raw file anywhere near this size would base64-encode to
-// well over hosting platforms' request body limits (commonly ~4.5MB) and
-// simply fail with no clear reason why — this is what used to make
-// uploads "not always work."
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-
-const UPLOAD_ERROR_MAP: Record<string, string> = {
-  INVALID_FILE_TYPE: "Please select a JPEG, PNG, or WEBP image",
-  FILE_TOO_LARGE: "Image must be under 20MB",
-  INVALID_FOLDER: "Upload failed",
-  INVALID_FILE: "Please select a valid image file",
-  UPLOAD_FAILED: "Upload failed, please try again",
-  RATE_LIMITED: "Too many uploads. Please try again later.",
-};
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-// Uploads go through the requireAdmin-protected uploadAdminImage server
-// function — the browser never writes to Supabase Storage directly. The
-// file is resized/recompressed client-side first (see image-resize.ts) so
-// the actual network payload stays small and sharp regardless of how large
-// the original photo was.
-async function uploadFile(file: File, folder: string): Promise<string | null> {
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    toast.error(UPLOAD_ERROR_MAP.INVALID_FILE_TYPE);
-    return null;
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    toast.error(UPLOAD_ERROR_MAP.FILE_TOO_LARGE);
-    return null;
-  }
-  try {
-    const { blob, contentType } = await resizeImageForUpload(file);
-    const base64 = await blobToBase64(blob);
-    const { publicUrl } = await uploadAdminImage({
-      data: { folder, contentType, base64 },
-    });
-    return publicUrl;
-  } catch (e: unknown) {
-    const message = getErrorMessage(e);
-    toast.error(UPLOAD_ERROR_MAP[message] ?? "Upload failed, please try again");
-    return null;
-  }
-}
-
-function ImageUpload({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (url: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      toast.error(UPLOAD_ERROR_MAP.INVALID_FILE_TYPE);
-      return;
-    }
-
-    setUploading(true);
-    const url = await uploadFile(file, "settings");
-    setUploading(false);
-
-    if (url) {
-      onChange(url);
-      toast.success("Uploaded!");
-    }
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  return (
-    <div className="grid gap-3">
-      <Label className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-        {label}
-      </Label>
-
-      {value && (
-        <div className="relative rounded-xl overflow-hidden bg-surface aspect-video max-h-[180px] border border-border/10">
-          <img src={value} alt="" className="w-full h-full object-cover" />
-          <button
-            onClick={() => onChange("")}
-            className="absolute top-2.5 end-2.5 grid h-7 w-7 place-items-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border/50 text-[12px] font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-        >
-          {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="h-4 w-4" />
-          )}
-          {uploading ? "Uploading..." : "Choose File"}
-        </button>
-        <Input
-          type="url"
-          value={value ?? ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Or paste URL..."
-          className="h-10 rounded-xl text-xs flex-1 border-border/30"
-        />
-      </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={handleFile}
-      />
-    </div>
-  );
-}
 
 function Page() {
   const { lang } = useI18n();
@@ -504,7 +361,7 @@ function Page() {
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ImageUpload
+            <ImageUploadField
               label={L(
                 "תמונת Hero (עמוד הבית)",
                 "صورة الواجهة (الصفحة الرئيسية)",
@@ -512,13 +369,15 @@ function Page() {
               )}
               value={form.hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, hero_image_url: url })}
+              folder="settings"
             />
-            <ImageUpload
+            <ImageUploadField
               label={L("תמונת אודות", "صورة عنا", "About Image")}
               value={form.about_image_url ?? ""}
               onChange={(url) => setForm({ ...form, about_image_url: url })}
+              folder="settings"
             />
-            <ImageUpload
+            <ImageUploadField
               label={L(
                 "תמונת Hero (עמוד המוצרים)",
                 "صورة الواجهة (صفحة المنتجات)",
@@ -526,6 +385,7 @@ function Page() {
               )}
               value={form.products_hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, products_hero_image_url: url })}
+              folder="settings"
             />
           </div>
         </div>

@@ -196,6 +196,22 @@
    Chrome/Edge/other Blink browsers (::-webkit-scrollbar) and Firefox
    (scrollbar-width). Safari has no supported CSS-only way to hide its
    native scrollbar, so it still shows its own there. */
+/* Site-wide horizontal-overflow guard. The scroll-reveal system
+   (.reveal-start/.reveal-end in particular) renders elements translated
+   ±80px sideways before hydration/IntersectionObserver settles them —
+   on mobile, any element that briefly overflows the viewport width can
+   make the browser render the whole page shrunk-to-fit and then snap to
+   the correct size once the transform resolves, which looks like a
+   broken/janky load. Clipping horizontal overflow at the document root
+   makes that impossible regardless of which page or component causes
+   the transient overflow, instead of relying on every call site to add
+   its own overflow-x-hidden wrapper. Nested elements that intentionally
+   scroll horizontally (e.g. overflow-x-auto carousels) are unaffected —
+   this only clips overflow of the document itself. */
+html, body {
+  overflow-x: hidden;
+}
+
 html {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* legacy Edge */

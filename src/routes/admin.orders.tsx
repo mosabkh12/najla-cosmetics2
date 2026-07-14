@@ -480,13 +480,29 @@ function Page() {
             )}
           </div>
           {items.length > 0 && viewOrder && (
-            <div className="flex items-center justify-between pt-3 border-t border-border/20 mt-2">
-              <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                {L("סך הכל", "المجموع", "Total")}
-              </span>
-              <span className="text-[18px] font-display font-semibold text-foreground">
-                ₪{Number(viewOrder.total).toFixed(0)}
-              </span>
+            <div className="pt-3 border-t border-border/20 mt-2 space-y-1.5">
+              <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+                <span>{L("משלוח", "التوصيل", "Delivery")}</span>
+                <span>
+                  {viewOrder.delivery_method === "delivery"
+                    ? `${viewOrder.delivery_area_name ?? L("אזור משלוח", "منطقة توصيل", "Delivery area")} · ₪${Number(viewOrder.delivery_fee).toFixed(0)}`
+                    : t("delivery_pickup")}
+                </span>
+              </div>
+              {viewOrder.delivery_method === "delivery" && viewOrder.delivery_street && (
+                <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+                  <span>{t("street_address")}</span>
+                  <span className="text-foreground text-end">{viewOrder.delivery_street}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1.5 border-t border-border/10">
+                <span className="text-[12px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                  {L("סך הכל", "المجموع", "Total")}
+                </span>
+                <span className="text-[18px] font-display font-semibold text-foreground">
+                  ₪{Number(viewOrder.total).toFixed(0)}
+                </span>
+              </div>
             </div>
           )}
         </DialogContent>
