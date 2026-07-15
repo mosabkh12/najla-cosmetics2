@@ -154,7 +154,7 @@ function Page() {
     cancelled: L("בוטלו", "ملغاة", "Cancelled"),
   };
 
-  const { data: items = [] } = useQuery({
+  const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ["admin-order-items", view],
     enabled: !!view,
     queryFn: () => getOrderItems({ data: { orderId: view! } }),
@@ -449,36 +449,43 @@ function Page() {
             </DialogTitle>
           </DialogHeader>
           <div className="mt-3 divide-y divide-border/10">
-            {items.map((it) => (
-              <div key={it.id} className="flex items-center gap-5 py-5 first:pt-0 last:pb-0">
-                <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-surface">
-                  {it.products?.image_url ? (
-                    <img
-                      src={it.products.image_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-full w-full grid place-items-center">
-                      <Package className="h-8 w-8 text-muted-foreground/30" aria-hidden="true" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[18px] font-medium text-foreground truncate">
-                    {it.product_name}
-                  </div>
-                  <div className="text-[14px] text-muted-foreground mt-1">
-                    ₪{Number(it.unit_price).toFixed(2)} · {L("כמות", "الكمية", "Qty")} {it.quantity}
-                  </div>
-                </div>
-                <span className="text-[20px] font-semibold text-foreground shrink-0">
-                  ₪{Number(it.total_price).toFixed(0)}
-                </span>
+            {itemsLoading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
               </div>
-            ))}
-            {items.length === 0 && (
+            )}
+            {!itemsLoading &&
+              items.map((it) => (
+                <div key={it.id} className="flex items-center gap-5 py-5 first:pt-0 last:pb-0">
+                  <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-surface">
+                    {it.products?.image_url ? (
+                      <img
+                        src={it.products.image_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-full w-full grid place-items-center">
+                        <Package className="h-8 w-8 text-muted-foreground/30" aria-hidden="true" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[18px] font-medium text-foreground truncate">
+                      {it.product_name}
+                    </div>
+                    <div className="text-[14px] text-muted-foreground mt-1">
+                      ₪{Number(it.unit_price).toFixed(2)} · {L("כמות", "الكمية", "Qty")}{" "}
+                      {it.quantity}
+                    </div>
+                  </div>
+                  <span className="text-[20px] font-semibold text-foreground shrink-0">
+                    ₪{Number(it.total_price).toFixed(0)}
+                  </span>
+                </div>
+              ))}
+            {!itemsLoading && items.length === 0 && (
               <div className="flex flex-col items-center py-8 text-center">
                 <Package className="h-8 w-8 text-muted-foreground/20 mb-2" />
                 <div className="text-[13px] text-muted-foreground">

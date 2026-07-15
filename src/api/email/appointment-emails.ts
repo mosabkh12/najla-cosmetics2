@@ -86,7 +86,7 @@ export async function sendBookingConfirmation(details: BookingDetails) {
 }
 
 export async function sendAdminBookingNotification(details: BookingDetails) {
-  const adminEmail = process.env.SMTP_USER;
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
   if (!adminEmail) return;
 
   const body = `

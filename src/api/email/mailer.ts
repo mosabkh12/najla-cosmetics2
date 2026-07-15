@@ -1,25 +1,31 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-let _transporter: nodemailer.Transporter | null = null;
+let _resend: Resend | null = null;
 
-function getTransporter() {
-  if (!_transporter) {
-    const host = process.env.SMTP_HOST;
-    const port = Number(process.env.SMTP_PORT || "587");
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-    if (!host || !user || !pass) throw new Error("Missing SMTP env vars");
-    _transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
-    });
+function getResend(): Resend {
+  if (!_resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("Missing RESEND_API_KEY env var");
+    _resend = new Resend(apiKey);
   }
-  return _transporter;
+  return _resend;
 }
 
 export async function sendMail(to: string, subject: string, html: string) {
-  const from = `"Najla Cosmetics" <${process.env.SMTP_USER}>`;
-  await getTransporter().sendMail({ from, to, subject, html });
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!from) throw new Error("Missing RESEND_FROM_EMAIL env var");
+
+  const fromName = process.env.SMTP_FROM_NAME || "Najla Cosmetics";
+
+  const { error } = await getResend().emails.send({
+    from: `${fromName} <${from}>`,
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    console.error("[sendMail] Resend send failed", error);
+    throw new Error("EMAIL_SEND_FAILED");
+  }
 }
