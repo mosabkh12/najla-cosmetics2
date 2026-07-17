@@ -4,23 +4,14 @@ import { requireAdmin } from "../admin/middleware";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Lang } from "@/api/email/appointment-emails";
 
-// Fixed, honest 60s ceiling — no stale-while-revalidate. swr would let a
-// shared cache keep serving a stale copy for minutes after the 60s mark
-// while it refetches in the background; a hard s-maxage means any cache
-// respecting this header cannot serve it past 60s, period. Also carries
-// max-age so a private/browser cache (which ignores s-maxage) gets the
-// same 60s lifetime. These handlers take no auth-derived context (no
-// requireSupabaseAuth/requireAdmin middleware, never read context.userId),
-// so the response is identical for every caller regardless of session —
-// safe to mark `public` even though a logged-in browser's request may
-// still carry an Authorization header (irrelevant to the response). Set
-// only on the success path so an error response never gets tagged cacheable.
-//
-// This is plain standard HTTP caching only — no custom edge cache, no
-// purge API, no external service. Vercel's CDN (and any browser) honors
-// this header directly; freshness after an admin change is bounded by
-// this 60s ceiling. See CACHING.md.
-const PUBLIC_CACHE_HEADER = "public, max-age=60, s-maxage=60";
+// Previously a 60s shared/browser cache (`public, max-age=60, s-maxage=60`)
+// — that meant a newly-uploaded product photo (or any other product/
+// service field change) could keep showing the old version to a new
+// visitor for up to a minute, which is exactly the "why doesn't the new
+// photo show up right away" complaint this fixes. Same reasoning already
+// applied to business_settings (see settings.ts) — an admin's change here
+// must be visible immediately, not after an HTTP cache window elapses.
+const PUBLIC_CACHE_HEADER = "no-store";
 
 export const getProducts = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -61,6 +52,30 @@ export const getProductById = createServerFn({ method: "GET" })
     if (error) throw error;
     setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
     return data;
+  });
+
+const MAX_REVALIDATE_IDS = 50; // matches MAX_UNIQUE_PRODUCTS in orders.ts
+
+// Public: lets the checkout page compare the customer's (possibly
+// stale, localStorage-persisted) cart against live price/stock/
+// availability before they submit — deliberately includes INACTIVE
+// products (unlike getProductById) since "this got deactivated since
+// you added it" is exactly one of the mismatches checkout needs to
+// detect and show. Reveals nothing the customer doesn't already see in
+// their own cart (they picked these ids themselves).
+export const getProductsByIds = createServerFn({ method: "GET" })
+  .validator((d: { ids: string[] }) => d)
+  .handler(async ({ data: { ids } }) => {
+    const uniqueIds = Array.from(new Set(ids)).slice(0, MAX_REVALIDATE_IDS);
+    if (uniqueIds.length === 0) return [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("products")
+      .select("id, name, price, stock_quantity, is_active")
+      .in("id", uniqueIds);
+    if (error) throw error;
+    setResponseHeader("Cache-Control", PUBLIC_CACHE_HEADER);
+    return data ?? [];
   });
 
 // Public: images for an inactive product are exactly as sensitive as

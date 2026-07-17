@@ -15,25 +15,15 @@ No Cloudflare-specific code, deploy scripts, or generated config remain in this 
 
 Verified by actually running `npm run build` after this change: it now produces `.vercel/output/` (Vercel's Build Output API v3 — `functions/__server.func/`, `config.json`, `nitro.json`), and `.vercel/output/nitro.json` reports `"preset": "vercel"`. No `.output/`, no `wrangler.json`, no Cloudflare artifacts were generated. (`@lovable.dev/vite-tanstack-config`'s own type docs mention it can force the Cloudflare preset inside Lovable's own one-click-deploy pipeline specifically — that did not apply to this build, which correctly picked up the `preset: "vercel"` override.)
 
-## Caching approach: plain standard HTTP caching only
+## Caching approach: none — every public read is `no-store`
 
-No custom edge cache, no cache-purge API, no external cache service (no Redis/Upstash/KV), and no new environment variables. Two layers, both already standard for this stack:
+Every public product/service/settings/detail server function sends `Cache-Control: no-store`, and none of their TanStack Query calls set a `staleTime` (default `0`, i.e. always considered stale). Nothing here is HTTP-cached or client-cached anymore.
 
-### 1. Browser caching — TanStack Query
-Public product/service/settings/detail queries keep a `staleTime` (120s for lists/details, 300s for settings). Admin mutations (`saveProduct`/`toggleProduct`/`deleteProduct`, `saveService`/`toggleService`/`deleteService`, `saveSettings`) call `invalidateQueries` on the matching public + admin query keys immediately after a successful write — **the admin sees their own change instantly**, in the same browser session, regardless of any HTTP/CDN cache state.
+Applied to: `getProducts`, `getFeaturedProducts`, `getProductById`, `getProductImages`, `getRelatedProducts`, `getServices`, `getSettings`.
 
-### 2. HTTP `Cache-Control` header — the only CDN-facing mechanism
-All public, unauthenticated, read-only server functions send:
+**History**: this used to be `Cache-Control: public, max-age=60, s-maxage=60` (a 60s CDN/browser cache) plus a 120s TanStack Query `staleTime`, on the reasoning that a bounded, disclosed staleness window was an acceptable trade-off for avoiding new infrastructure. In practice this produced a real, repeatedly-reported bug: a visitor could load the site and see the *old* photo/text for the first several seconds to a minute after an admin change, before it "caught up" to the new version — exactly the kind of "why does it look broken" impression a real business can't tolerate. `business_settings` (`getSettings`) was switched to `no-store` first for this reason; products and services get the identical fix here, extending the same reasoning consistently across every public read instead of leaving it half-applied.
 
-```
-Cache-Control: public, max-age=60, s-maxage=60
-```
-
-Applied to: `getProducts`, `getFeaturedProducts`, `getProductById`, `getProductImages`, `getRelatedProducts`, `getServices`, `getSettings`. No `stale-while-revalidate` — a hard `s-maxage=60` means Vercel's CDN (and any other cache that honors standard `Cache-Control`) cannot serve a copy older than 60 seconds, full stop. `max-age=60` is included alongside it so a plain browser HTTP cache (which ignores `s-maxage`) gets the same 60-second lifetime.
-
-This header is set with `setResponseHeader()` only on each handler's success path, so an error response is never marked cacheable. Every one of these handlers has no auth middleware and never reads `context.userId`/claims — the response is identical for every caller, so it's safe to mark `public` even though a logged-in browser's request may still carry an `Authorization` header (irrelevant to what these handlers return).
-
-**Public visitors may see up to 60 seconds of staleness after an admin change — there is no purge mechanism, and none is claimed.** This is a deliberate, disclosed trade-off, not an oversight: it keeps the implementation to "plain HTTP headers + the query cache already in the app," with zero new infrastructure, credentials, or moving parts.
+Admin mutations (`saveProduct`/`toggleProduct`/`deleteProduct`, `saveService`/`toggleService`/`deleteService`, `saveSettings`) still additionally call `invalidateQueries` on the matching public + admin query keys immediately after a successful write, so the admin's own browser reflects the change instantly without even waiting on a network round trip — that part is unchanged.
 
 ## What stays uncached
 
@@ -50,7 +40,7 @@ This header is set with `setResponseHeader()` only on each handler's success pat
 | Who | When they see the change |
 |---|---|
 | The admin who made the change | Immediately — TanStack Query invalidation, same browser session |
-| Any other visitor | Within 60 seconds — bounded by `Cache-Control: max-age=60, s-maxage=60`, nothing more precise is claimed |
+| Any other visitor | Immediately — every public read is `no-store` with no client-side `staleTime`, so every page load/navigation fetches fresh data |
 
 ## Required environment variables
 
@@ -64,5 +54,5 @@ This header is set with `setResponseHeader()` only on each handler's success pat
 
 ## Future improvements (not built — would need real traffic/infrastructure to justify)
 
-- **CDN purge on mutation**: Vercel's own Data Cache / `revalidateTag`-style APIs could give near-instant global freshness instead of the 60s bound, but that's a meaningfully larger change (tagging responses, wiring a revalidation call into each mutation) — not justified until the 60s window is demonstrated to be a real problem.
-- **Redis/Upstash**: not needed today. Would become worth it if traffic grows enough that even a 60s cache window doesn't meaningfully cut database load, or if `sendOtp`/`checkEmailAvailable`/`checkPhoneAvailable` need real cross-instance rate limiting beyond the current per-email database-backed cooldown.
+- **Reintroducing a short cache, correctly**: if database load ever becomes a real concern, the right fix is a short `stale-while-revalidate`-style CDN cache *plus* a purge-on-mutation call (Vercel's Data Cache / `revalidateTag`-style APIs), not a blind fixed TTL — a blind TTL is exactly what caused the staleness complaints this change fixes. Not worth building until traffic actually demonstrates the DB load is a problem; `no-store` is the correct default until then.
+- **Redis/Upstash**: not needed today. Would become worth it if traffic grows enough that uncached reads meaningfully strain the database, or if `sendOtp`/`checkEmailAvailable`/`checkPhoneAvailable` need real cross-instance rate limiting beyond the current per-email database-backed cooldown.

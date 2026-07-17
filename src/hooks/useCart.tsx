@@ -13,6 +13,11 @@ interface CartCtx {
   add: (i: Omit<CartItem, "quantity">, qty?: number) => void;
   remove: (id: string) => void;
   setQty: (id: string, qty: number) => void;
+  // Applies a live-data correction (price/stock changed, or the quantity
+  // needs clamping to newly-lower stock) without going through add()'s
+  // "merge with existing" semantics — used by checkout's stale-cart sync,
+  // never by the normal add-to-cart flow.
+  updateItem: (id: string, patch: Partial<Omit<CartItem, "product_id">>) => void;
   clear: () => void;
   open: boolean;
   setOpen: (b: boolean) => void;
@@ -69,6 +74,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems((p) =>
           p.map((x) =>
             x.product_id === id ? { ...x, quantity: Math.max(1, Math.min(x.stock, qty)) } : x,
+          ),
+        ),
+      updateItem: (id, patch) =>
+        setItems((p) =>
+          p.map((x) =>
+            x.product_id === id
+              ? {
+                  ...x,
+                  ...patch,
+                  quantity: Math.max(1, Math.min(patch.stock ?? x.stock, x.quantity)),
+                }
+              : x,
           ),
         ),
       clear: () => setItems([]),

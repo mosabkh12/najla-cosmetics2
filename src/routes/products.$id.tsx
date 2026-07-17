@@ -36,20 +36,20 @@ function ProductDetailPage() {
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
 
+  // No staleTime anywhere below: a newly-uploaded product photo (or any
+  // other admin change) must show up immediately, not stay cached for
+  // minutes — keeps refetching per default (staleTime: 0), same as the
+  // user-specific favorite check below always did.
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", id],
     queryFn: () => getProductById({ data: { id } }),
-    staleTime: 120_000,
   });
 
   const { data: images = [] } = useQuery({
     queryKey: ["product-images", id],
     queryFn: () => getProductImages({ data: { productId: id } }),
-    staleTime: 120_000,
   });
 
-  // User-specific — must never share the long staleTime used for public
-  // product data above; keeps refetching per default (staleTime: 0).
   const { data: fav } = useQuery({
     queryKey: ["favorite", id, user?.id],
     enabled: !!user,
@@ -61,7 +61,6 @@ function ProductDetailPage() {
     enabled: !!product,
     queryFn: async () =>
       (await getRelatedProducts({ data: { id, category: product!.category } })) as Product[],
-    staleTime: 120_000,
   });
 
   const favMutation = useMutation({

@@ -47,19 +47,19 @@ function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Query keys/staleTime here intentionally match services.tsx, products.index.tsx,
+  // Query keys here intentionally match services.tsx, products.index.tsx,
   // and products.$id.tsx exactly, so the same public data is shared across
-  // pages instead of being fetched and cached separately per route.
+  // pages instead of being fetched and cached separately per route. No
+  // staleTime: a newly-uploaded product/service photo (or any other admin
+  // change) must show up immediately, not stay cached for minutes.
   const { data: services = [] } = useQuery({
     queryKey: ["services", "active"],
     queryFn: async () => (await getServices()) as Service[],
-    staleTime: 120_000,
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["products", "featured"],
     queryFn: async () => (await getFeaturedProducts()) as Product[],
-    staleTime: 120_000,
   });
 
   // No staleTime: branding content (hero image, address, phone, hours)

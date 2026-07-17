@@ -47,6 +47,7 @@ export const createOrder = createServerFn({ method: "POST" })
       delivery_area_id: string | null;
       delivery_street: string | null;
       items: { product_id: string; quantity: number }[];
+      idempotency_key: string | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -105,8 +106,19 @@ export const createOrder = createServerFn({ method: "POST" })
     const uniqueProductIds = new Set(items.map((it) => it.product_id));
     if (uniqueProductIds.size > MAX_UNIQUE_PRODUCTS) throw new Error("INVALID_ORDER");
 
+    // Generated client-side once per checkout attempt (see checkout.tsx) and
+    // resent unchanged on every retry of that same attempt — lets
+    // create_order() recognize and no-op a duplicate submission instead of
+    // deducting stock / creating an order twice. A malformed value is
+    // treated as "no key" rather than failing the order outright.
+    const idempotencyKey =
+      typeof data.idempotency_key === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.idempotency_key)
+        ? data.idempotency_key
+        : null;
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: orderId, error } = await supabaseAdmin.rpc("create_order", {
+    const { data: rpcRows, error } = await supabaseAdmin.rpc("create_order", {
       p_user_id: context.userId,
       p_customer_name: customerName,
       p_customer_phone: customerPhone,
@@ -115,13 +127,30 @@ export const createOrder = createServerFn({ method: "POST" })
       p_delivery_area_id: deliveryAreaId || null,
       p_delivery_street: deliveryStreet || null,
       p_items: items,
+      p_idempotency_key: idempotencyKey,
     });
+    const result = rpcRows?.[0];
 
-    if (error || !orderId) {
+    if (error || !result?.order_id) {
       const code = ORDER_ERROR_CODES.find((c) => error?.message?.startsWith(c));
-      if (code) throw new Error(code);
+      // The full message (not just the code) is forwarded to the client —
+      // it's entirely our own RAISE EXCEPTION text (never raw Postgres
+      // error output), and for OUT_OF_STOCK/PRODUCT_NOT_AVAILABLE it
+      // carries a "|"-delimited product name checkout.tsx uses to tell
+      // the customer exactly which item the problem is about.
+      if (code) throw new Error(error!.message);
       console.error("[createOrder] failed for user", context.userId, error);
       throw new Error("ORDER_CREATION_FAILED");
+    }
+
+    const orderId = result.order_id;
+
+    // A retried/duplicate submission (same idempotency key) resolves to the
+    // SAME order every time, but only the call that actually created it
+    // should trigger the confirmation/admin emails — otherwise a network
+    // retry or double-tap would email the customer twice for one order.
+    if (!result.is_new) {
+      return { success: true, orderId };
     }
 
     const [{ data: order }, { data: orderItems }, { data: profile }] = await Promise.all([
@@ -232,6 +261,12 @@ export const getOrderItems = createServerFn({ method: "GET" })
 // admin's own mistake, which is exactly what it needs to be possible to
 // undo (e.g. accidentally marking an order completed and wanting it back
 // to pending).
+// update_order_status() RPC prefixes — mirrors the create_order()
+// pattern: raw Postgres exception text never reaches the browser, and
+// these two specifically arise only when un-cancelling an order whose
+// stock can no longer cover it (see the accompanying migration).
+const STATUS_UPDATE_ERROR_CODES = ["OUT_OF_STOCK", "PRODUCT_NOT_AVAILABLE"];
+
 export const updateOrderStatus = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { id: string; status: string }) => d)
@@ -240,39 +275,38 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     const nextStatus = status as OrderStatus;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: current } = await supabaseAdmin
+    const { data: order } = await supabaseAdmin
       .from("orders")
-      .select("status, order_number, user_id")
+      .select("order_number, user_id")
       .eq("id", id)
       .maybeSingle();
-    if (!current) throw new Error("ORDER_NOT_FOUND");
-    const currentStatus = current.status as OrderStatus;
+    if (!order) throw new Error("ORDER_NOT_FOUND");
 
-    // completed_at only ever reflects the CURRENT completion, not history —
-    // set on every (re-)entry into completed, cleared the moment it isn't.
-    const patch = {
-      status: nextStatus,
-      completed_at: nextStatus === "completed" ? new Date().toISOString() : null,
-    };
+    // Atomically applies the status change AND any stock restore/re-deduct
+    // it implies (cancelling <-> any other status) — see
+    // update_order_status() for why this can't safely be two separate
+    // application-level queries (a customer could place a conflicting
+    // order in the gap between reading and writing stock).
+    const { data: previousStatus, error } = await supabaseAdmin.rpc("update_order_status", {
+      p_order_id: id,
+      p_next_status: nextStatus,
+    });
 
-    const { data, error } = await supabaseAdmin
-      .from("orders")
-      .update(patch)
-      .eq("id", id)
-      .select("id");
     if (error) {
+      const code = STATUS_UPDATE_ERROR_CODES.find((c) => error.message?.startsWith(c));
+      if (code) throw new Error(code);
+      if (error.message?.startsWith("ORDER_NOT_FOUND")) throw new Error("ORDER_NOT_FOUND");
       console.error("[updateOrderStatus] failed for order", id, error);
       throw new Error("STATUS_UPDATE_FAILED");
     }
-    if (!data || data.length === 0) throw new Error("ORDER_NOT_FOUND");
 
     // Only notify the customer on a genuine change — re-saving the same
     // status (e.g. a duplicate submit) must not resend the email.
-    if (currentStatus !== nextStatus) {
+    if (previousStatus !== nextStatus) {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
         .select("full_name, email, language")
-        .eq("id", current.user_id)
+        .eq("id", order.user_id)
         .maybeSingle();
 
       if (profile?.email) {
@@ -280,7 +314,7 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
         await sendOrderStatusUpdateEmail({
           customerName: profile.full_name ?? "",
           customerEmail: profile.email,
-          orderNumber: current.order_number,
+          orderNumber: order.order_number,
           status: nextStatus,
           lang: profile.language as Lang,
         }).catch(console.error);

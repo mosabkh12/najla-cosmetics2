@@ -25,10 +25,11 @@ function ProductsPage() {
   const [priceCap, setPriceCap] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // No staleTime: a newly-uploaded product photo (or any other admin
+  // change) must show up immediately, not stay cached for minutes.
   const { data: products = [] } = useQuery({
     queryKey: ["products", "all"],
     queryFn: async () => (await getProducts()) as Product[],
-    staleTime: 120_000,
   });
 
   // No staleTime: branding content (hero image, etc.) should reflect an

@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProfile } from "@/api/profiles/profiles";
 import { createOrder } from "@/api/orders/orders";
 import { getDeliveryAreas } from "@/api/delivery-areas/delivery-areas";
+import { getProductsByIds } from "@/api/products/products";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,17 @@ import { useI18n } from "@/lib/i18n";
 import { pickLocalized } from "@/lib/pick-localized";
 import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
-import { Check, Loader2, Store, Truck, Banknote, CreditCard, ShoppingBag } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Store,
+  Truck,
+  Banknote,
+  CreditCard,
+  ShoppingBag,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
 import { Reveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/checkout")({
@@ -38,10 +49,25 @@ const ORDER_ERROR_MAP: Record<string, string> = {
   RATE_LIMITED: "err_rate_limited",
 };
 
+// OUT_OF_STOCK/PRODUCT_NOT_AVAILABLE come back as "CODE|product name" (see
+// create_order()'s RAISE EXCEPTION calls) so the customer can be told
+// exactly which item to fix instead of a generic "something in your cart"
+// message. The name is empty for the rare case there truly isn't one
+// (product deleted outright), which falls back to the generic message.
+const ORDER_ERROR_NAMED_MAP: Record<string, string> = {
+  OUT_OF_STOCK: "order_out_of_stock_named",
+  PRODUCT_NOT_AVAILABLE: "order_product_unavailable_named",
+};
+
+type CartMismatch =
+  | { type: "unavailable"; product_id: string; name: string }
+  | { type: "out_of_stock"; product_id: string; name: string; available: number }
+  | { type: "price_changed"; product_id: string; name: string; oldPrice: number; newPrice: number };
+
 function CheckoutPage() {
   const { t, lang } = useI18n();
   const { user, loading } = useAuth();
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, remove, updateItem } = useCart();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -57,6 +83,19 @@ function CheckoutPage() {
     street?: string;
   }>({});
 
+  // One key per checkout-page visit (a fresh mount — e.g. navigating away
+  // and back — gets a new one), sent unchanged on every submit/retry of
+  // this same attempt so the server can recognize and no-op a duplicate
+  // order instead of double-charging/double-deducting stock.
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID();
+
+  // Belt-and-suspenders alongside disabled={busy}: a ref is synchronous,
+  // so it also blocks a second click that lands in the gap before React
+  // has re-rendered the button as disabled (state updates are not
+  // synchronous), which busy alone cannot guarantee.
+  const submittingRef = useRef(false);
+
   const { data: deliveryAreas = [] } = useQuery({
     queryKey: ["delivery-areas"],
     queryFn: () => getDeliveryAreas(),
@@ -68,6 +107,73 @@ function CheckoutPage() {
   const total = subtotal + deliveryFee;
   const cheapestAreaPrice =
     deliveryAreas.length > 0 ? Math.min(...deliveryAreas.map((a) => Number(a.price))) : null;
+
+  // The cart is plain localStorage state that can go stale for a long
+  // time (added yesterday, price changed since, someone else bought the
+  // last unit) — this fetches the live truth right before checkout so
+  // the customer sees a mismatch and can fix it themselves instead of
+  // silently over/under-paying, or just hitting a generic error at
+  // submit time. The RPC itself remains the actual source of truth /
+  // enforcement (see create_order()'s FOR UPDATE checks) — this is purely
+  // a "don't let the customer submit against numbers we already know are
+  // wrong" UX layer on top of it.
+  const productIds = useMemo(() => items.map((i) => i.product_id).sort(), [items]);
+  const { data: liveProducts, isLoading: revalidatingInitial } = useQuery({
+    queryKey: ["cart-revalidate", productIds],
+    queryFn: () => getProductsByIds({ data: { ids: productIds } }),
+    enabled: productIds.length > 0,
+  });
+
+  const mismatches = useMemo<CartMismatch[]>(() => {
+    if (!liveProducts) return [];
+    const byId = new Map(liveProducts.map((p) => [p.id, p]));
+    const out: CartMismatch[] = [];
+    for (const item of items) {
+      const live = byId.get(item.product_id);
+      if (!live || !live.is_active) {
+        out.push({ type: "unavailable", product_id: item.product_id, name: item.name });
+      } else if (live.stock_quantity < item.quantity) {
+        out.push({
+          type: "out_of_stock",
+          product_id: item.product_id,
+          name: item.name,
+          available: live.stock_quantity,
+        });
+      } else if (Number(live.price) !== item.price) {
+        out.push({
+          type: "price_changed",
+          product_id: item.product_id,
+          name: item.name,
+          oldPrice: item.price,
+          newPrice: Number(live.price),
+        });
+      }
+    }
+    return out;
+  }, [liveProducts, items]);
+
+  const syncCart = () => {
+    if (!liveProducts) return;
+    const byId = new Map(liveProducts.map((p) => [p.id, p]));
+    for (const item of items) {
+      const live = byId.get(item.product_id);
+      if (!live || !live.is_active || live.stock_quantity <= 0) {
+        remove(item.product_id);
+      } else {
+        updateItem(item.product_id, {
+          price: Number(live.price),
+          stock: live.stock_quantity,
+          name: live.name,
+        });
+      }
+    }
+    toast.success(t("cart_synced"));
+  };
+
+  const mismatchByProduct = useMemo(
+    () => new Map(mismatches.map((m) => [m.product_id, m])),
+    [mismatches],
+  );
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
@@ -101,6 +207,9 @@ function CheckoutPage() {
     if (deliveryMethod === "delivery" && !street.trim()) e.street = t("err_street_required");
     setErrors(e);
     if (Object.keys(e).length > 0) return;
+    if (mismatches.length > 0) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setBusy(true);
     try {
       await createOrder({
@@ -115,15 +224,24 @@ function CheckoutPage() {
             product_id: it.product_id,
             quantity: it.quantity,
           })),
+          idempotency_key: idempotencyKeyRef.current,
         },
       });
       toast.success(t("order_success"));
       clear();
       navigate({ to: "/profile" });
     } catch (e: unknown) {
-      const key = ORDER_ERROR_MAP[getErrorMessage(e)];
-      toast.error(key ? t(key) : t("order_creation_failed"));
+      const raw = getErrorMessage(e);
+      const [code, productName] = raw.includes("|") ? raw.split("|") : [raw, ""];
+      const namedKey = productName ? ORDER_ERROR_NAMED_MAP[code] : undefined;
+      if (namedKey) {
+        toast.error(t(namedKey).replace("{name}", productName));
+      } else {
+        const key = ORDER_ERROR_MAP[code];
+        toast.error(key ? t(key) : t("order_creation_failed"));
+      }
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   };
@@ -330,36 +448,58 @@ function CheckoutPage() {
         >
           <h2 className="font-display text-[22px] text-foreground">{t("cart")}</h2>
           <ul className="mt-4 divide-y divide-border/10">
-            {items.map((i) => (
-              <li key={i.product_id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface">
-                  {i.image_url ? (
-                    <img
-                      src={i.image_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-full w-full grid place-items-center">
-                      <ShoppingBag
-                        className="h-6 w-6 text-muted-foreground/30"
-                        aria-hidden="true"
+            {items.map((i) => {
+              const mismatch = mismatchByProduct.get(i.product_id);
+              return (
+                <li
+                  key={i.product_id}
+                  className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
+                >
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface">
+                    {i.image_url ? (
+                      <img
+                        src={i.image_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
                       />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-foreground truncate">{i.name}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    ₪{i.price.toFixed(2)} × {i.quantity}
-                  </p>
-                </div>
-                <span className="text-[15px] font-semibold text-foreground shrink-0">
-                  ₪{(i.price * i.quantity).toFixed(2)}
-                </span>
-              </li>
-            ))}
+                    ) : (
+                      <div className="h-full w-full grid place-items-center">
+                        <ShoppingBag
+                          className="h-6 w-6 text-muted-foreground/30"
+                          aria-hidden="true"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-medium text-foreground truncate">{i.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      ₪{i.price.toFixed(2)} × {i.quantity}
+                    </p>
+                    {mismatch && (
+                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        {mismatch.type === "unavailable" && t("cart_item_unavailable_short")}
+                        {mismatch.type === "out_of_stock" &&
+                          t("cart_item_out_of_stock_short").replace(
+                            "{available}",
+                            String(mismatch.available),
+                          )}
+                        {mismatch.type === "price_changed" &&
+                          t("cart_item_price_changed_short").replace(
+                            "{newPrice}",
+                            mismatch.newPrice.toFixed(2),
+                          )}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-[15px] font-semibold text-foreground shrink-0">
+                    ₪{(i.price * i.quantity).toFixed(2)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="mt-4 pt-4 border-t space-y-3">
@@ -416,10 +556,27 @@ function CheckoutPage() {
               <span className="font-semibold text-foreground text-lg">₪{total.toFixed(2)}</span>
             </div>
           </div>
+          {mismatches.length > 0 && (
+            <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+              <p className="text-sm font-semibold text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t("cart_stale_title")}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">{t("cart_stale_desc")}</p>
+              <button
+                type="button"
+                onClick={syncCart}
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-full border border-destructive/40 text-destructive text-[11px] font-semibold uppercase tracking-[0.1em] h-10 hover:bg-destructive/10 transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("sync_cart")}
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={placeOrder}
-            disabled={busy}
+            disabled={busy || mismatches.length > 0 || revalidatingInitial}
             aria-busy={busy}
             className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-4 flex items-center justify-center gap-2"
           >

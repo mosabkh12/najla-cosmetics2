@@ -19,12 +19,13 @@ function ServicesPage() {
   const [active, setActive] = useState<Service | null>(null);
   const [cat, setCat] = useState<string>("all");
 
-  // Same key/staleTime as index.tsx's identical getServices() call, so both
-  // pages share one cache entry instead of fetching/caching it twice.
+  // Same key as index.tsx's identical getServices() call, so both pages
+  // share one cache entry instead of fetching it twice. No staleTime: a
+  // newly-uploaded service photo (or any other admin change) must show up
+  // immediately, not stay cached for minutes.
   const { data: services = [] } = useQuery({
     queryKey: ["services", "active"],
     queryFn: async () => (await getServices()) as Service[],
-    staleTime: 120_000,
   });
 
   // No staleTime: branding content (hero image, etc.) should reflect an

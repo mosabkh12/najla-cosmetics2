@@ -276,6 +276,7 @@ export type Database = {
           delivery_method: string;
           delivery_street: string | null;
           id: string;
+          idempotency_key: string | null;
           notes: string | null;
           order_number: string;
           payment_method: string;
@@ -296,6 +297,7 @@ export type Database = {
           delivery_method?: string;
           delivery_street?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           notes?: string | null;
           order_number?: string;
           payment_method?: string;
@@ -316,6 +318,7 @@ export type Database = {
           delivery_method?: string;
           delivery_street?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           notes?: string | null;
           order_number?: string;
           payment_method?: string;
@@ -608,8 +611,9 @@ export type Database = {
           p_delivery_area_id: string | null;
           p_delivery_street: string | null;
           p_items: Json;
+          p_idempotency_key?: string | null;
         };
-        Returns: string;
+        Returns: { order_id: string; is_new: boolean }[];
       };
       create_appointment: {
         Args: {
@@ -640,6 +644,13 @@ export type Database = {
           p_max_count: number;
         };
         Returns: boolean;
+      };
+      update_order_status: {
+        Args: {
+          p_order_id: string;
+          p_next_status: string;
+        };
+        Returns: string;
       };
     };
     Enums: {
