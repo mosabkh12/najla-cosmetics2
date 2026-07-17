@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAdmin } from "../admin/middleware";
 import { enforceRateLimit } from "@/api/rate-limit/rate-limit.server";
+import type { Lang } from "@/api/email/appointment-emails";
 
 const MAX_QTY_PER_ITEM = 100;
 const MAX_UNIQUE_PRODUCTS = 50;
@@ -123,6 +124,58 @@ export const createOrder = createServerFn({ method: "POST" })
       throw new Error("ORDER_CREATION_FAILED");
     }
 
+    const [{ data: order }, { data: orderItems }, { data: profile }] = await Promise.all([
+      supabaseAdmin
+        .from("orders")
+        .select(
+          "order_number, total, delivery_method, delivery_area_name, delivery_fee, delivery_street",
+        )
+        .eq("id", orderId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("order_items")
+        .select("product_name, quantity, total_price")
+        .eq("order_id", orderId),
+      supabaseAdmin
+        .from("profiles")
+        .select("email, language")
+        .eq("id", context.userId)
+        .maybeSingle(),
+    ]);
+
+    if (order && profile?.email) {
+      const { sendOrderConfirmation, sendAdminOrderNotification } =
+        await import("@/api/email/order-emails");
+      const details = {
+        customerName,
+        customerEmail: profile.email,
+        orderNumber: order.order_number,
+        items: (orderItems ?? []).map((it) => ({
+          productName: it.product_name,
+          quantity: it.quantity,
+          totalPrice: Number(it.total_price),
+        })),
+        delivery: {
+          method: order.delivery_method as "pickup" | "delivery",
+          areaName: order.delivery_area_name,
+          fee: Number(order.delivery_fee),
+          street: order.delivery_street,
+        },
+        total: Number(order.total),
+        lang: profile.language as Lang,
+      };
+      // Awaited (each with its own error swallow) rather than a dangling
+      // fire-and-forget promise — Vercel's serverless runtime can freeze
+      // the function right after the response is sent, which can silently
+      // cut off an un-awaited send before it reaches Resend. Running both
+      // in parallel means this adds no more latency than the slower of
+      // the two, not their sum.
+      await Promise.all([
+        sendOrderConfirmation(details).catch(console.error),
+        sendAdminOrderNotification({ ...details, customerPhone }).catch(console.error),
+      ]);
+    }
+
     return { success: true, orderId };
   });
 
@@ -187,6 +240,14 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     const nextStatus = status as OrderStatus;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const { data: current } = await supabaseAdmin
+      .from("orders")
+      .select("status, order_number, user_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (!current) throw new Error("ORDER_NOT_FOUND");
+    const currentStatus = current.status as OrderStatus;
+
     // completed_at only ever reflects the CURRENT completion, not history —
     // set on every (re-)entry into completed, cleared the moment it isn't.
     const patch = {
@@ -204,6 +265,27 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
       throw new Error("STATUS_UPDATE_FAILED");
     }
     if (!data || data.length === 0) throw new Error("ORDER_NOT_FOUND");
+
+    // Only notify the customer on a genuine change — re-saving the same
+    // status (e.g. a duplicate submit) must not resend the email.
+    if (currentStatus !== nextStatus) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("full_name, email, language")
+        .eq("id", current.user_id)
+        .maybeSingle();
+
+      if (profile?.email) {
+        const { sendOrderStatusUpdateEmail } = await import("@/api/email/order-emails");
+        await sendOrderStatusUpdateEmail({
+          customerName: profile.full_name ?? "",
+          customerEmail: profile.email,
+          orderNumber: current.order_number,
+          status: nextStatus,
+          lang: profile.language as Lang,
+        }).catch(console.error);
+      }
+    }
 
     return { success: true };
   });

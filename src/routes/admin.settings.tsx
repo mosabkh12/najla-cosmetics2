@@ -123,6 +123,7 @@ function Page() {
       hero_image_url: form.hero_image_url || null,
       about_image_url: form.about_image_url || null,
       products_hero_image_url: form.products_hero_image_url || null,
+      services_hero_image_url: form.services_hero_image_url || null,
       latitude: latNum,
       longitude: lngNum,
     };
@@ -385,6 +386,16 @@ function Page() {
               )}
               value={form.products_hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, products_hero_image_url: url })}
+              folder="settings"
+            />
+            <ImageUploadField
+              label={L(
+                "תמונת Hero (עמוד השירותים)",
+                "صورة الواجهة (صفحة الخدمات)",
+                "Hero Image (Services Page)",
+              )}
+              value={form.services_hero_image_url ?? ""}
+              onChange={(url) => setForm({ ...form, services_hero_image_url: url })}
               folder="settings"
             />
           </div>

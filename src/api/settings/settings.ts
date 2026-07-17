@@ -26,11 +26,12 @@ export const saveSettings = createServerFn({ method: "POST" })
       hero_image_url: string | null;
       about_image_url: string | null;
       products_hero_image_url: string | null;
+      services_hero_image_url: string | null;
     } | null = null;
     if (id) {
       const { data } = await supabaseAdmin
         .from("business_settings")
-        .select("hero_image_url, about_image_url, products_hero_image_url")
+        .select("hero_image_url, about_image_url, products_hero_image_url, services_hero_image_url")
         .eq("id", id)
         .maybeSingle();
       previous = data ?? null;
@@ -52,6 +53,9 @@ export const saveSettings = createServerFn({ method: "POST" })
       // home page hero and the products page banner are different photos
       // the admin uploads separately, not the same image reused.
       products_hero_image_url: (payload.products_hero_image_url as string) || null,
+      // Same reasoning — previously the Services page silently reused
+      // hero_image_url with no dedicated field of its own.
+      services_hero_image_url: (payload.services_hero_image_url as string) || null,
       latitude: lat != null && !isNaN(lat) ? lat : null,
       longitude: lng != null && !isNaN(lng) ? lng : null,
     };
@@ -79,6 +83,12 @@ export const saveSettings = createServerFn({ method: "POST" })
       previous.products_hero_image_url !== clean.products_hero_image_url
     ) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, previous.products_hero_image_url);
+    }
+    if (
+      previous?.services_hero_image_url &&
+      previous.services_hero_image_url !== clean.services_hero_image_url
+    ) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, previous.services_hero_image_url);
     }
 
     return { success: true };

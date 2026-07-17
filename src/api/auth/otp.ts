@@ -13,21 +13,21 @@ const MAX_FAILED_ATTEMPTS = 5;
 // look up yet, so the client passes whatever it's currently displaying.
 const OTP_EMAIL_COPY = {
   he: {
-    subject: "Najla Cosmetics — קוד אימות",
+    subject: "קוד אימות",
     subtitle: "קוד האימות שלך",
     expires: "הקוד תקף ל-10 דקות.",
     ignore: "אם לא ביקשת זאת, התעלמי מהודעה זו.",
     dir: "rtl" as const,
   },
   ar: {
-    subject: "Najla Cosmetics — رمز التحقق",
+    subject: "رمز التحقق",
     subtitle: "رمز التحقق الخاص بك",
     expires: "الرمز صالح لمدة 10 دقائق.",
     ignore: "إذا لم تطلبي هذا، تجاهلي هذه الرسالة.",
     dir: "rtl" as const,
   },
   en: {
-    subject: "Najla Cosmetics — Verification Code",
+    subject: "Verification Code",
     subtitle: "Your verification code",
     expires: "This code expires in 10 minutes.",
     ignore: "If you didn't request this, ignore this email.",
@@ -76,12 +76,14 @@ export const sendOtp = createServerFn({ method: "POST" })
     if (insError) throw new Error("VERIFICATION_FAILED");
 
     const copy = OTP_EMAIL_COPY[lang as keyof typeof OTP_EMAIL_COPY] ?? OTP_EMAIL_COPY.he;
+    const { getEmailBrand } = await import("@/api/email/brand");
+    const brand = await getEmailBrand();
 
     await sendMail(
       emailLower,
-      copy.subject,
+      `${brand.businessName} — ${copy.subject}`,
       `<div dir="${copy.dir}" style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:40px 24px;text-align:center;">
-        <h1 style="font-size:24px;font-weight:600;color:#1b1c1c;margin-bottom:8px;">Najla Cosmetics</h1>
+        <h1 style="font-size:24px;font-weight:600;color:#1b1c1c;margin-bottom:8px;">${brand.businessName}</h1>
         <p style="font-size:14px;color:#615e57;margin-bottom:32px;">${copy.subtitle}</p>
         <div style="background:#f6f3f2;border-radius:16px;padding:24px;margin-bottom:24px;">
           <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#1b1c1c;">${otp}</span>

@@ -46,7 +46,7 @@ function ServicesPage() {
       <div className="relative h-[320px] sm:h-[420px] md:h-[520px] flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={settings?.hero_image_url ?? "/images/brand/services-hero.png"}
+            src={settings?.services_hero_image_url ?? "/images/brand/services-hero.png"}
             alt=""
             className="w-full h-full object-cover"
           />

@@ -257,8 +257,16 @@ export const createAppointment = createServerFn({ method: "POST" })
         price: Number(service.price),
         lang: profile.language as Lang,
       };
-      sendBookingConfirmation(details).catch(console.error);
-      sendAdminBookingNotification(details).catch(console.error);
+      // Awaited (each with its own error swallow) rather than left as a
+      // dangling fire-and-forget promise — on Vercel's serverless runtime,
+      // the function can freeze/terminate immediately after the response
+      // is sent, which can silently cut off an un-awaited send before it
+      // actually reaches Resend. Running both in parallel means this adds
+      // no more latency than the slower of the two, not their sum.
+      await Promise.all([
+        sendBookingConfirmation(details).catch(console.error),
+        sendAdminBookingNotification(details).catch(console.error),
+      ]);
     }
 
     const { syncAppointmentToGoogleCalendar } =
@@ -441,8 +449,10 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
         price: Number(service.price),
         lang: profile.language as Lang,
       };
-      sendBookingConfirmation(details).catch(console.error);
-      sendAdminBookingNotification(details).catch(console.error);
+      await Promise.all([
+        sendBookingConfirmation(details).catch(console.error),
+        sendAdminBookingNotification(details).catch(console.error),
+      ]);
     }
 
     const { syncAppointmentToGoogleCalendar } =
@@ -528,7 +538,7 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
 
         if (profile?.email && appt.service_name) {
           const { sendStatusUpdateEmail } = await import("@/api/email/appointment-emails");
-          sendStatusUpdateEmail({
+          await sendStatusUpdateEmail({
             customerName: appt.customer_name,
             customerEmail: profile.email,
             serviceName: appt.service_name,

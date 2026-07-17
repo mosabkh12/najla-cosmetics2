@@ -1,4 +1,5 @@
 import { sendMail } from "./mailer";
+import { getEmailBrand, type EmailBrand } from "./brand";
 
 // customerName/customerPhone originate from the booking form (trimmed and
 // length-capped, but never HTML-escaped) — everything else here
@@ -67,14 +68,29 @@ export function row(label: string, value: string) {
   </tr>`;
 }
 
+const FALLBACK_BRAND: EmailBrand = { businessName: "Najla Cosmetics", address: null };
+
 // dir defaults to "ltr" for sendAdminBookingNotification, the one caller
 // that never carries a customer lang (it's always read by the business
-// owner, in whatever language their own mail client is set to).
-export function wrap(title: string, body: string, dir: "rtl" | "ltr" = "ltr") {
+// owner, in whatever language their own mail client is set to). brand
+// defaults to the fallback only for safety (every real caller fetches the
+// actual business_settings row via getEmailBrand() and passes it through)
+// — the business name/address shown here must always reflect what the
+// admin actually configured, never a hardcoded placeholder.
+export function wrap(
+  title: string,
+  body: string,
+  dir: "rtl" | "ltr" = "ltr",
+  brand: EmailBrand = FALLBACK_BRAND,
+) {
+  const year = new Date().getFullYear();
+  const footerLine = brand.address
+    ? `${brand.businessName} · ${brand.address}`
+    : brand.businessName;
   return `<div dir="${dir}" style="background:${BRAND.bg};padding:40px 16px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:480px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
-      <h1 style="font-size:22px;font-weight:600;color:${BRAND.text};margin:0;font-style:italic;">Najla Cosmetics</h1>
+      <h1 style="font-size:22px;font-weight:600;color:${BRAND.text};margin:0;font-style:italic;">${escapeHtml(brand.businessName)}</h1>
     </div>
     <div style="background:${BRAND.card};border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.04);">
       <div style="background:${BRAND.text};padding:20px 24px;text-align:center;">
@@ -82,7 +98,7 @@ export function wrap(title: string, body: string, dir: "rtl" | "ltr" = "ltr") {
       </div>
       <div style="padding:24px;">${body}</div>
     </div>
-    <p style="text-align:center;font-size:11px;color:${BRAND.muted};margin-top:24px;">© 2026 Najla Cosmetics · Nazareth, Israel</p>
+    <p style="text-align:center;font-size:11px;color:${BRAND.muted};margin-top:24px;">© ${year} ${escapeHtml(footerLine)}</p>
   </div>
 </div>`;
 }
@@ -103,19 +119,19 @@ const BOOKING_CONFIRMATION_COPY: Record<
   { subject: string; title: string; intro: string; status: string }
 > = {
   he: {
-    subject: "Najla Cosmetics — התור התקבל",
+    subject: "התור התקבל",
     title: "אישור תור",
     intro: "התור שלך נקבע! מצפים לראותך.",
     status: "סטטוס: אושר",
   },
   ar: {
-    subject: "Najla Cosmetics — تم استلام الموعد",
+    subject: "تم استلام الموعد",
     title: "تأكيد الموعد",
     intro: "تم حجز موعدك! نتطلع لرؤيتك.",
     status: "الحالة: تم التأكيد",
   },
   en: {
-    subject: "Najla Cosmetics — Appointment Received",
+    subject: "Appointment Received",
     title: "Appointment Confirmation",
     intro: "Your appointment is booked! We look forward to seeing you.",
     status: "Status: Confirmed",
@@ -123,6 +139,7 @@ const BOOKING_CONFIRMATION_COPY: Record<
 };
 
 export async function sendBookingConfirmation(details: BookingDetails) {
+  const brand = await getEmailBrand();
   const copy = pick(details.lang, BOOKING_CONFIRMATION_COPY);
   const greeting = pick(details.lang, {
     he: "שלום",
@@ -138,7 +155,11 @@ export async function sendBookingConfirmation(details: BookingDetails) {
       <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:${BRAND.accent};">${copy.status}</span>
     </div>`;
 
-  await sendMail(details.customerEmail, copy.subject, wrap(copy.title, body, DIR[details.lang]));
+  await sendMail(
+    details.customerEmail,
+    `${brand.businessName} — ${copy.subject}`,
+    wrap(copy.title, body, DIR[details.lang], brand),
+  );
 }
 
 // Always in a fixed layout/language regardless of the customer's own
@@ -149,6 +170,7 @@ export async function sendAdminBookingNotification(details: Omit<BookingDetails,
   const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
   if (!adminEmail) return;
 
+  const brand = await getEmailBrand();
   const body = `
     <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">A new appointment has been booked:</p>
     <table style="width:100%;border-collapse:collapse;">
@@ -164,7 +186,7 @@ export async function sendAdminBookingNotification(details: Omit<BookingDetails,
   await sendMail(
     adminEmail,
     `New Booking — ${details.customerName} · ${details.serviceName}`,
-    wrap("New Appointment", body),
+    wrap("New Appointment", body, "ltr", brand),
   );
 }
 
@@ -188,17 +210,17 @@ const STATUS_UPDATE_COPY: Record<Lang, { title: string; intro: string; subjectPr
   he: {
     title: "עדכון תור",
     intro: "סטטוס התור שלך עודכן.",
-    subjectPrefix: "Najla Cosmetics — התור",
+    subjectPrefix: "התור",
   },
   ar: {
     title: "تحديث الموعد",
     intro: "تم تحديث حالة موعدك.",
-    subjectPrefix: "Najla Cosmetics — الموعد",
+    subjectPrefix: "الموعد",
   },
   en: {
     title: "Appointment Update",
     intro: "Your appointment status has been updated.",
-    subjectPrefix: "Najla Cosmetics — Appointment",
+    subjectPrefix: "Appointment",
   },
 };
 
@@ -206,6 +228,7 @@ export async function sendStatusUpdateEmail(details: StatusUpdateDetails) {
   const label = STATUS_LABELS[details.status];
   if (!label) return;
 
+  const brand = await getEmailBrand();
   const copy = pick(details.lang, STATUS_UPDATE_COPY);
   const greeting = pick(details.lang, { he: "שלום", ar: "مرحباً", en: "Hi" });
   const labels = FIELD_LABELS[details.lang];
@@ -224,8 +247,8 @@ export async function sendStatusUpdateEmail(details: StatusUpdateDetails) {
 
   await sendMail(
     details.customerEmail,
-    `${copy.subjectPrefix} ${label[details.lang]}`,
-    wrap(copy.title, body, DIR[details.lang]),
+    `${brand.businessName} — ${copy.subjectPrefix} ${label[details.lang]}`,
+    wrap(copy.title, body, DIR[details.lang], brand),
   );
 }
 
@@ -243,21 +266,21 @@ const AVAILABILITY_CANCELLATION_COPY: Record<
   { subject: string; title: string; intro: string; badge: string }
 > = {
   he: {
-    subject: "Najla Cosmetics — התור בוטל (שינוי בלוח הזמנים)",
+    subject: "התור בוטל (שינוי בלוח הזמנים)",
     title: "התור בוטל",
     intro:
       "אנו מתנצלות על אי הנוחות — נאלצנו לעדכן את לוח הזמנים שלנו, והתור שלך לא יכול היה להישאר בתוקף. התור בוטל ללא חיוב. נשמח שתקבעי תור חדש בזמן שמתאים לך.",
     badge: "בוטל — שינוי בלוח הזמנים",
   },
   ar: {
-    subject: "Najla Cosmetics — تم إلغاء الموعد (تغيير في الجدول)",
+    subject: "تم إلغاء الموعد (تغيير في الجدول)",
     title: "تم إلغاء الموعد",
     intro:
       "نعتذر عن الإزعاج — اضطررنا لتحديث جدولنا، ولم يعد بالإمكان الإبقاء على موعدك. تم إلغاء الموعد دون أي رسوم. يسعدنا أن تحجزي موعداً جديداً في الوقت الذي يناسبك.",
     badge: "ملغى — تغيير في الجدول",
   },
   en: {
-    subject: "Najla Cosmetics — Appointment Cancelled (Schedule Change)",
+    subject: "Appointment Cancelled (Schedule Change)",
     title: "Appointment Cancelled",
     intro:
       "We're sorry for the inconvenience — we've had to update our schedule, and the appointment below could no longer be kept. It has been cancelled at no charge. Please feel free to book a new time that works for you.",
@@ -270,6 +293,7 @@ const AVAILABILITY_CANCELLATION_COPY: Record<
 // closing/changing hours out from under an existing booking. Naming that
 // plainly is more honest than a generic "your appointment was cancelled".
 export async function sendAvailabilityCancellationEmail(details: AvailabilityCancellationDetails) {
+  const brand = await getEmailBrand();
   const copy = pick(details.lang, AVAILABILITY_CANCELLATION_COPY);
   const greeting = pick(details.lang, { he: "שלום", ar: "مرحباً", en: "Hi" });
   const labels = FIELD_LABELS[details.lang];
@@ -286,5 +310,9 @@ export async function sendAvailabilityCancellationEmail(details: AvailabilityCan
       <span style="font-size:13px;font-weight:700;color:#dc2626;">${copy.badge}</span>
     </div>`;
 
-  await sendMail(details.customerEmail, copy.subject, wrap(copy.title, body, DIR[details.lang]));
+  await sendMail(
+    details.customerEmail,
+    `${brand.businessName} — ${copy.subject}`,
+    wrap(copy.title, body, DIR[details.lang], brand),
+  );
 }

@@ -1,5 +1,6 @@
 import { sendMail } from "./mailer";
 import { BRAND, escapeHtml, wrap, type Lang } from "./appointment-emails";
+import { getEmailBrand } from "./brand";
 
 interface BackInStockDetails {
   customerName: string;
@@ -36,6 +37,7 @@ const BACK_IN_STOCK_COPY: Record<Lang, { title: string; intro: string; badge: st
 // not customer-controlled, but escaped anyway since it's cheap and this
 // email could in principle be triggered for any product.
 export async function sendBackInStockEmail(details: BackInStockDetails) {
+  const brand = await getEmailBrand();
   const copy = BACK_IN_STOCK_COPY[details.lang] ?? BACK_IN_STOCK_COPY.he;
   const greeting = details.lang === "ar" ? "مرحباً" : details.lang === "en" ? "Hi" : "שלום";
 
@@ -54,7 +56,7 @@ export async function sendBackInStockEmail(details: BackInStockDetails) {
 
   await sendMail(
     details.customerEmail,
-    `Najla Cosmetics — ${details.productName}`,
-    wrap(copy.title, body, DIR[details.lang]),
+    `${brand.businessName} — ${details.productName}`,
+    wrap(copy.title, body, DIR[details.lang], brand),
   );
 }

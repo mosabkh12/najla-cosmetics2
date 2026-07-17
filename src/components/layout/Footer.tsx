@@ -133,7 +133,8 @@ export function Footer() {
       <div className="border-t border-border/20">
         <div className="px-5 sm:px-10 md:px-20 max-w-[1400px] mx-auto py-5 sm:py-6 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {t("copyright")}
+            © {new Date().getFullYear()} {settings?.business_name || "Najla Cosmetics"}.{" "}
+            {t("rights_reserved")}
           </p>
         </div>
       </div>
