@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Lang } from "@/api/email/appointment-emails";
 import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 import { toMinutes } from "@/lib/time-minutes";
 
@@ -227,7 +228,7 @@ async function notifyCancelledAppointments(
     try {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
-        .select("email")
+        .select("email, language")
         .eq("id", c.user_id)
         .maybeSingle();
       if (profile?.email) {
@@ -237,6 +238,7 @@ async function notifyCancelledAppointments(
           serviceName: c.service_name,
           date: c.appointment_date,
           time: c.appointment_time,
+          lang: profile.language as Lang,
         });
       }
     } catch (e) {

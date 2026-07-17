@@ -32,7 +32,7 @@ const OTP_ERROR_MAP: Record<string, string> = {
 };
 
 function AuthPage() {
-  const { t, dir } = useI18n();
+  const { t, dir, lang } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -92,7 +92,7 @@ function AuthPage() {
   };
 
   const triggerOtp = async (email: string) => {
-    await sendOtp({ data: { email } });
+    await sendOtp({ data: { email, lang } });
     setOtpEmail(email);
     setOtpDigits(["", "", "", "", "", ""]);
     setOtpError("");
@@ -224,7 +224,7 @@ function AuthPage() {
     if (!otpEmail) return;
     setResending(true);
     try {
-      await sendOtp({ data: { email: otpEmail } });
+      await sendOtp({ data: { email: otpEmail, lang } });
       toast.success(t("verify_resent"));
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError("");

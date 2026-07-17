@@ -81,3 +81,31 @@ export const updateProfile = createServerFn({ method: "POST" })
     }
     return { success: true };
   });
+
+const VALID_LANGUAGES = ["he", "ar", "en"];
+
+// Keeps the server-side record of the customer's language in sync with
+// the site's language switcher (see Header.tsx) whenever they're logged
+// in — this is the only way transactional emails (sent from server
+// functions, with no access to the browser's localStorage) know which
+// language a customer reads. Silently ignored if it fails; language
+// preference is a nice-to-have, never something that should block
+// browsing or surface an error to the customer.
+export const updateProfileLanguage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: { language: string }) => d)
+  .handler(async ({ data: { language }, context }) => {
+    if (!VALID_LANGUAGES.includes(language)) throw new Error("Invalid language");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ language })
+      .eq("id", context.userId);
+
+    if (error) {
+      console.error("[updateProfileLanguage] failed for user", context.userId, error);
+      throw new Error("Could not update language preference.");
+    }
+    return { success: true };
+  });

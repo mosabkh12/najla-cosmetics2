@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireAdmin } from "../admin/middleware";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Lang } from "@/api/email/appointment-emails";
 
 // Fixed, honest 60s ceiling — no stale-while-revalidate. swr would let a
 // shared cache keep serving a stale copy for minutes after the 60s mark
@@ -147,7 +148,7 @@ async function notifyRestockedFavoriters(
     try {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
-        .select("email, full_name")
+        .select("email, full_name, language")
         .eq("id", fav.user_id)
         .maybeSingle();
       if (profile?.email) {
@@ -156,6 +157,7 @@ async function notifyRestockedFavoriters(
           customerEmail: profile.email,
           productName,
           productImageUrl,
+          lang: profile.language as Lang,
         });
       }
     } catch (e) {

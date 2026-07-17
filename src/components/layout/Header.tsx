@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, ShoppingBag, User as UserIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,29 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import { updateProfileLanguage } from "@/api/profiles/profiles";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Header() {
-  const { t, dir } = useI18n();
+  const { t, dir, lang } = useI18n();
   const { user, isAdmin } = useAuth();
   const { count } = useCart();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Server functions (e.g. sending a booking confirmation or back-in-stock
+  // email) have no access to the browser's localStorage, so this is the
+  // only way they can know which language a given customer reads. Fires
+  // whenever the active language changes while logged in, and once right
+  // after login/signup (syncing whatever language they were already
+  // browsing in) — not on every render, since the effect only depends on
+  // `lang` and the user's id.
+  useEffect(() => {
+    if (!user) return;
+    updateProfileLanguage({ data: { language: lang } }).catch(() => {
+      // Best-effort only — never worth surfacing to the customer.
+    });
+  }, [lang, user]);
 
   const nav = [
     { to: "/", label: t("nav_home") },

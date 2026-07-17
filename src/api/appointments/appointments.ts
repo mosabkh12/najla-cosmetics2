@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { setResponseHeader } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Lang } from "@/api/email/appointment-emails";
 import { requireAdmin } from "../admin/middleware";
 import { enforceRateLimit, getClientIp } from "@/api/rate-limit/rate-limit.server";
 import { type DayHours, DEFAULT_WEEKLY } from "@/api/slots/slots";
@@ -235,7 +236,11 @@ export const createAppointment = createServerFn({ method: "POST" })
         .select("name, duration_minutes, price")
         .eq("id", data.service_id)
         .maybeSingle(),
-      supabaseAdmin.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
+      supabaseAdmin
+        .from("profiles")
+        .select("email, language")
+        .eq("id", context.userId)
+        .maybeSingle(),
     ]);
 
     if (profile?.email && service) {
@@ -250,6 +255,7 @@ export const createAppointment = createServerFn({ method: "POST" })
         time: data.appointment_time,
         duration: service.duration_minutes,
         price: Number(service.price),
+        lang: profile.language as Lang,
       };
       sendBookingConfirmation(details).catch(console.error);
       sendAdminBookingNotification(details).catch(console.error);
@@ -414,7 +420,11 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
         .select("name, duration_minutes, price")
         .eq("id", data.service_id)
         .maybeSingle(),
-      supabaseAdmin.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
+      supabaseAdmin
+        .from("profiles")
+        .select("email, language")
+        .eq("id", context.userId)
+        .maybeSingle(),
     ]);
 
     if (profile?.email && service && appt) {
@@ -429,6 +439,7 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
         time: data.appointment_time,
         duration: service.duration_minutes,
         price: Number(service.price),
+        lang: profile.language as Lang,
       };
       sendBookingConfirmation(details).catch(console.error);
       sendAdminBookingNotification(details).catch(console.error);
@@ -511,7 +522,7 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
         // consistent with how order_items.product_name already works.
         const { data: profile } = await supabaseAdmin
           .from("profiles")
-          .select("email")
+          .select("email, language")
           .eq("id", appt.user_id)
           .maybeSingle();
 
@@ -524,6 +535,7 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
             date: appt.appointment_date,
             time: String(appt.appointment_time),
             status,
+            lang: profile.language as Lang,
           }).catch(console.error);
         }
       }
