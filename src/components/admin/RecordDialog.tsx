@@ -51,6 +51,11 @@ export type Field =
       // Storage folder passed straight through to uploadAdminImage —
       // must be one of storage.ts's ALLOWED_FOLDERS.
       folder: string;
+      // Name of a second field to hold a small grid-card thumbnail,
+      // generated and uploaded alongside the main image — see
+      // ImageUploadField's onThumbnailChange. Omit for images that are
+      // never shown at grid/thumbnail size (e.g. settings hero/about).
+      thumbnailField?: string;
     };
 
 // The only value shapes any field type in this generic dialog ever
@@ -120,6 +125,11 @@ export function RecordDialog<T extends Record<string, FormValue>>({
                     value={typeof values[f.name] === "string" ? (values[f.name] as string) : ""}
                     onChange={(url) => setValues({ ...values, [f.name]: url })}
                     folder={f.folder}
+                    onThumbnailChange={
+                      f.thumbnailField
+                        ? (url) => setValues({ ...values, [f.thumbnailField!]: url })
+                        : undefined
+                    }
                   />
                 ) : f.type === "select" ? (
                   customFields.has(f.name) ? (

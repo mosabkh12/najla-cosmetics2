@@ -19,6 +19,18 @@ import { formatWeeklyHours } from "@/lib/business-hours";
 
 export const Route = createFileRoute("/location")({
   head: () => ({ meta: [{ title: "Location — Najla Cosmetics" }] }),
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["business_settings"],
+        queryFn: () => getSettings(),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["availability-settings"],
+        queryFn: () => getAvailabilitySettings(),
+      }),
+    ]);
+  },
   component: LocationPage,
 });
 

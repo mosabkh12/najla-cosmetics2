@@ -38,13 +38,15 @@ export const saveService = createServerFn({ method: "POST" })
     const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
 
     let previousImageUrl: string | null = null;
+    let previousThumbnailUrl: string | null = null;
     if (id) {
       const { data } = await supabaseAdmin
         .from("services")
-        .select("image_url")
+        .select("image_url, thumbnail_url")
         .eq("id", id)
         .maybeSingle();
       previousImageUrl = data?.image_url ?? null;
+      previousThumbnailUrl = data?.thumbnail_url ?? null;
     }
 
     const clean = {
@@ -56,6 +58,7 @@ export const saveService = createServerFn({ method: "POST" })
       description_ar: (payload.description_ar as string) || null,
       description_en: (payload.description_en as string) || null,
       image_url: (payload.image_url as string) || null,
+      thumbnail_url: (payload.thumbnail_url as string) || null,
       price: Number(payload.price) || 0,
       duration_minutes: Number(payload.duration_minutes) || 30,
       is_active: !!payload.is_active,
@@ -74,6 +77,9 @@ export const saveService = createServerFn({ method: "POST" })
 
     if (previousImageUrl && previousImageUrl !== clean.image_url) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, previousImageUrl);
+    }
+    if (previousThumbnailUrl && previousThumbnailUrl !== clean.thumbnail_url) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, previousThumbnailUrl);
     }
 
     return { success: true };
@@ -101,7 +107,7 @@ export const deleteService = createServerFn({ method: "POST" })
 
     const { data: existing } = await supabaseAdmin
       .from("services")
-      .select("image_url")
+      .select("image_url, thumbnail_url")
       .eq("id", id)
       .maybeSingle();
 
@@ -116,6 +122,9 @@ export const deleteService = createServerFn({ method: "POST" })
 
     if (existing?.image_url) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, existing.image_url);
+    }
+    if (existing?.thumbnail_url) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, existing.thumbnail_url);
     }
 
     return { success: true };

@@ -23,6 +23,7 @@ export interface Product {
   stock_quantity: number;
   low_stock_threshold: number;
   image_url: string | null;
+  thumbnail_url: string | null;
 }
 
 export function ProductCard({ product }: { product: Product }) {
@@ -95,7 +96,10 @@ export function ProductCard({ product }: { product: Product }) {
       product_id: product.id,
       name,
       price: product.price,
-      image_url: product.image_url,
+      // The cart/checkout only ever render this at small size, so the
+      // thumbnail (when available) is the right variant here too — not
+      // just on the grid card above.
+      image_url: product.thumbnail_url ?? product.image_url,
       stock: product.stock_quantity,
     });
     toast.success(t("add_to_cart"));
@@ -112,7 +116,7 @@ export function ProductCard({ product }: { product: Product }) {
         <Link to="/products/$id" params={{ id: product.id }} className="absolute inset-0 z-0">
           {product.image_url ? (
             <img
-              src={product.image_url}
+              src={product.thumbnail_url ?? product.image_url}
               alt={name}
               loading="lazy"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"

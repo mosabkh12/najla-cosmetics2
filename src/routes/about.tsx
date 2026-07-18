@@ -7,6 +7,12 @@ import { Reveal } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/about")({
   head: () => ({ meta: [{ title: "About — Najla Cosmetics" }] }),
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData({
+      queryKey: ["business_settings"],
+      queryFn: () => getSettings(),
+    });
+  },
   component: AboutPage,
 });
 

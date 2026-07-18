@@ -11,6 +11,20 @@ import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/services")({
   head: () => ({ meta: [{ title: "Services — Najla Cosmetics" }] }),
+  // Same reasoning as products.index.tsx's loader — warms the grid +
+  // branding data before the route finishes navigating.
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["services", "active"],
+        queryFn: async () => (await getServices()) as Service[],
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["business_settings"],
+        queryFn: () => getSettings(),
+      }),
+    ]);
+  },
   component: ServicesPage,
 });
 

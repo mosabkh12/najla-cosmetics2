@@ -384,6 +384,7 @@ export type Database = {
           price: number;
           skin_type: string | null;
           stock_quantity: number;
+          thumbnail_url: string | null;
           updated_at: string;
         };
         Insert: {
@@ -402,6 +403,7 @@ export type Database = {
           price?: number;
           skin_type?: string | null;
           stock_quantity?: number;
+          thumbnail_url?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -420,6 +422,7 @@ export type Database = {
           price?: number;
           skin_type?: string | null;
           stock_quantity?: number;
+          thumbnail_url?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -553,6 +556,7 @@ export type Database = {
           name_ar: string | null;
           name_en: string | null;
           price: number;
+          thumbnail_url: string | null;
           updated_at: string;
         };
         Insert: {
@@ -569,6 +573,7 @@ export type Database = {
           name_ar?: string | null;
           name_en?: string | null;
           price?: number;
+          thumbnail_url?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -585,6 +590,7 @@ export type Database = {
           name_ar?: string | null;
           name_en?: string | null;
           price?: number;
+          thumbnail_url?: string | null;
           updated_at?: string;
         };
         Relationships: [];

@@ -460,7 +460,7 @@ function Page() {
                   <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-surface">
                     {it.products?.image_url ? (
                       <img
-                        src={it.products.image_url}
+                        src={it.products.thumbnail_url ?? it.products.image_url}
                         alt=""
                         className="h-full w-full object-cover"
                         loading="lazy"

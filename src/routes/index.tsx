@@ -28,6 +28,33 @@ import { formatWeeklyHours } from "@/lib/business-hours";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Najla Cosmetics — בית" }] }),
+  // Warms these four query keys before the route finishes navigating, so
+  // the SSR HTML already contains the real hero/services/products/hours
+  // instead of shipping an empty shell that only fills in after the client
+  // JS hydrates and fires its own fetches — that gap was the actual cause
+  // of the "shows empty, then a second later shows content" flash, not a
+  // caching issue (query keys below match the useQuery calls in Home()
+  // exactly, so this is a genuine warm cache hit, not a duplicate fetch).
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["services", "active"],
+        queryFn: async () => (await getServices()) as Service[],
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["products", "featured"],
+        queryFn: async () => (await getFeaturedProducts()) as Product[],
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["business_settings"],
+        queryFn: () => getSettings(),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["availability-settings"],
+        queryFn: () => getAvailabilitySettings(),
+      }),
+    ]);
+  },
   component: Home,
 });
 

@@ -492,7 +492,7 @@ function ProfilePage() {
                     <div className="flex items-start gap-3">
                       {a.services?.image_url ? (
                         <img
-                          src={a.services.image_url}
+                          src={a.services.thumbnail_url ?? a.services.image_url}
                           className="h-14 w-14 rounded-xl object-cover shrink-0"
                           alt=""
                         />

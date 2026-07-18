@@ -189,14 +189,16 @@ export const saveProduct = createServerFn({ method: "POST" })
     const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
 
     let previousImageUrl: string | null = null;
+    let previousThumbnailUrl: string | null = null;
     let previousStockQuantity: number | null = null;
     if (id) {
       const { data } = await supabaseAdmin
         .from("products")
-        .select("image_url, stock_quantity")
+        .select("image_url, thumbnail_url, stock_quantity")
         .eq("id", id)
         .maybeSingle();
       previousImageUrl = data?.image_url ?? null;
+      previousThumbnailUrl = data?.thumbnail_url ?? null;
       previousStockQuantity = data?.stock_quantity ?? null;
     }
 
@@ -209,6 +211,7 @@ export const saveProduct = createServerFn({ method: "POST" })
       description_ar: (payload.description_ar as string) || null,
       description_en: (payload.description_en as string) || null,
       image_url: (payload.image_url as string) || null,
+      thumbnail_url: (payload.thumbnail_url as string) || null,
       price: Number(payload.price) || 0,
       skin_type: (payload.skin_type as string) || null,
       stock_quantity: Number(payload.stock_quantity) || 0,
@@ -229,6 +232,9 @@ export const saveProduct = createServerFn({ method: "POST" })
 
     if (previousImageUrl && previousImageUrl !== clean.image_url) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, previousImageUrl);
+    }
+    if (previousThumbnailUrl && previousThumbnailUrl !== clean.thumbnail_url) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, previousThumbnailUrl);
     }
 
     // Only on the 0-or-less → positive transition, i.e. genuinely just
@@ -266,7 +272,7 @@ export const deleteProduct = createServerFn({ method: "POST" })
 
     const { data: existing } = await supabaseAdmin
       .from("products")
-      .select("image_url")
+      .select("image_url, thumbnail_url")
       .eq("id", id)
       .maybeSingle();
 
@@ -281,6 +287,9 @@ export const deleteProduct = createServerFn({ method: "POST" })
 
     if (existing?.image_url) {
       await deleteOldImageIfUnreferenced(supabaseAdmin, existing.image_url);
+    }
+    if (existing?.thumbnail_url) {
+      await deleteOldImageIfUnreferenced(supabaseAdmin, existing.thumbnail_url);
     }
 
     return { success: true };

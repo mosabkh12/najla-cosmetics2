@@ -3,18 +3,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { ALLOWED_IMAGE_TYPES, UPLOAD_ERROR_MAP, uploadImageFile } from "@/lib/upload-image";
+import {
+  ALLOWED_IMAGE_TYPES,
+  UPLOAD_ERROR_MAP,
+  uploadImageFile,
+  uploadImageWithThumbnail,
+} from "@/lib/upload-image";
 
 export function ImageUploadField({
   label,
   value,
   onChange,
   folder,
+  onThumbnailChange,
 }: {
   label: string;
   value: string;
   onChange: (url: string) => void;
   folder: string;
+  // When provided, a small grid-card thumbnail is generated and uploaded
+  // alongside the full image (see uploadImageWithThumbnail) — used for
+  // products/services, whose photos also render as small cards across
+  // the site. Omit for single-use images (settings hero/about) that are
+  // never shown at thumbnail size.
+  onThumbnailChange?: (url: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -48,12 +60,21 @@ export function ImageUploadField({
     setPreview(objectUrl);
 
     setUploading(true);
-    const url = await uploadImageFile(file, folder);
-    setUploading(false);
-
-    if (url) {
-      onChange(url);
-      toast.success("Uploaded!");
+    if (onThumbnailChange) {
+      const result = await uploadImageWithThumbnail(file, folder);
+      setUploading(false);
+      if (result) {
+        onChange(result.url);
+        onThumbnailChange(result.thumbnailUrl);
+        toast.success("Uploaded!");
+      }
+    } else {
+      const url = await uploadImageFile(file, folder);
+      setUploading(false);
+      if (url) {
+        onChange(url);
+        toast.success("Uploaded!");
+      }
     }
     if (previewRef.current === objectUrl) {
       URL.revokeObjectURL(objectUrl);
@@ -82,7 +103,10 @@ export function ImageUploadField({
           {!uploading && (
             <button
               type="button"
-              onClick={() => onChange("")}
+              onClick={() => {
+                onChange("");
+                onThumbnailChange?.("");
+              }}
               className="absolute top-2.5 end-2.5 grid h-7 w-7 place-items-center rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors"
             >
               <X className="h-3.5 w-3.5" />

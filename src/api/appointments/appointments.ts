@@ -284,7 +284,7 @@ export const getUserAppointments = createServerFn({ method: "GET" })
 
     const { data } = await context.supabase
       .from("appointments")
-      .select("*, services(name,name_ar,image_url)")
+      .select("*, services(name,name_ar,image_url,thumbnail_url)")
       .eq("user_id", context.userId)
       .order("appointment_date", { ascending: false });
     return data ?? [];

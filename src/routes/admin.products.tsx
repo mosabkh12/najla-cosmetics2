@@ -115,6 +115,7 @@ function Page() {
       label: L("תמונה ראשית", "الصورة الرئيسية", "Main Image"),
       type: "image",
       folder: "products",
+      thumbnailField: "thumbnail_url",
     },
     { name: "is_active", label: t("is_active"), type: "switch" },
   ];
@@ -293,7 +294,7 @@ function Page() {
                           <div className="flex items-center gap-3">
                             {p.image_url ? (
                               <img
-                                src={p.image_url}
+                                src={p.thumbnail_url ?? p.image_url}
                                 alt=""
                                 className="h-9 w-9 rounded-lg object-cover shrink-0"
                               />

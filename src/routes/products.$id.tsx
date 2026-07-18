@@ -23,6 +23,25 @@ import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/products/$id")({
+  // Warms the product + its images before the route finishes navigating,
+  // so the SSR HTML already shows the real product instead of a loading
+  // state that only fills in once the client re-fetches post-hydration.
+  // Favorite status and related products are deliberately left as
+  // client-only queries — the former needs the logged-in user's session
+  // (not available in the loader), the latter cascades off the product's
+  // category and is below-the-fold, secondary content.
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["product", params.id],
+        queryFn: () => getProductById({ data: { id: params.id } }),
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["product-images", params.id],
+        queryFn: () => getProductImages({ data: { productId: params.id } }),
+      }),
+    ]);
+  },
   component: ProductDetailPage,
 });
 

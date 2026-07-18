@@ -12,6 +12,7 @@ export interface Service {
   description_en: string | null;
   category: string;
   image_url: string | null;
+  thumbnail_url: string | null;
   price: number;
   duration_minutes: number;
 }
@@ -50,7 +51,7 @@ export function ServiceCard({
         >
           {service.image_url ? (
             <img
-              src={service.image_url}
+              src={service.thumbnail_url ?? service.image_url}
               alt=""
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"

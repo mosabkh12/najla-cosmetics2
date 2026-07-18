@@ -11,6 +11,21 @@ import { StaggerGrid } from "@/components/ScrollReveal";
 
 export const Route = createFileRoute("/products/")({
   head: () => ({ meta: [{ title: "Products — Najla Cosmetics" }] }),
+  // Same reasoning as index.tsx's loader: warms the exact query keys
+  // ProductsPage reads below so the grid is already populated in the SSR
+  // HTML instead of appearing empty until the client re-fetches post-hydration.
+  loader: async ({ context }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData({
+        queryKey: ["products", "all"],
+        queryFn: async () => (await getProducts()) as Product[],
+      }),
+      context.queryClient.ensureQueryData({
+        queryKey: ["business_settings"],
+        queryFn: () => getSettings(),
+      }),
+    ]);
+  },
   component: ProductsPage,
 });
 

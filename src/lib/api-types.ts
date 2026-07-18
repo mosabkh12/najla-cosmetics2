@@ -20,9 +20,9 @@ export type DeliveryAreaRow = Tables<"delivery_areas">;
 /** getUserOrders(): orders.select("*, order_items(*)") */
 export type UserOrderRow = OrderRow & { order_items: OrderItemRow[] };
 
-/** getOrderItems(): order_items.select("*, products(image_url)") */
+/** getOrderItems(): order_items.select("*, products(image_url, thumbnail_url)") */
 export type AdminOrderItemRow = OrderItemRow & {
-  products: Pick<ProductRow, "image_url"> | null;
+  products: Pick<ProductRow, "image_url" | "thumbnail_url"> | null;
 };
 
 /** getAdminAppointments(): appointments.select("*, service:services(name,name_ar)") */
@@ -30,9 +30,9 @@ export type AdminAppointmentRow = AppointmentRow & {
   service: Pick<ServiceRow, "name" | "name_ar"> | null;
 };
 
-/** getUserAppointments(): appointments.select("*, services(name,name_ar,image_url)") */
+/** getUserAppointments(): appointments.select("*, services(name,name_ar,image_url,thumbnail_url)") */
 export type UserAppointmentRow = AppointmentRow & {
-  services: Pick<ServiceRow, "name" | "name_ar" | "image_url"> | null;
+  services: Pick<ServiceRow, "name" | "name_ar" | "image_url" | "thumbnail_url"> | null;
 };
 
 /** syncAppointmentToGoogleCalendar(): appointments.select("*, service:services(name,duration_minutes)") */
@@ -58,6 +58,7 @@ export type ProductFormValues = Partial<
     | "description_en"
     | "category"
     | "image_url"
+    | "thumbnail_url"
     | "price"
     | "skin_type"
     | "stock_quantity"
@@ -78,6 +79,7 @@ export type ServiceFormValues = Partial<
     | "description_en"
     | "category"
     | "image_url"
+    | "thumbnail_url"
     | "price"
     | "duration_minutes"
     | "is_active"

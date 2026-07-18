@@ -1,5 +1,5 @@
 import { uploadAdminImage } from "@/api/storage/storage";
-import { resizeImageForUpload } from "@/lib/image-resize";
+import { resizeImageForUpload, resizeImageWithThumbnail } from "@/lib/image-resize";
 import { getErrorMessage } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -54,6 +54,48 @@ export async function uploadImageFile(file: File, folder: string): Promise<strin
       data: { folder, contentType, base64 },
     });
     return publicUrl;
+  } catch (e: unknown) {
+    const message = getErrorMessage(e);
+    toast.error(UPLOAD_ERROR_MAP[message] ?? "Upload failed, please try again");
+    return null;
+  }
+}
+
+// Same validation/upload path as uploadImageFile, but also produces and
+// uploads a small grid-card thumbnail alongside the full image — for
+// products/services, whose photos are shown both full-size (detail page)
+// and as small cards (grids across the site). If the thumbnail upload
+// specifically fails, the full image still succeeds and its own URL is
+// reused as the "thumbnail" rather than failing the whole upload over a
+// non-essential variant.
+export async function uploadImageWithThumbnail(
+  file: File,
+  folder: string,
+): Promise<{ url: string; thumbnailUrl: string } | null> {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    toast.error(UPLOAD_ERROR_MAP.INVALID_FILE_TYPE);
+    return null;
+  }
+  if (file.size > MAX_SOURCE_FILE_SIZE) {
+    toast.error(UPLOAD_ERROR_MAP.FILE_TOO_LARGE);
+    return null;
+  }
+  try {
+    const { blob, contentType, thumbnail } = await resizeImageWithThumbnail(file);
+    const [base64, thumbnailBase64] = await Promise.all([
+      blobToBase64(blob),
+      blobToBase64(thumbnail.blob),
+    ]);
+    const [{ publicUrl }, thumbnailResult] = await Promise.all([
+      uploadAdminImage({ data: { folder, contentType, base64 } }),
+      uploadAdminImage({
+        data: { folder, contentType: thumbnail.contentType, base64: thumbnailBase64 },
+      }).catch((e: unknown) => {
+        console.warn("[uploadImageWithThumbnail] thumbnail upload failed", e);
+        return null;
+      }),
+    ]);
+    return { url: publicUrl, thumbnailUrl: thumbnailResult?.publicUrl ?? publicUrl };
   } catch (e: unknown) {
     const message = getErrorMessage(e);
     toast.error(UPLOAD_ERROR_MAP[message] ?? "Upload failed, please try again");

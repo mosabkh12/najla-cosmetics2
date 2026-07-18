@@ -244,7 +244,7 @@ export const getOrderItems = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("order_items")
-      .select("*, products(image_url)")
+      .select("*, products(image_url, thumbnail_url)")
       .eq("order_id", orderId);
     if (error) throw error;
     return data ?? [];

@@ -25,5 +25,9 @@ export default defineConfig({
     // (e.g. Vercel's own build pipeline), which is the only place it needs
     // to apply.
     preset: "vercel",
+    // Function region is pinned via vercel.json's top-level "regions" key
+    // instead of here — this wrapper's `nitro` option only exposes
+    // preset/output/cloudflare (see LovableViteTanstackOptions), not
+    // Nitro's `vercel.functions` config.
   },
 });
