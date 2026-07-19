@@ -161,26 +161,45 @@ interface OrderStatusUpdateDetails {
   orderNumber: string;
   status: string;
   lang: Lang;
+  items?: OrderItemDetail[];
+  delivery?: OrderDeliveryInfo;
+  total?: number;
 }
 
 const ORDER_STATUS_UPDATE_COPY: Record<
   Lang,
-  { title: string; intro: string; subjectPrefix: string }
+  { title: string; subjectPrefix: string }
 > = {
-  he: {
-    title: "עדכון הזמנה",
-    intro: "סטטוס ההזמנה שלך עודכן.",
-    subjectPrefix: "ההזמנה",
+  he: { title: "עדכון הזמנה", subjectPrefix: "ההזמנה" },
+  ar: { title: "تحديث الطلب", subjectPrefix: "الطلب" },
+  en: { title: "Order Update", subjectPrefix: "Order" },
+};
+
+const STATUS_SPECIFIC_MSG: Record<string, Record<Lang, string>> = {
+  pending: {
+    he: "קיבלנו את הזמנתך ונעדכן אותך בקרוב.",
+    ar: "استلمنا طلبك وسنُعلمك قريباً.",
+    en: "We've received your order and will update you shortly.",
   },
-  ar: {
-    title: "تحديث الطلب",
-    intro: "تم تحديث حالة طلبك.",
-    subjectPrefix: "الطلب",
+  confirmed: {
+    he: "הזמנתך אושרה ותוכן בקרוב.",
+    ar: "تم تأكيد طلبك وسيتم تجهيزه قريباً.",
+    en: "Your order has been confirmed and will be prepared shortly.",
   },
-  en: {
-    title: "Order Update",
-    intro: "Your order status has been updated.",
-    subjectPrefix: "Order",
+  preparing: {
+    he: "אנו מכינים את הזמנתך כרגע — היא תהיה מוכנה בקרוב!",
+    ar: "نقوم بتجهيز طلبك الآن، سيكون جاهزاً قريباً!",
+    en: "We're preparing your order now — it'll be ready soon!",
+  },
+  completed: {
+    he: "הזמנתך מוכנה! תודה שקנית אצלנו.",
+    ar: "طلبك جاهز! شكراً لتسوقك معنا.",
+    en: "Your order is ready! Thank you for shopping with us.",
+  },
+  cancelled: {
+    he: "הזמנתך בוטלה. נשמח לעזור לך שוב.",
+    ar: "تم إلغاء طلبك. يسعدنا مساعدتك مرة أخرى.",
+    en: "Your order has been cancelled. We hope to serve you again.",
   },
 };
 
@@ -193,16 +212,26 @@ export async function sendOrderStatusUpdateEmail(details: OrderStatusUpdateDetai
   const greeting = pick(details.lang, { he: "שלום", ar: "مرحباً", en: "Hi" });
   const labels = FIELD_LABELS[details.lang];
   const statusText = label[details.lang];
+  const statusMsg =
+    STATUS_SPECIFIC_MSG[details.status]?.[details.lang] ??
+    STATUS_SPECIFIC_MSG[details.status]?.he ??
+    "";
+
+  const orderSummary =
+    details.items && details.items.length > 0 && details.delivery != null && details.total != null
+      ? `<div style="margin-top:20px;">${orderTable(details.lang, details.items, details.delivery, details.total)}</div>`
+      : "";
 
   const body = `
     <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">${greeting} <strong>${escapeHtml(details.customerName)}</strong>,</p>
-    <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">${copy.intro}</p>
+    <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">${statusMsg}</p>
     <table style="width:100%;border-collapse:collapse;">
       ${row(labels.orderNumber, `#${escapeHtml(details.orderNumber)}`)}
     </table>
-    <div style="margin-top:20px;padding:14px 16px;background:${BRAND.bg};border-radius:10px;text-align:center;">
+    <div style="margin-top:16px;padding:14px 16px;background:${BRAND.bg};border-radius:10px;text-align:center;">
       <span style="font-size:13px;font-weight:700;color:${label.color};">${statusText}</span>
-    </div>`;
+    </div>
+    ${orderSummary}`;
 
   await sendMail(
     details.customerEmail,

@@ -303,11 +303,22 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     // Only notify the customer on a genuine change — re-saving the same
     // status (e.g. a duplicate submit) must not resend the email.
     if (previousStatus !== nextStatus) {
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("full_name, email, language")
-        .eq("id", order.user_id)
-        .maybeSingle();
+      const [{ data: profile }, { data: fullOrder }, { data: orderItems }] = await Promise.all([
+        supabaseAdmin
+          .from("profiles")
+          .select("full_name, email, language")
+          .eq("id", order.user_id)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("orders")
+          .select("total, delivery_method, delivery_area_name, delivery_fee, delivery_street")
+          .eq("id", id)
+          .maybeSingle(),
+        supabaseAdmin
+          .from("order_items")
+          .select("product_name, quantity, total_price")
+          .eq("order_id", id),
+      ]);
 
       if (profile?.email) {
         const { sendOrderStatusUpdateEmail } = await import("@/api/email/order-emails");
@@ -317,6 +328,20 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
           orderNumber: order.order_number,
           status: nextStatus,
           lang: profile.language as Lang,
+          items: (orderItems ?? []).map((it) => ({
+            productName: it.product_name,
+            quantity: it.quantity,
+            totalPrice: Number(it.total_price),
+          })),
+          delivery: fullOrder
+            ? {
+                method: fullOrder.delivery_method as "pickup" | "delivery",
+                areaName: fullOrder.delivery_area_name,
+                fee: Number(fullOrder.delivery_fee),
+                street: fullOrder.delivery_street,
+              }
+            : undefined,
+          total: fullOrder ? Number(fullOrder.total) : undefined,
         }).catch(console.error);
       }
     }

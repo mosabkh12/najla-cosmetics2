@@ -148,24 +148,27 @@ function ProfilePage() {
     qc.invalidateQueries({ queryKey: ["appointments", user.id] });
   };
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  // An appointment is only truly "upcoming" if its date is today or later
+  // AND its status is active — past confirmed/pending appointments are
+  // treated as done on the client side even before the server auto-completes them.
+  const isUpcoming = (a: (typeof appts)[0]) =>
+    ["pending", "confirmed"].includes(a.status) && a.appointment_date >= todayStr;
+
   const filteredAppts = appts
     .filter((a) => {
-      if (apptFilter === "upcoming") return ["pending", "confirmed"].includes(a.status);
-      if (apptFilter === "completed") return a.status === "completed";
+      if (apptFilter === "upcoming") return isUpcoming(a);
+      if (apptFilter === "completed") return a.status === "completed" || (["pending", "confirmed"].includes(a.status) && a.appointment_date < todayStr);
       if (apptFilter === "cancelled") return a.status === "cancelled";
       return true;
     })
-    // Not-yet-finished appointments always come first (soonest next at the very
-    // top), then finished ones below (most recent first) — grouped by status,
-    // not raw date, so e.g. a cancelled appointment dated in the future still
-    // sorts into the "finished" group rather than appearing above what's upcoming.
     .sort((a, b) => {
-      const aUpcoming = ["pending", "confirmed"].includes(a.status);
-      const bUpcoming = ["pending", "confirmed"].includes(b.status);
-      if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+      const aUp = isUpcoming(a);
+      const bUp = isUpcoming(b);
+      if (aUp !== bUp) return aUp ? -1 : 1;
       const aKey = `${a.appointment_date} ${a.appointment_time}`;
       const bKey = `${b.appointment_date} ${b.appointment_time}`;
-      return aUpcoming ? aKey.localeCompare(bKey) : bKey.localeCompare(aKey);
+      return aUp ? aKey.localeCompare(bKey) : bKey.localeCompare(aKey);
     });
 
   const filteredOrders = orders.filter((o) => {
@@ -175,7 +178,7 @@ function ProfilePage() {
     return true;
   });
 
-  const upcomingCount = appts.filter((a) => ["pending", "confirmed"].includes(a.status)).length;
+  const upcomingCount = appts.filter(isUpcoming).length;
   const hasApptHistory = appts.some((a) => ["completed", "cancelled"].includes(a.status));
   const activeOrderCount = orders.filter(
     (o) => !["completed", "cancelled"].includes(o.status),
@@ -529,7 +532,7 @@ function ProfilePage() {
                         </div>
                       </div>
                     </div>
-                    {["pending", "confirmed"].includes(a.status) && serviceId && (
+                    {isUpcoming(a) && serviceId && (
                       <div className="mt-3 pt-3 border-t border-border/20 flex justify-end gap-2">
                         <button
                           type="button"
@@ -558,7 +561,7 @@ function ProfilePage() {
                         </button>
                       </div>
                     )}
-                    {["completed", "cancelled"].includes(a.status) && (
+                    {(["completed", "cancelled"].includes(a.status) || !isUpcoming(a)) && (
                       <div className="mt-3 pt-3 border-t border-border/20 flex justify-end">
                         <button
                           type="button"

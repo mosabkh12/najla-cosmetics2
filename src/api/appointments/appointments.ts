@@ -44,6 +44,20 @@ async function purgeOldAppointments(supabaseAdmin: SupabaseAdmin) {
     .lt("appointment_date", cutoffStr);
 }
 
+// Auto-completes confirmed/pending appointments whose date is strictly
+// before today (Jerusalem time). Runs on every fetch so past appointments
+// never stay "active" even if the admin forgot to mark them done.
+// Same-day appointments are left alone until tomorrow — a customer should
+// be able to cancel earlier on the day of their appointment.
+async function autoCompleteExpiredAppointments(supabaseAdmin: SupabaseAdmin) {
+  const { dateStr: todayStr } = jerusalemNow();
+  await supabaseAdmin
+    .from("appointments")
+    .update({ status: "completed" as const })
+    .in("status", ["pending", "confirmed"])
+    .lt("appointment_date", todayStr);
+}
+
 function parseDate(date: string): Date | null {
   if (!DATE_RE.test(date)) return null;
   const [y, m, d] = date.split("-").map(Number);
@@ -280,6 +294,9 @@ export const getUserAppointments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Auto-complete first so the data returned is already up-to-date,
+    // then purge old history. Both are best-effort (errors are swallowed).
+    await autoCompleteExpiredAppointments(supabaseAdmin).catch(console.error);
     purgeOldAppointments(supabaseAdmin).catch(console.error);
 
     const { data } = await context.supabase
@@ -466,6 +483,7 @@ export const getAdminAppointments = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await autoCompleteExpiredAppointments(supabaseAdmin).catch(console.error);
     purgeOldAppointments(supabaseAdmin).catch(console.error);
 
     const { data, error } = await supabaseAdmin

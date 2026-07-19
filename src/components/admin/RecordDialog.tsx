@@ -95,9 +95,11 @@ export function RecordDialog<T extends Record<string, FormValue>>({
 }) {
   const { t } = useI18n();
   const [values, setValues] = useState<T>(initial);
-  // Fields currently showing a free-text input instead of their select
-  // list, because "type a new value" was chosen (see allowCustom above).
   const [customFields, setCustomFields] = useState<Set<string>>(new Set());
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const anyUploading = uploadingCount > 0;
+  const onUploadingChange = (uploading: boolean) =>
+    setUploadingCount((c) => Math.max(0, uploading ? c + 1 : c - 1));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,6 +132,7 @@ export function RecordDialog<T extends Record<string, FormValue>>({
                         ? (url) => setValues({ ...values, [f.thumbnailField!]: url })
                         : undefined
                     }
+                    onUploadingChange={onUploadingChange}
                   />
                 ) : f.type === "select" ? (
                   customFields.has(f.name) ? (
@@ -249,8 +252,8 @@ export function RecordDialog<T extends Record<string, FormValue>>({
           <button
             type="button"
             className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5 disabled:opacity-50"
-            disabled={submitting}
-            aria-busy={submitting}
+            disabled={submitting || anyUploading}
+            aria-busy={submitting || anyUploading}
             onClick={() => onSubmit(values)}
           >
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

@@ -151,6 +151,7 @@ export async function deleteOldImageIfUnreferenced(
       heroRes,
       aboutRes,
       productsHeroRes,
+      servicesHeroRes,
       galleryRes,
     ] = await Promise.all([
       supabaseAdmin
@@ -182,6 +183,10 @@ export async function deleteOldImageIfUnreferenced(
         .select("id", { count: "exact", head: true })
         .eq("products_hero_image_url", oldUrl),
       supabaseAdmin
+        .from("business_settings")
+        .select("id", { count: "exact", head: true })
+        .eq("services_hero_image_url", oldUrl),
+      supabaseAdmin
         .from("product_images")
         .select("id", { count: "exact", head: true })
         .eq("image_url", oldUrl),
@@ -195,6 +200,7 @@ export async function deleteOldImageIfUnreferenced(
       (heroRes.count ?? 0) > 0 ||
       (aboutRes.count ?? 0) > 0 ||
       (productsHeroRes.count ?? 0) > 0 ||
+      (servicesHeroRes.count ?? 0) > 0 ||
       (galleryRes.count ?? 0) > 0;
 
     if (stillReferenced) return;

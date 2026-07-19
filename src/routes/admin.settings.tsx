@@ -70,6 +70,10 @@ function Page() {
   const [form, setForm] = useState<SettingsFormState>({});
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const anyUploading = uploadingCount > 0;
+  const onUploadingChange = (uploading: boolean) =>
+    setUploadingCount((c) => Math.max(0, uploading ? c + 1 : c - 1));
 
   useEffect(() => {
     if (data) setForm(data);
@@ -170,7 +174,7 @@ function Page() {
           </div>
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || anyUploading}
             className="bg-foreground text-background px-6 py-2.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center gap-1.5 disabled:opacity-50"
           >
             {saving ? (
@@ -371,12 +375,14 @@ function Page() {
               value={form.hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, hero_image_url: url })}
               folder="settings"
+              onUploadingChange={onUploadingChange}
             />
             <ImageUploadField
               label={L("תמונת אודות", "صورة عنا", "About Image")}
               value={form.about_image_url ?? ""}
               onChange={(url) => setForm({ ...form, about_image_url: url })}
               folder="settings"
+              onUploadingChange={onUploadingChange}
             />
             <ImageUploadField
               label={L(
@@ -387,6 +393,7 @@ function Page() {
               value={form.products_hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, products_hero_image_url: url })}
               folder="settings"
+              onUploadingChange={onUploadingChange}
             />
             <ImageUploadField
               label={L(
@@ -397,6 +404,7 @@ function Page() {
               value={form.services_hero_image_url ?? ""}
               onChange={(url) => setForm({ ...form, services_hero_image_url: url })}
               folder="settings"
+              onUploadingChange={onUploadingChange}
             />
           </div>
         </div>
@@ -438,7 +446,7 @@ function Page() {
         <div className="sm:hidden">
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || anyUploading}
             className="w-full bg-foreground text-background py-3.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.08em] hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             {saving ? (

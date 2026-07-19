@@ -16,6 +16,7 @@ export function ImageUploadField({
   onChange,
   folder,
   onThumbnailChange,
+  onUploadingChange,
 }: {
   label: string;
   value: string;
@@ -27,6 +28,10 @@ export function ImageUploadField({
   // the site. Omit for single-use images (settings hero/about) that are
   // never shown at thumbnail size.
   onThumbnailChange?: (url: string) => void;
+  // Called with true when an upload starts, false when it settles —
+  // lets the parent disable its Save button so the form is never saved
+  // with an old URL while a new image is still in flight.
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -60,21 +65,25 @@ export function ImageUploadField({
     setPreview(objectUrl);
 
     setUploading(true);
-    if (onThumbnailChange) {
-      const result = await uploadImageWithThumbnail(file, folder);
-      setUploading(false);
-      if (result) {
-        onChange(result.url);
-        onThumbnailChange(result.thumbnailUrl);
-        toast.success("Uploaded!");
+    onUploadingChange?.(true);
+    try {
+      if (onThumbnailChange) {
+        const result = await uploadImageWithThumbnail(file, folder);
+        if (result) {
+          onChange(result.url);
+          onThumbnailChange(result.thumbnailUrl);
+          toast.success("Photo ready — click Save to apply.");
+        }
+      } else {
+        const url = await uploadImageFile(file, folder);
+        if (url) {
+          onChange(url);
+          toast.success("Photo ready — click Save to apply.");
+        }
       }
-    } else {
-      const url = await uploadImageFile(file, folder);
+    } finally {
       setUploading(false);
-      if (url) {
-        onChange(url);
-        toast.success("Uploaded!");
-      }
+      onUploadingChange?.(false);
     }
     if (previewRef.current === objectUrl) {
       URL.revokeObjectURL(objectUrl);
