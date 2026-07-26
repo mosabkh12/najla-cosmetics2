@@ -136,6 +136,12 @@ export function Footer() {
             © {new Date().getFullYear()} {settings?.business_name || "Najla Cosmetics"}.{" "}
             {t("rights_reserved")}
           </p>
+          <Link
+            to="/privacy"
+            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t("privacy_policy")}
+          </Link>
         </div>
       </div>
     </footer>

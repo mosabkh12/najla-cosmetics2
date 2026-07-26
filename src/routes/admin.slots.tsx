@@ -70,10 +70,14 @@ function TimeSelect({
   value,
   onChange,
   className = "",
+  id,
+  ariaLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
   className?: string;
+  id?: string;
+  ariaLabel?: string;
 }) {
   // A stored time that isn't one of the fixed 30-minute options (e.g. odd
   // leftover data, or a value set some other way) wouldn't match any
@@ -85,6 +89,8 @@ function TimeSelect({
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
+        id={id}
+        aria-label={ariaLabel}
         className={`rounded-lg border-border/30 text-[13px] font-medium ${className}`}
         dir="ltr"
       >
@@ -303,6 +309,7 @@ function Page() {
                   <Switch
                     checked={day?.enabled ?? false}
                     onCheckedChange={(v) => updateDay(d, { enabled: v })}
+                    aria-label={dayName(d, lang)}
                   />
                   <span
                     className={`w-16 sm:w-20 text-[13px] font-medium shrink-0 ${day?.enabled ? "text-foreground" : "text-muted-foreground"}`}
@@ -315,12 +322,16 @@ function Page() {
                         value={day.open}
                         onChange={(v) => updateDay(d, { open: v })}
                         className="h-8 w-[85px]"
+                        ariaLabel={`${dayName(d, lang)} — ${L("שעת פתיחה", "وقت الفتح", "Opening time")}`}
                       />
-                      <span className="text-muted-foreground text-[11px]">{"—"}</span>
+                      <span className="text-muted-foreground text-[11px]" aria-hidden="true">
+                        {"—"}
+                      </span>
                       <TimeSelect
                         value={day.close}
                         onChange={(v) => updateDay(d, { close: v })}
                         className="h-8 w-[85px]"
+                        ariaLabel={`${dayName(d, lang)} — ${L("שעת סגירה", "وقت الإغلاق", "Closing time")}`}
                       />
                     </div>
                   ) : (
@@ -348,11 +359,11 @@ function Page() {
           </div>
           <div className="grid sm:grid-cols-3 gap-5">
             <div className="grid gap-2">
-              <Label className={labelClass}>
+              <Label htmlFor="slot-interval" className={labelClass}>
                 {L("מרווח בין תורים", "الفاصل بين المواعيد", "Slot Interval")}
               </Label>
               <Select value={String(interval)} onValueChange={(v) => setInterval_(Number(v))}>
-                <SelectTrigger className="h-10 rounded-xl border-border/30">
+                <SelectTrigger id="slot-interval" className="h-10 rounded-xl border-border/30">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -365,9 +376,12 @@ function Page() {
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label className={labelClass}>{L("זמן חיץ", "وقت الفاصل", "Buffer Time")}</Label>
+              <Label htmlFor="buffer-time" className={labelClass}>
+                {L("זמן חיץ", "وقت الفاصل", "Buffer Time")}
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
+                  id="buffer-time"
                   type="number"
                   min={0}
                   max={120}
@@ -382,10 +396,11 @@ function Page() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label className={labelClass}>
+              <Label htmlFor="max-per-day" className={labelClass}>
                 {L("מקסימום ליום", "الحد الأقصى يومياً", "Max Per Day")}
               </Label>
               <Input
+                id="max-per-day"
                 type="number"
                 min={0}
                 placeholder={L("ללא הגבלה", "بلا حد", "Unlimited")}
@@ -425,14 +440,15 @@ function Page() {
                     className="flex items-center gap-2 text-[13px] font-medium text-foreground"
                     dir="ltr"
                   >
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden="true" />
                     {b.start} {"—"} {b.end}
                   </span>
                   <button
                     onClick={() => setBreaks((prev) => prev.filter((_, j) => j !== i))}
+                    aria-label={`${L("מחק הפסקה", "حذف فترة راحة", "Delete break")}: ${b.start}–${b.end}`}
                     className="grid h-7 w-7 place-items-center rounded-lg hover:bg-destructive/10 transition-colors"
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -441,17 +457,29 @@ function Page() {
 
           <div className="flex items-end gap-3">
             <div className="grid gap-1.5">
-              <Label className={labelClass}>{L("מ", "من", "From")}</Label>
+              <Label htmlFor="break-start" className={labelClass}>
+                {L("מ", "من", "From")}
+              </Label>
               <TimeSelect
+                id="break-start"
                 value={newBreakStart}
                 onChange={setNewBreakStart}
                 className="h-9 w-[100px]"
               />
             </div>
-            <span className="text-muted-foreground text-[12px] pb-2">{"—"}</span>
+            <span className="text-muted-foreground text-[12px] pb-2" aria-hidden="true">
+              {"—"}
+            </span>
             <div className="grid gap-1.5">
-              <Label className={labelClass}>{L("עד", "إلى", "To")}</Label>
-              <TimeSelect value={newBreakEnd} onChange={setNewBreakEnd} className="h-9 w-[100px]" />
+              <Label htmlFor="break-end" className={labelClass}>
+                {L("עד", "إلى", "To")}
+              </Label>
+              <TimeSelect
+                id="break-end"
+                value={newBreakEnd}
+                onChange={setNewBreakEnd}
+                className="h-9 w-[100px]"
+              />
             </div>
             <button
               onClick={addBreak}
@@ -487,14 +515,15 @@ function Page() {
                     className="flex items-center gap-2 text-[13px] font-medium text-foreground"
                     dir="ltr"
                   >
-                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden="true" />
                     {d}
                   </span>
                   <button
                     onClick={() => setClosedDates((prev) => prev.filter((x) => x !== d))}
+                    aria-label={`${L("מחק תאריך סגור", "حذف تاريخ مغلق", "Delete closed date")}: ${d}`}
                     className="grid h-7 w-7 place-items-center rounded-lg hover:bg-destructive/10 transition-colors"
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                   </button>
                 </div>
               ))}
@@ -503,8 +532,11 @@ function Page() {
 
           <div className="flex items-end gap-3">
             <div className="grid gap-1.5">
-              <Label className={labelClass}>{L("תאריך", "التاريخ", "Date")}</Label>
+              <Label htmlFor="new-closed-date" className={labelClass}>
+                {L("תאריך", "التاريخ", "Date")}
+              </Label>
               <Input
+                id="new-closed-date"
                 type="date"
                 value={newClosedDate}
                 onChange={(e) => setNewClosedDate(e.target.value)}

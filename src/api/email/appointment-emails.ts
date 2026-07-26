@@ -68,7 +68,12 @@ export function row(label: string, value: string) {
   </tr>`;
 }
 
-const FALLBACK_BRAND: EmailBrand = { businessName: "Najla Cosmetics", address: null };
+const FALLBACK_BRAND: EmailBrand = {
+  businessName: "Najla Cosmetics",
+  address: null,
+  phone: null,
+  whatsappNumber: null,
+};
 
 // dir defaults to "ltr" for sendAdminBookingNotification, the one caller
 // that never carries a customer lang (it's always read by the business
@@ -87,6 +92,26 @@ export function wrap(
   const footerLine = brand.address
     ? `${brand.businessName} · ${brand.address}`
     : brand.businessName;
+
+  // Rendered on every email (booking, order, OTP, back-in-stock, etc.) so a
+  // customer always has a direct way to reach the business from their
+  // inbox, not just from the site. tel:/wa.me links need digits only —
+  // admin-entered phone numbers may contain spaces/dashes/parens.
+  const contactParts = [
+    brand.phone
+      ? `<a href="tel:${encodeURIComponent(brand.phone)}" style="color:${BRAND.text};text-decoration:none;font-weight:600;">📞 ${escapeHtml(brand.phone)}</a>`
+      : null,
+    brand.whatsappNumber
+      ? `<a href="https://wa.me/${brand.whatsappNumber.replace(/[^0-9]/g, "")}" style="color:${BRAND.text};text-decoration:none;font-weight:600;">💬 WhatsApp</a>`
+      : null,
+  ].filter((part): part is string => Boolean(part));
+  const contactLine =
+    contactParts.length > 0
+      ? `<p style="text-align:center;font-size:13px;color:${BRAND.muted};margin:20px 0 0;">${contactParts.join(
+          `<span style="color:${BRAND.border};margin:0 10px;">|</span>`,
+        )}</p>`
+      : "";
+
   return `<div dir="${dir}" style="background:${BRAND.bg};padding:40px 16px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:480px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
@@ -98,7 +123,8 @@ export function wrap(
       </div>
       <div style="padding:24px;">${body}</div>
     </div>
-    <p style="text-align:center;font-size:11px;color:${BRAND.muted};margin-top:24px;">© ${year} ${escapeHtml(footerLine)}</p>
+    ${contactLine}
+    <p style="text-align:center;font-size:11px;color:${BRAND.muted};margin-top:${contactParts.length > 0 ? "8px" : "24px"};">© ${year} ${escapeHtml(footerLine)}</p>
   </div>
 </div>`;
 }

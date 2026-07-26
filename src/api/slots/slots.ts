@@ -175,26 +175,28 @@ async function findConflictingAppointments(
   supabaseAdmin: SupabaseAdmin,
   proposed: ProposedAvailability,
 ): Promise<ConflictingAppointment[]> {
+  // Reads duration_minutes/service_name off each appointment's own snapshot
+  // rather than joining services — a live join here would silently miss any
+  // appointment whose service was since deleted (service_id set NULL), the
+  // same hole fixed for the booking RPCs' own conflict checks (see the
+  // accompanying migration).
   const { data } = await supabaseAdmin
     .from("appointments")
-    .select(
-      "id, user_id, customer_name, appointment_date, appointment_time, services(name, duration_minutes)",
-    )
+    .select("id, user_id, customer_name, appointment_date, appointment_time, duration_minutes, service_name")
     .in("status", ["pending", "confirmed"])
     .gte("appointment_date", jerusalemTodayStr());
 
   const conflicts: ConflictingAppointment[] = [];
   for (const a of data ?? []) {
     const start = toMinutes(String(a.appointment_time));
-    const duration = a.services?.duration_minutes ?? 30;
-    if (isBlockedUnder(proposed, a.appointment_date, start, start + duration)) {
+    if (isBlockedUnder(proposed, a.appointment_date, start, start + a.duration_minutes)) {
       conflicts.push({
         id: a.id,
         user_id: a.user_id,
         customer_name: a.customer_name,
         appointment_date: a.appointment_date,
         appointment_time: String(a.appointment_time),
-        service_name: a.services?.name ?? "",
+        service_name: a.service_name ?? "",
       });
     }
   }

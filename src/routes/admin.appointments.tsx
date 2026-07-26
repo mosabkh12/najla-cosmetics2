@@ -352,6 +352,7 @@ function Page() {
             <button
               key={tf}
               onClick={() => setTimeFilter(tf)}
+              aria-pressed={timeFilter === tf}
               className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
                 timeFilter === tf
                   ? "bg-foreground text-background"
@@ -387,13 +388,16 @@ function Page() {
             <button
               key={sf}
               onClick={() => setStatusFilter(sf)}
+              aria-pressed={statusFilter === sf}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
                 statusFilter === sf
                   ? "bg-primary text-primary-foreground"
                   : "bg-surface text-muted-foreground hover:bg-surface-2"
               }`}
             >
-              {sf !== "all" && <span className={`h-1.5 w-1.5 rounded-full ${statusDot[sf]}`} />}
+              {sf !== "all" && (
+                <span className={`h-1.5 w-1.5 rounded-full ${statusDot[sf]}`} aria-hidden="true" />
+              )}
               {statusFilterLabel[sf]}
               <span
                 className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${
@@ -534,13 +538,13 @@ function Page() {
                     variant="ghost"
                     onClick={() => deleteDay(group)}
                     className="h-7 w-7 rounded-lg hover:bg-destructive/10"
-                    title={L(
+                    aria-label={L(
                       "מחק את כל התורים ביום זה",
                       "حذف كل مواعيد هذا اليوم",
                       "Delete this day",
                     )}
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -687,7 +691,7 @@ function Page() {
                                       type="button"
                                       onClick={() => retrySync(a.id)}
                                       disabled={isSyncing}
-                                      title={L(
+                                      aria-label={L(
                                         "נסה לסנכרן שוב",
                                         "إعادة محاولة المزامنة",
                                         "Retry Google sync",
@@ -695,6 +699,7 @@ function Page() {
                                       className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-surface hover:text-foreground transition-colors disabled:opacity-50"
                                     >
                                       <RefreshCw
+                                        aria-hidden="true"
                                         className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`}
                                       />
                                     </button>
@@ -717,9 +722,10 @@ function Page() {
                                   ),
                                 )
                               }
+                              aria-label={`${L("מחק", "حذف", "Delete")}: ${a.customer_name}`}
                               className="h-8 w-8 rounded-lg hover:bg-destructive/10"
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
                             </Button>
                           </td>
                         </tr>

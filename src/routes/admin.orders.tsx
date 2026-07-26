@@ -201,6 +201,7 @@ function Page() {
             <button
               key={tf}
               onClick={() => setTimeFilter(tf)}
+              aria-pressed={timeFilter === tf}
               className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
                 timeFilter === tf
                   ? "bg-foreground text-background"
@@ -236,13 +237,16 @@ function Page() {
             <button
               key={sf}
               onClick={() => setStatusFilter(sf)}
+              aria-pressed={statusFilter === sf}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap transition-colors ${
                 statusFilter === sf
                   ? "bg-primary text-primary-foreground"
                   : "bg-surface text-muted-foreground hover:bg-surface-2"
               }`}
             >
-              {sf !== "all" && <span className={`h-1.5 w-1.5 rounded-full ${statusDot[sf]}`} />}
+              {sf !== "all" && (
+                <span className={`h-1.5 w-1.5 rounded-full ${statusDot[sf]}`} aria-hidden="true" />
+              )}
               {statusFilterLabel[sf]}
               <span
                 className={`grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold ${

@@ -157,7 +157,7 @@ export const createOrder = createServerFn({ method: "POST" })
       supabaseAdmin
         .from("orders")
         .select(
-          "order_number, total, delivery_method, delivery_area_name, delivery_fee, delivery_street",
+          "order_number, total, delivery_method, delivery_area_name, delivery_fee, delivery_street, created_at",
         )
         .eq("id", orderId)
         .maybeSingle(),
@@ -191,6 +191,7 @@ export const createOrder = createServerFn({ method: "POST" })
           street: order.delivery_street,
         },
         total: Number(order.total),
+        orderDate: order.created_at,
         lang: profile.language as Lang,
       };
       // Awaited (each with its own error swallow) rather than a dangling

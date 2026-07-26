@@ -48,6 +48,7 @@ export type Database = {
           created_at: string;
           customer_name: string;
           customer_phone: string;
+          duration_minutes: number;
           google_calendar_sync_error: string | null;
           google_calendar_synced_at: string | null;
           google_event_id: string | null;
@@ -67,6 +68,7 @@ export type Database = {
           created_at?: string;
           customer_name: string;
           customer_phone: string;
+          duration_minutes?: number;
           google_calendar_sync_error?: string | null;
           google_calendar_synced_at?: string | null;
           google_event_id?: string | null;
@@ -86,6 +88,7 @@ export type Database = {
           created_at?: string;
           customer_name?: string;
           customer_phone?: string;
+          duration_minutes?: number;
           google_calendar_sync_error?: string | null;
           google_calendar_synced_at?: string | null;
           google_event_id?: string | null;

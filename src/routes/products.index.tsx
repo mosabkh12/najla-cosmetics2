@@ -165,7 +165,7 @@ function ProductsPage() {
               className="lg:hidden w-full flex items-center justify-between py-3 border-b border-border/40 mb-6"
             >
               <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-foreground">
-                {t("sort")}
+                {t("filters")}
               </span>
               <span
                 aria-hidden="true"
@@ -280,29 +280,15 @@ function ProductsPage() {
                   <span>₪{priceCeiling}</span>
                 </div>
               </div>
+            </div>
 
-              {/* Consultation CTA */}
-              <div className="pt-2">
-                <div className="aspect-[3/4] overflow-hidden rounded-2xl mb-5">
-                  <img
-                    src={settings?.about_image_url ?? "/images/brand/about.png"}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <p className="font-display text-[22px] italic text-center mb-2">
-                  {t("book_appointment")}?
-                </p>
-                <p className="text-[14px] text-muted-foreground text-center mb-5 leading-relaxed">
-                  {t("services_sub")}
-                </p>
-                <Link
-                  to="/services"
-                  className="block text-center w-full py-3.5 rounded-full border border-foreground text-foreground text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all"
-                >
-                  {t("book_appointment")}
-                </Link>
-              </div>
+            {/* Consultation CTA — always visible on desktop (not gated by
+                the mobile filter toggle above, since it's a promo card, not
+                a filter). On mobile it renders separately, after the
+                product grid, so opening filters doesn't bury the grid
+                under a full-bleed image. */}
+            <div className="hidden lg:block pt-12">
+              <ConsultationCta imageUrl={settings?.about_image_url} t={t} />
             </div>
           </aside>
 
@@ -319,9 +305,39 @@ function ProductsPage() {
                 <p className="text-[15px] text-muted-foreground">{t("empty_cart")}</p>
               </div>
             )}
+
+            <div className="lg:hidden pt-14">
+              <ConsultationCta imageUrl={settings?.about_image_url} t={t} />
+            </div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function ConsultationCta({
+  imageUrl,
+  t,
+}: {
+  imageUrl: string | null | undefined;
+  t: (key: string) => string;
+}) {
+  return (
+    <div>
+      <div className="aspect-[3/4] overflow-hidden rounded-2xl mb-5 max-w-sm mx-auto lg:max-w-none">
+        <img src={imageUrl ?? "/images/brand/about.png"} alt="" className="h-full w-full object-cover" />
+      </div>
+      <p className="font-display text-[22px] italic text-center mb-2">{t("book_appointment")}?</p>
+      <p className="text-[14px] text-muted-foreground text-center mb-5 leading-relaxed max-w-sm mx-auto lg:max-w-none">
+        {t("services_sub")}
+      </p>
+      <Link
+        to="/services"
+        className="block text-center w-full max-w-sm mx-auto lg:max-w-none py-3.5 rounded-full border border-foreground text-foreground text-[11px] font-semibold uppercase tracking-[0.1em] hover:bg-foreground hover:text-background transition-all"
+      >
+        {t("book_appointment")}
+      </Link>
+    </div>
   );
 }

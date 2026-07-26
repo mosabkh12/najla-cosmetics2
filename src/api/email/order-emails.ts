@@ -18,11 +18,60 @@ const ORDER_STATUS_LABELS: Record<string, { he: string; ar: string; en: string; 
 
 const FIELD_LABELS: Record<
   Lang,
-  { orderNumber: string; delivery: string; address: string; total: string }
+  { orderNumber: string; orderDate: string; items: string; delivery: string; address: string; total: string }
 > = {
-  he: { orderNumber: "מספר הזמנה", delivery: "משלוח", address: "כתובת", total: "סך הכל" },
-  ar: { orderNumber: "رقم الطلب", delivery: "التوصيل", address: "العنوان", total: "المجموع" },
-  en: { orderNumber: "Order #", delivery: "Delivery", address: "Address", total: "Total" },
+  he: {
+    orderNumber: "מספר הזמנה",
+    orderDate: "תאריך הזמנה",
+    items: "פריטים",
+    delivery: "משלוח",
+    address: "כתובת",
+    total: "סך הכל",
+  },
+  ar: {
+    orderNumber: "رقم الطلب",
+    orderDate: "تاريخ الطلب",
+    items: "المنتجات",
+    delivery: "التوصيل",
+    address: "العنوان",
+    total: "المجموع",
+  },
+  en: {
+    orderNumber: "Order #",
+    orderDate: "Order Date",
+    items: "Items",
+    delivery: "Delivery",
+    address: "Address",
+    total: "Total",
+  },
+};
+
+const LOCALE: Record<Lang, string> = { he: "he-IL", ar: "ar", en: "en-US" };
+
+function formatOrderDate(iso: string, lang: Lang): string {
+  try {
+    return new Date(iso).toLocaleString(LOCALE[lang], {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+const NEXT_STEPS_COPY: Record<Lang, string> = {
+  he: "נעדכן אותך במייל בכל שינוי בסטטוס ההזמנה, עד שתהיה מוכנה.",
+  ar: "سنُعلمك عبر البريد الإلكتروني عند تحديث حالة طلبك، حتى يصبح جاهزاً.",
+  en: "We'll email you at every step until your order is ready.",
+};
+
+const NEED_HELP_COPY: Record<Lang, string> = {
+  he: "שאלות לגבי ההזמנה? נשמח לעזור בכל עת.",
+  ar: "أسئلة حول طلبك؟ يسعدنا مساعدتك في أي وقت.",
+  en: "Questions about your order? We're happy to help anytime.",
 };
 
 const PICKUP_LABEL: Record<Lang, string> = {
@@ -51,6 +100,7 @@ function orderTable(
   total: number,
 ) {
   const labels = FIELD_LABELS[lang];
+  const itemCount = items.reduce((sum, it) => sum + it.quantity, 0);
   const itemRows = items
     .map((it) => row(`${escapeHtml(it.productName)} × ${it.quantity}`, `₪${it.totalPrice}`))
     .join("");
@@ -65,7 +115,8 @@ function orderTable(
       ? row(labels.address, escapeHtml(delivery.street))
       : "";
 
-  return `<table style="width:100%;border-collapse:collapse;">
+  return `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:${BRAND.muted};margin:0 0 8px;">${labels.items} (${itemCount})</div>
+  <table style="width:100%;border-collapse:collapse;">
     ${itemRows}
     ${row(labels.delivery, deliveryValue)}
     ${streetRow}
@@ -80,6 +131,7 @@ interface OrderConfirmationDetails {
   customerName: string;
   customerEmail: string;
   orderNumber: string;
+  orderDate: string;
   items: OrderItemDetail[];
   delivery: OrderDeliveryInfo;
   total: number;
@@ -114,11 +166,16 @@ export async function sendOrderConfirmation(details: OrderConfirmationDetails) {
   const body = `
     <p style="font-size:14px;color:${BRAND.text};margin:0 0 20px;">${greeting} <strong>${escapeHtml(details.customerName)}</strong>,</p>
     <p style="font-size:14px;color:${BRAND.muted};margin:0 0 20px;line-height:1.6;">${copy.intro}</p>
-    <p style="font-size:12px;color:${BRAND.muted};margin:0 0 12px;">${labels.orderNumber}: <strong style="color:${BRAND.text};">#${escapeHtml(details.orderNumber)}</strong></p>
+    <table style="width:100%;border-collapse:collapse;margin:0 0 16px;">
+      ${row(labels.orderNumber, `#${escapeHtml(details.orderNumber)}`)}
+      ${row(labels.orderDate, formatOrderDate(details.orderDate, details.lang))}
+    </table>
     ${orderTable(details.lang, details.items, details.delivery, details.total)}
     <div style="margin-top:12px;text-align:center;">
       <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:${ORDER_STATUS_LABELS.pending.color};">${pendingLabel}</span>
-    </div>`;
+    </div>
+    <p style="font-size:13px;color:${BRAND.muted};margin:20px 0 0;line-height:1.6;text-align:center;">${NEXT_STEPS_COPY[details.lang]}</p>
+    <p style="font-size:12px;color:${BRAND.muted};margin:6px 0 0;line-height:1.6;text-align:center;">${NEED_HELP_COPY[details.lang]}</p>`;
 
   await sendMail(
     details.customerEmail,

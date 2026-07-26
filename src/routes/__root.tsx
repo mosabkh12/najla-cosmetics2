@@ -16,8 +16,10 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { CookieConsentBanner } from "@/components/layout/CookieConsentBanner";
 import { Toaster } from "@/components/ui/sonner";
 import { useKeepScrollbarVisibleForSelects } from "@/lib/keep-scrollbar-visible";
+import { getSettings } from "@/api/settings/settings";
 
 // Radix UI primitives (Select, RadioGroup, Dialog, etc.) don't inherit the
 // document's dir="rtl" automatically — without this, they silently render
@@ -70,6 +72,22 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // Footer (rendered on every route via this root layout) reads
+  // ["business_settings"] itself. Several page-level loaders (index,
+  // products, location) already prefetch that same key for their own
+  // needs, but plenty of routes (cart, checkout, profile, admin, ...)
+  // don't — on those, SSR previously rendered the Footer before any
+  // data existed, showing its hardcoded "Nazareth, Israel" fallback,
+  // while the client then fetched the real address ("Jatt, Israel")
+  // and re-rendered — a hydration mismatch on every route that didn't
+  // happen to prefetch this key. Prefetching here once, for every
+  // route, guarantees the Footer never renders before real data exists.
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData({
+      queryKey: ["business_settings"],
+      queryFn: () => getSettings(),
+    });
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -164,6 +182,7 @@ function RootComponent() {
                 </main>
                 <Footer />
                 <Toaster position="top-center" />
+                <CookieConsentBanner />
               </div>
             </CartProvider>
           </AuthProvider>

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProductsRouteImport } from './routes/products'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
@@ -43,6 +44,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const ProductsRoute = ProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationRoute = LocationRouteImport.update({
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/location': typeof LocationRoute
+  '/privacy': typeof PrivacyRoute
   '/products': typeof ProductsRouteWithChildren
   '/profile': typeof ProfileRoute
   '/services': typeof ServicesRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/location': typeof LocationRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/services': typeof ServicesRoute
   '/admin/appointments': typeof AdminAppointmentsRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/location': typeof LocationRoute
+  '/privacy': typeof PrivacyRoute
   '/products': typeof ProductsRouteWithChildren
   '/profile': typeof ProfileRoute
   '/services': typeof ServicesRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/location'
+    | '/privacy'
     | '/products'
     | '/profile'
     | '/services'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/location'
+    | '/privacy'
     | '/profile'
     | '/services'
     | '/admin/appointments'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/location'
+    | '/privacy'
     | '/products'
     | '/profile'
     | '/services'
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   LocationRoute: typeof LocationRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProductsRoute: typeof ProductsRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ServicesRoute: typeof ServicesRoute
@@ -297,6 +310,13 @@ declare module '@tanstack/react-router' {
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof ProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/location': {
@@ -467,6 +487,7 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   LocationRoute: LocationRoute,
+  PrivacyRoute: PrivacyRoute,
   ProductsRoute: ProductsRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ServicesRoute: ServicesRoute,

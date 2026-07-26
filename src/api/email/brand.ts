@@ -6,6 +6,8 @@
 export interface EmailBrand {
   businessName: string;
   address: string | null;
+  phone: string | null;
+  whatsappNumber: string | null;
 }
 
 const DEFAULT_BUSINESS_NAME = "Najla Cosmetics";
@@ -14,11 +16,13 @@ export async function getEmailBrand(): Promise<EmailBrand> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("business_settings")
-    .select("business_name, address")
+    .select("business_name, address, phone, whatsapp_number")
     .maybeSingle();
 
   return {
     businessName: data?.business_name || DEFAULT_BUSINESS_NAME,
     address: data?.address || null,
+    phone: data?.phone || null,
+    whatsappNumber: data?.whatsapp_number || null,
   };
 }

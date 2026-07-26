@@ -152,10 +152,15 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
       if (!inBreak) slots.push(fromMinutes(m));
     }
 
-    // Check ALL services for cross-service conflicts (single-operator salon)
+    // Check ALL services for cross-service conflicts (single-operator salon).
+    // Reads duration_minutes off the appointment's own snapshot rather than
+    // joining services — a `services!inner` join here used to silently drop
+    // any appointment whose service was later deleted (service_id set NULL)
+    // out of this list entirely, making that slot look available again even
+    // though it's still booked. See the accompanying migration.
     let apptQuery = supabaseAdmin
       .from("appointments")
-      .select("appointment_time, services!inner(duration_minutes)")
+      .select("appointment_time, duration_minutes")
       .eq("appointment_date", date)
       .neq("status", "cancelled");
     if (excludeAppointmentId) apptQuery = apptQuery.neq("id", excludeAppointmentId);
@@ -166,8 +171,7 @@ export const getAvailableTimes = createServerFn({ method: "GET" })
     const buf = settings.buffer;
     const taken = (appointments ?? []).map((a) => {
       const start = toMinutes(String(a.appointment_time));
-      const aDuration = a.services?.duration_minutes ?? 30;
-      return { start: start - buf, end: start + aDuration + buf };
+      return { start: start - buf, end: start + a.duration_minutes + buf };
     });
 
     let available = slots.filter((slot) => {
