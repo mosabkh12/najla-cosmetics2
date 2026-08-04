@@ -102,7 +102,7 @@ function orderTable(
   const labels = FIELD_LABELS[lang];
   const itemCount = items.reduce((sum, it) => sum + it.quantity, 0);
   const itemRows = items
-    .map((it) => row(`${escapeHtml(it.productName)} × ${it.quantity}`, `₪${it.totalPrice}`))
+    .map((it, i) => row(`${i + 1}. ${escapeHtml(it.productName)} × ${it.quantity}`, `₪${it.totalPrice}`))
     .join("");
 
   const deliveryValue =

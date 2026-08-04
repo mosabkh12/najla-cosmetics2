@@ -25,3 +25,14 @@ export function jerusalemNow(): { dateStr: string; minutes: number } {
 export function jerusalemTodayStr(): string {
   return jerusalemNow().dateStr;
 }
+
+// A `Date` anchored to "today" in Jerusalem, for callers that need an
+// actual Date object (e.g. react-day-picker's `{ before: Date }` matcher)
+// rather than a "YYYY-MM-DD" string. Built via the local-timezone Date
+// constructor (not `new Date(dateStr)`, which parses as UTC midnight) so
+// its getFullYear()/getMonth()/getDate() reliably round-trip the same
+// calendar date regardless of the viewer's own device timezone.
+export function jerusalemToday(): Date {
+  const [year, month, day] = jerusalemTodayStr().split("-").map(Number);
+  return new Date(year, month - 1, day);
+}

@@ -199,6 +199,10 @@ export async function syncAppointmentToGoogleCalendar(appointmentId: string): Pr
     if (!appt) throw new Error("APPOINTMENT_NOT_FOUND");
 
     if (appt.status === "cancelled") {
+      // Deleting the same Google event twice, or writing google_event_id
+      // = null twice, is already a harmless no-op either way (see
+      // deleteGoogleEventIfExists' 404/410 handling below) — no
+      // concurrency guard is needed on this branch.
       await deleteGoogleEventIfExists(client, appt.google_event_id);
       await supabaseAdmin
         .from("appointments")
@@ -211,26 +215,69 @@ export async function syncAppointmentToGoogleCalendar(appointmentId: string): Pr
       return;
     }
 
-    const [{ data: profile }, { data: settings }] = await Promise.all([
+    const [{ data: profile }, { data: settings, error: settingsError }] = await Promise.all([
       supabaseAdmin.from("profiles").select("email").eq("id", appt.user_id).maybeSingle(),
-      supabaseAdmin.from("business_settings").select("address").maybeSingle(),
+      supabaseAdmin.from("business_settings").select("address").eq("singleton", true).maybeSingle(),
     ]);
+    // A failed read here only means the synced event's location field
+    // stays empty — never a reason to fail the whole sync (this
+    // function's entire design never blocks booking/appointment
+    // functionality on a Calendar-adjacent issue) — but still logged so
+    // the failure isn't invisible.
+    if (settingsError) {
+      console.error(
+        "[syncAppointmentToGoogleCalendar] failed to load business address",
+        settingsError,
+      );
+    }
 
     const eventBody = buildGoogleEvent(
       appt as GoogleSyncAppointmentRow,
       profile?.email ?? null,
       settings?.address ?? null,
     );
-    const googleEventId = await upsertGoogleEvent(client, appt.google_event_id, eventBody);
+    // Snapshot the id read just now — used below as an optimistic-
+    // concurrency token so a second, near-simultaneous sync for this
+    // same appointment (possibly on a different serverless instance)
+    // can't silently overwrite this one's result.
+    const previousEventId = appt.google_event_id;
+    const googleEventId = await upsertGoogleEvent(client, previousEventId, eventBody);
 
-    await supabaseAdmin
-      .from("appointments")
-      .update({
-        google_event_id: googleEventId,
-        google_calendar_synced_at: new Date().toISOString(),
-        google_calendar_sync_error: null,
-      })
-      .eq("id", appointmentId);
+    const updatePayload = {
+      google_event_id: googleEventId,
+      google_calendar_synced_at: new Date().toISOString(),
+      google_calendar_sync_error: null,
+    };
+
+    // Atomic compare-and-swap: only record our result if google_event_id
+    // is still exactly what we read a moment ago. Unlike an in-process
+    // lock, this is enforced by Postgres itself, so it holds even if two
+    // requests for the same appointment are handled by two different
+    // serverless instances at once.
+    const { data: updatedRow } = previousEventId
+      ? await supabaseAdmin
+          .from("appointments")
+          .update(updatePayload)
+          .eq("id", appointmentId)
+          .eq("google_event_id", previousEventId)
+          .select("id")
+          .maybeSingle()
+      : await supabaseAdmin
+          .from("appointments")
+          .update(updatePayload)
+          .eq("id", appointmentId)
+          .is("google_event_id", null)
+          .select("id")
+          .maybeSingle();
+
+    if (!updatedRow && !previousEventId) {
+      // We lost the race, and previousEventId was null — meaning we just
+      // called events.insert() (not update), so googleEventId is a
+      // brand-new event nothing in the database ends up referencing.
+      // Delete it so this race never leaves two Google events for one
+      // appointment.
+      await deleteGoogleEventIfExists(client, googleEventId);
+    }
   } catch (err) {
     console.error("[syncAppointmentToGoogleCalendar] failed for appointment", appointmentId, err);
     const message = err instanceof Error ? err.message : "Unknown Google Calendar error";

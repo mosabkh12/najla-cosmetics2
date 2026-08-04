@@ -4,7 +4,11 @@ import { requireAdmin } from "../admin/middleware";
 
 export const getSettings = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("business_settings").select("*").maybeSingle();
+  const { data, error } = await supabaseAdmin
+    .from("business_settings")
+    .select("*")
+    .eq("singleton", true)
+    .maybeSingle();
   // Branding content (hero/about/products images, address, phone, hours
   // display) must reflect an admin's change immediately — same reasoning
   // as availability settings (see slots.ts): a shared HTTP cache here
@@ -12,29 +16,38 @@ export const getSettings = createServerFn({ method: "GET" }).handler(async () =>
   // for up to a minute, which is exactly the "why doesn't it update"
   // complaint this fixes.
   setResponseHeader("Cache-Control", "no-store");
+  // A genuine query failure must never be silently read as "no settings
+  // configured yet" — this feeds both the admin edit form (which would
+  // then risk saving blank defaults over real data) and every public
+  // page's business info, so a real DB error surfaces as a real error
+  // instead of misleadingly rendering as empty.
+  if (error) {
+    console.error("[getSettings] query failed", error);
+    throw new Error("Could not load business settings. Please try again.");
+  }
   return data;
 });
 
 export const saveSettings = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
-  .validator((d: { id?: string; payload: Record<string, unknown> }) => d)
-  .handler(async ({ data: { id, payload } }) => {
+  .validator((d: { payload: Record<string, unknown> }) => d)
+  .handler(async ({ data: { payload } }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deleteOldImageIfUnreferenced } = await import("@/api/storage/storage");
 
-    let previous: {
-      hero_image_url: string | null;
-      about_image_url: string | null;
-      products_hero_image_url: string | null;
-      services_hero_image_url: string | null;
-    } | null = null;
-    if (id) {
-      const { data } = await supabaseAdmin
-        .from("business_settings")
-        .select("hero_image_url, about_image_url, products_hero_image_url, services_hero_image_url")
-        .eq("id", id)
-        .maybeSingle();
-      previous = data ?? null;
+    // Read purely to know which previously-uploaded images are being
+    // replaced, so they can be cleaned up after the save below commits.
+    // Never used to decide insert-vs-update — the upsert against the
+    // singleton key handles that atomically on its own, regardless of
+    // whether this read sees a row, no row, or (transiently) fails.
+    const { data: previous, error: previousError } = await supabaseAdmin
+      .from("business_settings")
+      .select("hero_image_url, about_image_url, products_hero_image_url, services_hero_image_url")
+      .eq("singleton", true)
+      .maybeSingle();
+    if (previousError) {
+      console.error("[saveSettings] failed to read previous settings", previousError);
+      throw new Error("Failed to save settings. Please check the details and try again.");
     }
 
     const lat =
@@ -42,6 +55,7 @@ export const saveSettings = createServerFn({ method: "POST" })
     const lng =
       payload.longitude === "" || payload.longitude == null ? null : Number(payload.longitude);
     const clean = {
+      singleton: true as const,
       business_name: String(payload.business_name ?? "Najla Cosmetics"),
       address: (payload.address as string) || null,
       phone: (payload.phone as string) || null,
@@ -59,14 +73,24 @@ export const saveSettings = createServerFn({ method: "POST" })
       latitude: lat != null && !isNaN(lat) ? lat : null,
       longitude: lng != null && !isNaN(lng) ? lng : null,
     };
-    const op = id
-      ? await supabaseAdmin.from("business_settings").update(clean).eq("id", id)
-      : await supabaseAdmin.from("business_settings").insert(clean);
-    if (op.error) {
+
+    // Atomic UPSERT against the singleton key — the database itself
+    // decides insert vs. update by whether a singleton=true row already
+    // exists, at the moment this statement actually runs. Two
+    // concurrent first-ever saves can no longer both take an INSERT
+    // branch: one INSERT commits, and Postgres serializes the other
+    // one into the ON CONFLICT DO UPDATE branch against that same row.
+    const { data: saved, error } = await supabaseAdmin
+      .from("business_settings")
+      .upsert(clean, { onConflict: "singleton" })
+      .select("*")
+      .single();
+
+    if (error || !saved) {
       // Thrown as a plain Error (not the raw PostgrestError) so the
       // message survives the server-function RPC boundary intact and
       // never leaks raw DB internals to the client.
-      console.error("[saveSettings] failed", op.error);
+      console.error("[saveSettings] failed", error);
       throw new Error("Failed to save settings. Please check the details and try again.");
     }
 
@@ -91,5 +115,5 @@ export const saveSettings = createServerFn({ method: "POST" })
       await deleteOldImageIfUnreferenced(supabaseAdmin, previous.services_hero_image_url);
     }
 
-    return { success: true };
+    return { success: true, settings: saved };
   });

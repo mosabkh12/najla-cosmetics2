@@ -221,6 +221,29 @@ export const previewAvailabilityConflicts = createServerFn({ method: "POST" })
     return findConflictingAppointments(supabaseAdmin, data);
   });
 
+// Small worker-pool runner: processes `items` with at most `limit`
+// concurrent in-flight calls to `worker`, instead of firing every item at
+// once. A single settings change (e.g. closing a whole weekday) can
+// cancel an unbounded number of appointments, and each one then needs
+// its own Google Calendar API call — an unbounded Promise.all here would
+// burst potentially dozens of simultaneous requests at Google.
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let index = 0;
+  async function runNext(): Promise<void> {
+    while (index < items.length) {
+      const item = items[index++];
+      await worker(item);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runNext));
+}
+
+const GOOGLE_SYNC_CONCURRENCY = 3;
+
 async function notifyCancelledAppointments(
   supabaseAdmin: SupabaseAdmin,
   conflicts: ConflictingAppointment[],
@@ -299,6 +322,12 @@ export const updateAvailabilitySettings = createServerFn({ method: "POST" })
     }
 
     let cancelledAppointments: ConflictingAppointment[] = [];
+    let googleCalendarSyncAttempted = 0;
+    // null means "unable to verify" — kept distinct from 0 ("verified,
+    // and none failed") so a verification-query error can never be
+    // misreported as a clean pass.
+    let googleCalendarSyncFailed: number | null = 0;
+
     if (conflicts.length > 0) {
       const { error: cancelError } = await supabaseAdmin
         .from("appointments")
@@ -314,11 +343,113 @@ export const updateAvailabilitySettings = createServerFn({ method: "POST" })
         );
       } else {
         cancelledAppointments = conflicts;
+
+        // Kicked off, not awaited — unchanged from before. The
+        // customer-facing cancellation email shouldn't wait on Google
+        // Calendar bookkeeping below it.
         notifyCancelledAppointments(supabaseAdmin, conflicts).catch((e) =>
           console.error("[updateAvailabilitySettings] notification pass failed", e),
         );
+
+        // Awaited, with bounded concurrency. Each cancelled appointment
+        // may still have a Google Calendar event that needs deleting;
+        // syncAppointmentToGoogleCalendar re-reads the row itself (now
+        // status='cancelled'), deletes the matching event, and records
+        // any failure on google_calendar_sync_error the same way every
+        // other cancellation path already does. It never throws (see
+        // calendar.server.ts) — but everything in this block, including
+        // the dynamic import itself, is still wrapped below so that even
+        // a failure to load the integration module cannot fail this
+        // request or affect the cancellation already committed above.
+        try {
+          const { syncAppointmentToGoogleCalendar } =
+            await import("@/integrations/google/calendar.server");
+
+          // Only reached once the module has actually loaded — every
+          // appointment below is about to get a real sync call attempted,
+          // not merely counted as if it had been.
+          googleCalendarSyncAttempted = cancelledAppointments.length;
+
+          // syncAppointmentToGoogleCalendar wraps its entire body in its
+          // own try/catch and is designed to never throw — but its
+          // dynamic import of the Supabase client and its call to
+          // getCalendarClient() both happen before that internal
+          // try/catch takes over, so an unexpected throw there would
+          // reach here having never written google_calendar_sync_error.
+          // Track those ids explicitly so they can never be silently
+          // read back as "no error stored, therefore successful".
+          const threwIds = new Set<string>();
+          await runWithConcurrency(cancelledAppointments, GOOGLE_SYNC_CONCURRENCY, async (c) => {
+            try {
+              await syncAppointmentToGoogleCalendar(c.id);
+            } catch (e) {
+              threwIds.add(c.id);
+              console.error(
+                "[updateAvailabilitySettings] calendar sync threw unexpectedly",
+                c.id,
+                e,
+              );
+            }
+          });
+
+          // syncAppointmentToGoogleCalendar always clears
+          // google_calendar_sync_error to null on success and sets it on
+          // failure, so re-reading it here after every attempt has settled
+          // reflects exactly this sync pass's outcome, not any older
+          // unrelated failure — but only if this verification read itself
+          // succeeds.
+          const { data: syncedRows, error: verifyError } = await supabaseAdmin
+            .from("appointments")
+            .select("id, google_calendar_sync_error")
+            .in(
+              "id",
+              cancelledAppointments.map((c) => c.id),
+            );
+
+          if (verifyError) {
+            // The sync attempts above may well have mostly succeeded —
+            // there is simply no way to confirm it now, for any of them,
+            // including the ones that didn't throw. Reporting 0 (or even
+            // threwIds.size) here would misrepresent a genuinely unknown
+            // complete outcome as known, so it is left explicitly
+            // unknown instead.
+            console.error(
+              "[updateAvailabilitySettings] failed to verify calendar sync outcome",
+              verifyError,
+            );
+            googleCalendarSyncFailed = null;
+          } else {
+            // Union, not a plain filter: an id that threw before
+            // syncAppointmentToGoogleCalendar could record a persisted
+            // error must still count as failed even if this row shows no
+            // google_calendar_sync_error; a Set dedupes the (structurally
+            // unlikely, but possible) case where an id appears in both.
+            const failedIds = new Set(threwIds);
+            for (const r of syncedRows ?? []) {
+              if (r.google_calendar_sync_error) failedIds.add(r.id);
+            }
+            googleCalendarSyncFailed = failedIds.size;
+          }
+        } catch (e) {
+          // The Google Calendar integration module itself failed to load
+          // (or something else threw before any sync call could even be
+          // attempted). This is a known count, not an unknown one: zero
+          // real sync calls were made, so every cancelled appointment's
+          // Calendar event is known to still be unsynced.
+          console.error(
+            "[updateAvailabilitySettings] failed to load Google Calendar integration",
+            e,
+          );
+          googleCalendarSyncAttempted = 0;
+          googleCalendarSyncFailed = cancelledAppointments.length;
+        }
       }
     }
 
-    return { success: true, cancelledAppointments };
+    return {
+      success: true,
+      cancelledAppointments,
+      googleCalendarSyncAttempted,
+      googleCalendarSyncFailed,
+    };
   });

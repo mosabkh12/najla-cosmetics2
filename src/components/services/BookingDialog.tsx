@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getAvailableTimes, createAppointment } from "@/api/appointments/appointments";
 import { getAvailabilitySettings } from "@/api/slots/slots";
 import { getProfile } from "@/api/profiles/profiles";
+import { jerusalemToday } from "@/lib/jerusalem-time";
+import { createSubmitGuard } from "@/lib/submit-guard";
 import type { Service } from "@/components/services/ServiceCard";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
@@ -30,6 +32,11 @@ const ERROR_MAP: Record<string, string> = {
   INVALID_INPUT: "booking_fields_required",
   BOOKING_FAILED: "booking_failed",
   RATE_LIMITED: "err_rate_limited",
+  // Only reachable if a client-side bug resent a stale idempotency key
+  // against a changed payload — reuses the generic failure message
+  // rather than a dedicated translation string for an error the normal
+  // UI flow can't actually produce.
+  IDEMPOTENCY_PAYLOAD_MISMATCH: "booking_failed",
 };
 
 function fmtDate(d: Date): string {
@@ -53,7 +60,7 @@ export function BookingDialog({
   const { t, lang, dir } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const todayDate = useMemo(() => new Date(), []);
+  const todayDate = useMemo(() => jerusalemToday(), []);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDate, setSelectedDate] = useState<Date>(todayDate);
@@ -63,6 +70,21 @@ export function BookingDialog({
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Belt-and-suspenders alongside disabled={busy} — see submit-guard.ts.
+  const submitGuard = useRef(createSubmitGuard()).current;
+
+  // One key per booking *attempt* — regenerated whenever the dialog is
+  // (re)opened or the target service/date/time changes, so a double-click
+  // or retry of the exact same attempt reuses the same key (letting the
+  // server recognize and no-op the duplicate), while a genuinely different
+  // booking (new slot, new dialog session) always gets a fresh one. See
+  // create_appointment()'s p_idempotency_key handling.
+  // The factory deliberately doesn't reference these; they're recompute
+  // *triggers* (a fresh key whenever the target attempt's identity
+  // changes), not values the computation reads.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const idempotencyKey = useMemo(() => crypto.randomUUID(), [open, service?.id, dateStr, time]);
   const [available, setAvailable] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
 
@@ -155,6 +177,7 @@ export function BookingDialog({
       toast.error(t("booking_fields_required"));
       return;
     }
+    if (!submitGuard.tryAcquire()) return;
     setBusy(true);
     try {
       await createAppointment({
@@ -165,6 +188,7 @@ export function BookingDialog({
           customer_name: name.trim(),
           customer_phone: phone.trim(),
           notes: notes.trim() || null,
+          idempotency_key: idempotencyKey,
         },
       });
       toast.success(t("booking_success"));
@@ -176,6 +200,7 @@ export function BookingDialog({
       const key = ERROR_MAP[message];
       toast.error(key ? t(key) : message);
     } finally {
+      submitGuard.release();
       setBusy(false);
     }
   };

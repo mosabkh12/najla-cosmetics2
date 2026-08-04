@@ -102,10 +102,11 @@ function Page() {
   const lngError = lngNum != null && !isValidLongitude(lngNum);
 
   const save = async () => {
-    if (saving) return; // Guards against a double-click creating two rows
-    // on the very first-ever save, before `data`/`form.id` come back from
-    // the invalidated query — there's no row to update yet at that point,
-    // so a second concurrent click would insert a second one.
+    // A second row is no longer possible even on a double-click or two
+    // concurrent tabs — saveSettings upserts against a database-enforced
+    // singleton key. This guard now exists purely to avoid firing
+    // redundant duplicate requests while one is already in flight.
+    if (saving) return;
 
     if (latError || lngError) {
       toast.error(
@@ -134,7 +135,9 @@ function Page() {
 
     setSaving(true);
     try {
-      await saveSettings({ data: { id: form.id, payload } });
+      // No id sent — saveSettings now upserts against the singleton key
+      // itself; the client no longer decides insert-vs-update.
+      await saveSettings({ data: { payload } });
       toast.success("Saved");
       await qc.invalidateQueries({ queryKey: ["admin-settings"] });
       qc.invalidateQueries({ queryKey: ["business_settings"] });

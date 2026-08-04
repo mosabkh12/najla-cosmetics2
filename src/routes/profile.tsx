@@ -34,6 +34,7 @@ import { useI18n } from "@/lib/i18n";
 import { pickLocalized } from "@/lib/pick-localized";
 import type { Product } from "@/components/products/ProductCard";
 import { getErrorMessage } from "@/lib/utils";
+import { jerusalemTodayStr } from "@/lib/jerusalem-time";
 import { toast } from "sonner";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 import { RescheduleDialog, type RescheduleTarget } from "@/components/services/RescheduleDialog";
@@ -148,7 +149,7 @@ function ProfilePage() {
     qc.invalidateQueries({ queryKey: ["appointments", user.id] });
   };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = jerusalemTodayStr();
   // An appointment is only truly "upcoming" if its date is today or later
   // AND its status is active — past confirmed/pending appointments are
   // treated as done on the client side even before the server auto-completes them.

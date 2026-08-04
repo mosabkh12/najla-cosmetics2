@@ -1,1 +1,71 @@
 project_id = "pselbqxcdurmroihquhb"
+
+# --- Phase 4 addition: local dev/test stack configuration ---
+# This repo previously had no local-stack configuration at all (only
+# project_id, used for `supabase link` against the real hosted project —
+# unaffected by anything below, since `supabase start` never connects
+# anywhere remote). Ports below are the Supabase CLI's own standard
+# defaults, intentionally NOT shifted — a port shift was only ever needed
+# on one specific development machine that happened to have an unrelated
+# local Supabase project already running on the default range, and that
+# is not something to bake into shared project configuration. On a
+# machine with a conflicting local stack, override locally (without
+# committing) or run the other project's `supabase stop` first; the test
+# suite itself also honors SUPABASE_TEST_URL/SUPABASE_TEST_ANON_KEY/
+# SUPABASE_TEST_SERVICE_ROLE_KEY env vars (see
+# tests/phase4-admin-reactivation.integration.test.ts) for exactly this
+# situation, so a conflicting machine never needs this file edited at all.
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 54329
+
+[realtime]
+enabled = true
+
+# Disabled: not needed for API/RPC-level testing, and keeps a local test
+# stack lighter/faster to start for anyone running it.
+[studio]
+enabled = false
+port = 54323
+
+[local_smtp]
+enabled = false
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = []
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 6
+
+[auth.email]
+enable_signup = true
+# Test users are created via the admin API with email_confirm:true, but
+# this is left off anyway so a plain sign-up flow can be exercised
+# locally without needing a real mailbox.
+enable_confirmations = false
+
+# Log-aggregation side-service; not needed for API/RPC-level testing.
+[analytics]
+enabled = false

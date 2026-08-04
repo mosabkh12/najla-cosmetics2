@@ -8,6 +8,8 @@ import { getErrorMessage } from "@/lib/utils";
 import { getAvailableTimes, rescheduleAppointment } from "@/api/appointments/appointments";
 import { getAvailabilitySettings } from "@/api/slots/slots";
 import { getServices } from "@/api/services/services";
+import { jerusalemToday } from "@/lib/jerusalem-time";
+import { createSubmitGuard } from "@/lib/submit-guard";
 import type { Service } from "@/components/services/ServiceCard";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +35,11 @@ const ERROR_MAP: Record<string, string> = {
   NOT_RESCHEDULABLE: "reschedule_not_eligible",
   RESCHEDULE_FAILED: "reschedule_failed",
   RATE_LIMITED: "err_rate_limited",
+  // Only reachable if a client-side bug resent a stale idempotency key
+  // against a changed payload — reuses the generic failure message
+  // rather than a dedicated translation string for an error the normal
+  // UI flow can't actually produce.
+  IDEMPOTENCY_PAYLOAD_MISMATCH: "reschedule_failed",
 };
 
 function fmtDate(d: Date): string {
@@ -63,7 +70,7 @@ export function RescheduleDialog({
   onDone: () => void;
 }) {
   const { t, lang, dir } = useI18n();
-  const todayDate = useMemo(() => new Date(), []);
+  const todayDate = useMemo(() => jerusalemToday(), []);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [serviceId, setServiceId] = useState<string>("");
@@ -74,6 +81,22 @@ export function RescheduleDialog({
   const [available, setAvailable] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [fetchKey, setFetchKey] = useState(0);
+
+  // Belt-and-suspenders alongside disabled={busy} — see submit-guard.ts.
+  const submitGuard = useRef(createSubmitGuard()).current;
+
+  // One key per reschedule *attempt* — regenerated whenever the dialog is
+  // (re)opened or the target appointment/service/date/time changes. See
+  // the same reasoning in BookingDialog.tsx and
+  // reschedule_appointment()'s p_idempotency_key handling.
+  // The factory deliberately doesn't reference these; they're recompute
+  // *triggers* (a fresh key whenever the target attempt's identity
+  // changes), not values the computation reads.
+  const idempotencyKey = useMemo(
+    () => crypto.randomUUID(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open, appointment?.id, serviceId, dateStr, time],
+  );
 
   // Same key/staleTime as the public services queries (index.tsx,
   // services.tsx) — this dialog fetches the exact same getServices() data,
@@ -155,6 +178,7 @@ export function RescheduleDialog({
 
   const submit = async () => {
     if (!serviceId || !dateStr || !time) return;
+    if (!submitGuard.tryAcquire()) return;
     setBusy(true);
     try {
       await rescheduleAppointment({
@@ -163,6 +187,7 @@ export function RescheduleDialog({
           service_id: serviceId,
           appointment_date: dateStr,
           appointment_time: time,
+          idempotency_key: idempotencyKey,
         },
       });
       toast.success(t("reschedule_success"));
@@ -173,6 +198,7 @@ export function RescheduleDialog({
       const key = ERROR_MAP[message];
       toast.error(key ? t(key) : message);
     } finally {
+      submitGuard.release();
       setBusy(false);
     }
   };

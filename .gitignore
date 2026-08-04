@@ -22,6 +22,11 @@ dist-ssr
 # Vercel
 .vercel
 
+# Supabase CLI local-stack artifacts (generated fresh by `supabase start`,
+# includes local-only dev secrets — never meant to be committed)
+supabase/.branches
+supabase/.temp
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

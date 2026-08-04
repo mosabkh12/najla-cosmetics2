@@ -53,7 +53,9 @@ export type Database = {
           google_calendar_synced_at: string | null;
           google_event_id: string | null;
           id: string;
+          idempotency_key: string | null;
           notes: string | null;
+          reschedule_idempotency_key: string | null;
           service_id: string | null;
           service_name: string | null;
           service_name_ar: string | null;
@@ -73,7 +75,9 @@ export type Database = {
           google_calendar_synced_at?: string | null;
           google_event_id?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           notes?: string | null;
+          reschedule_idempotency_key?: string | null;
           service_id?: string | null;
           service_name?: string | null;
           service_name_ar?: string | null;
@@ -93,7 +97,9 @@ export type Database = {
           google_calendar_synced_at?: string | null;
           google_event_id?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           notes?: string | null;
+          reschedule_idempotency_key?: string | null;
           service_id?: string | null;
           service_name?: string | null;
           service_name_ar?: string | null;
@@ -125,6 +131,7 @@ export type Database = {
           phone: string | null;
           products_hero_image_url: string | null;
           services_hero_image_url: string | null;
+          singleton: boolean;
           updated_at: string;
           whatsapp_number: string | null;
         };
@@ -140,6 +147,7 @@ export type Database = {
           phone?: string | null;
           products_hero_image_url?: string | null;
           services_hero_image_url?: string | null;
+          singleton?: boolean;
           updated_at?: string;
           whatsapp_number?: string | null;
         };
@@ -155,6 +163,7 @@ export type Database = {
           phone?: string | null;
           products_hero_image_url?: string | null;
           services_hero_image_url?: string | null;
+          singleton?: boolean;
           updated_at?: string;
           whatsapp_number?: string | null;
         };
@@ -633,8 +642,9 @@ export type Database = {
           p_customer_name: string;
           p_customer_phone: string;
           p_notes: string | null;
+          p_idempotency_key?: string | null;
         };
-        Returns: string;
+        Returns: { appointment_id: string; is_new: boolean }[];
       };
       reschedule_appointment: {
         Args: {
@@ -643,8 +653,9 @@ export type Database = {
           p_service_id: string;
           p_appointment_date: string;
           p_appointment_time: string;
+          p_idempotency_key?: string | null;
         };
-        Returns: string;
+        Returns: { appointment_id: string; applied: boolean }[];
       };
       check_rate_limit: {
         Args: {
@@ -658,6 +669,13 @@ export type Database = {
         Args: {
           p_order_id: string;
           p_next_status: string;
+        };
+        Returns: string;
+      };
+      admin_update_appointment_status: {
+        Args: {
+          p_appointment_id: string;
+          p_status: string;
         };
         Returns: string;
       };

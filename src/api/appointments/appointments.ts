@@ -26,8 +26,31 @@ const APPOINTMENT_ERROR_CODES = [
   "TIME_TAKEN",
   "INVALID_SLOT_TIME",
   "INVALID_INPUT",
+  "IDEMPOTENCY_PAYLOAD_MISMATCH",
 ];
+
+// Same format check used by createOrder() for its idempotency key — a
+// malformed value is treated as "no key" rather than failing the
+// request outright.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function normalizeIdempotencyKey(value: unknown): string | null {
+  return typeof value === "string" && UUID_RE.test(value) ? value : null;
+}
 const RESCHEDULE_ERROR_CODES = [...APPOINTMENT_ERROR_CODES, "NOT_FOUND", "NOT_RESCHEDULABLE"];
+
+// Prefixes admin_update_appointment_status() raises on validation
+// failure (see the accompanying migration) — mapped the same way as
+// APPOINTMENT_ERROR_CODES/RESCHEDULE_ERROR_CODES so raw Postgres error
+// text never reaches the browser here either.
+const ADMIN_STATUS_ERROR_CODES = [
+  "APPOINTMENT_NOT_FOUND",
+  "INVALID_STATUS",
+  "INVALID_STATUS_TRANSITION",
+  "APPOINTMENT_IN_PAST",
+  "APPOINTMENT_TIME_CONFLICT",
+  "APPOINTMENT_OUTSIDE_WORKING_HOURS",
+  "APPOINTMENT_ON_CLOSED_DATE",
+];
 
 // Best-effort cleanup: permanently deletes completed/cancelled appointments
 // older than the retention window. Runs opportunistically on every read so
@@ -212,6 +235,7 @@ export const createAppointment = createServerFn({ method: "POST" })
       customer_name: string;
       customer_phone: string;
       notes: string | null;
+      idempotency_key: string | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -231,7 +255,15 @@ export const createAppointment = createServerFn({ method: "POST" })
     if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");
     if (!DATE_RE.test(data.appointment_date)) throw new Error("Invalid date format");
 
-    const { data: appointmentId, error } = await supabaseAdmin.rpc("create_appointment", {
+    // Generated client-side once per booking attempt (see BookingDialog.tsx —
+    // regenerated whenever the target service/date/time changes or the
+    // dialog reopens) and resent unchanged on every retry of that same
+    // attempt — lets create_appointment() recognize and no-op a duplicate
+    // submission instead of raising a confusing TIME_TAKEN against the
+    // user's own successful booking.
+    const idempotencyKey = normalizeIdempotencyKey(data.idempotency_key);
+
+    const { data: rpcRows, error } = await supabaseAdmin.rpc("create_appointment", {
       p_user_id: context.userId,
       p_service_id: data.service_id,
       p_appointment_date: data.appointment_date,
@@ -239,13 +271,26 @@ export const createAppointment = createServerFn({ method: "POST" })
       p_customer_name: customerName,
       p_customer_phone: customerPhone,
       p_notes: data.notes?.trim() || null,
+      p_idempotency_key: idempotencyKey,
     });
+    const result = rpcRows?.[0];
 
-    if (error || !appointmentId) {
+    if (error || !result?.appointment_id) {
       const code = APPOINTMENT_ERROR_CODES.find((c) => error?.message?.startsWith(c));
       if (code) throw new Error(code);
       console.error("[createAppointment] failed for user", context.userId, error);
       throw new Error("BOOKING_FAILED");
+    }
+
+    const appointmentId = result.appointment_id;
+
+    // A retried/duplicate submission (same idempotency key) resolves to
+    // the SAME appointment every time, but only the call that actually
+    // created it should trigger confirmation emails / Calendar sync —
+    // otherwise a network retry or double-tap would notify twice for one
+    // booking.
+    if (!result.is_new) {
+      return { success: true };
     }
 
     const [{ data: service }, { data: profile }] = await Promise.all([
@@ -287,9 +332,15 @@ export const createAppointment = createServerFn({ method: "POST" })
       ]);
     }
 
+    // Awaited (with its own error swallow, and never expected to throw —
+    // see calendar.server.ts) rather than left as a dangling
+    // fire-and-forget promise: same Vercel-freeze risk as the emails
+    // above — an un-awaited call can be silently cut off, including the
+    // DB write that would otherwise record google_calendar_sync_error
+    // for the admin to retry.
     const { syncAppointmentToGoogleCalendar } =
       await import("@/integrations/google/calendar.server");
-    syncAppointmentToGoogleCalendar(appointmentId).catch(console.error);
+    await syncAppointmentToGoogleCalendar(appointmentId).catch(console.error);
 
     return { success: true };
   });
@@ -334,8 +385,11 @@ export const deleteAppointment = createServerFn({ method: "POST" })
     if (error) throw error;
 
     if (appt.google_event_id) {
+      // Awaited for the same reason as every other sync/delete call site
+      // in this file — an un-awaited call can be silently cut off by
+      // Vercel freezing the function right after the response is sent.
       const { deleteGoogleCalendarEvent } = await import("@/integrations/google/calendar.server");
-      deleteGoogleCalendarEvent(appt.google_event_id).catch(console.error);
+      await deleteGoogleCalendarEvent(appt.google_event_id).catch(console.error);
     }
 
     return { success: true };
@@ -362,8 +416,9 @@ export const clearAppointmentHistory = createServerFn({ method: "POST" })
       .map((a) => a.google_event_id)
       .filter((eventId): eventId is string => Boolean(eventId));
     if (eventIds.length > 0) {
+      // Awaited — see the comment on the same pattern in deleteAppointment.
       const { deleteGoogleCalendarEvent } = await import("@/integrations/google/calendar.server");
-      Promise.all(eventIds.map((eventId) => deleteGoogleCalendarEvent(eventId))).catch(
+      await Promise.all(eventIds.map((eventId) => deleteGoogleCalendarEvent(eventId))).catch(
         console.error,
       );
     }
@@ -393,9 +448,10 @@ export const cancelAppointment = createServerFn({ method: "POST" })
       .eq("user_id", context.userId);
     if (error) throw error;
 
+    // Awaited — see the comment on the same pattern in createAppointment.
     const { syncAppointmentToGoogleCalendar } =
       await import("@/integrations/google/calendar.server");
-    syncAppointmentToGoogleCalendar(id).catch(console.error);
+    await syncAppointmentToGoogleCalendar(id).catch(console.error);
 
     return { success: true };
   });
@@ -407,8 +463,13 @@ export const cancelAppointment = createServerFn({ method: "POST" })
 export const rescheduleAppointment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (d: { id: string; service_id: string; appointment_date: string; appointment_time: string }) =>
-      d,
+    (d: {
+      id: string;
+      service_id: string;
+      appointment_date: string;
+      appointment_time: string;
+      idempotency_key: string | null;
+    }) => d,
   )
   .handler(async ({ data, context }) => {
     await enforceRateLimit({
@@ -423,19 +484,35 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
     if (!TIME_RE.test(data.appointment_time)) throw new Error("Invalid time format");
     if (!DATE_RE.test(data.appointment_date)) throw new Error("Invalid date format");
 
-    const { data: result, error } = await supabaseAdmin.rpc("reschedule_appointment", {
+    // Generated client-side once per reschedule attempt (see
+    // RescheduleDialog.tsx) — same idempotency contract as
+    // createAppointment above, but stored on (and compared against) the
+    // appointment row being rescheduled rather than a new row.
+    const idempotencyKey = normalizeIdempotencyKey(data.idempotency_key);
+
+    const { data: rpcRows, error } = await supabaseAdmin.rpc("reschedule_appointment", {
       p_user_id: context.userId,
       p_appointment_id: data.id,
       p_service_id: data.service_id,
       p_appointment_date: data.appointment_date,
       p_appointment_time: data.appointment_time,
+      p_idempotency_key: idempotencyKey,
     });
+    const result = rpcRows?.[0];
 
-    if (error || !result) {
+    if (error || !result?.appointment_id) {
       const code = RESCHEDULE_ERROR_CODES.find((c) => error?.message?.startsWith(c));
       if (code) throw new Error(code);
       console.error("[rescheduleAppointment] failed for user", context.userId, error);
       throw new Error("RESCHEDULE_FAILED");
+    }
+
+    // A retried/duplicate reschedule (same idempotency key, same target)
+    // resolves successfully every time, but only the call that actually
+    // applied the change should trigger confirmation emails / Calendar
+    // sync — see the same reasoning in createAppointment above.
+    if (!result.applied) {
+      return { success: true };
     }
 
     const [{ data: appt }, { data: service }, { data: profile }] = await Promise.all([
@@ -476,9 +553,10 @@ export const rescheduleAppointment = createServerFn({ method: "POST" })
       ]);
     }
 
+    // Awaited — see the comment on the same pattern in createAppointment.
     const { syncAppointmentToGoogleCalendar } =
       await import("@/integrations/google/calendar.server");
-    syncAppointmentToGoogleCalendar(data.id).catch(console.error);
+    await syncAppointmentToGoogleCalendar(data.id).catch(console.error);
 
     return { success: true };
   });
@@ -499,16 +577,32 @@ export const getAdminAppointments = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// Admin may move an appointment to ANY status from ANY status, including
+// Admin may move an appointment to ANY status from ANY status EXCEPT
+// cancelled -> completed (a cancelled appointment never took place, so it
+// can't become "completed" without first being reactivated), including
 // back out of "completed"/"cancelled" — those are no longer terminal (see
-// the accompanying migration that dropped the DB-level transition trigger
-// for appointments, mirroring the same fix already applied to orders).
-// This is intentionally unrestricted: reachable only through requireAdmin,
-// and direct client writes to appointments remain fully revoked (see
+// 20260706220000_allow_full_appointment_status_transitions.sql, which
+// dropped the old blanket DB-level terminal-state trigger for appointments,
+// mirroring the same fix already applied to orders). This stays
+// intentionally permissive: reachable only through requireAdmin, and
+// direct client writes to appointments remain fully revoked (see
 // secure_appointment_booking.sql) — a customer can never reach this
-// regardless of the status graph, so the only thing the old transition
-// allowlist was protecting against was an admin's own mistake, which is
-// exactly what it needs to be possible to undo.
+// regardless of the status graph, so the old blanket restriction was only
+// ever getting in the admin's own way, not protecting against a customer.
+//
+// What changed in Phase 4: reactivating an appointment (moving it from
+// cancelled/completed back to pending/confirmed) can re-occupy a slot
+// another booking may have since taken — every other transition here
+// (active -> terminal, terminal <-> terminal correction, active <-> active)
+// never does that and needs no re-check. The actual DB write now goes
+// through admin_update_appointment_status() (see the accompanying
+// migration), a SECURITY DEFINER RPC that locks the target row, and — only
+// for a reactivation — re-validates hours/breaks/closed-dates/past-date and
+// re-checks overlap against every other active appointment (excluding
+// itself), serialized with the same pg_advisory_xact_lock namespace
+// create_appointment/reschedule_appointment already use. This function no
+// longer writes appointments.status directly, and performs no conflict
+// logic of its own — the RPC is the sole source of truth for both.
 export const updateAppointmentStatus = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .validator((d: { id: string; status: string }) => d)
@@ -518,26 +612,36 @@ export const updateAppointmentStatus = createServerFn({ method: "POST" })
     const nextStatus = status as AppointmentStatus;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: current, error: fetchError } = await supabaseAdmin
+    // Read only — used below purely to decide whether this is a genuine
+    // status change worth emailing the customer about. Not the
+    // authoritative check: the RPC re-reads and locks the row itself
+    // inside its own transaction regardless of what this read saw.
+    const { data: current } = await supabaseAdmin
       .from("appointments")
       .select("status")
       .eq("id", id)
-      .single();
-    if (fetchError || !current) throw new Error("APPOINTMENT_NOT_FOUND");
-    const currentStatus = current.status as AppointmentStatus;
+      .maybeSingle();
+    const currentStatus = current?.status as AppointmentStatus | undefined;
 
-    const { error } = await supabaseAdmin
-      .from("appointments")
-      .update({ status: nextStatus })
-      .eq("id", id);
-    if (error) {
+    const { data: updatedId, error } = await supabaseAdmin.rpc("admin_update_appointment_status", {
+      p_appointment_id: id,
+      p_status: nextStatus,
+    });
+
+    if (error || !updatedId) {
+      const code = ADMIN_STATUS_ERROR_CODES.find((c) => error?.message?.startsWith(c));
+      if (code) throw new Error(code);
       console.error("[updateAppointmentStatus] failed for appointment", id, error);
       throw new Error("STATUS_UPDATE_FAILED");
     }
 
+    // Awaited — see the comment on the same pattern in createAppointment.
+    // Only reached once the RPC above has actually committed the status
+    // change; a validation failure throws before this line, so a failed
+    // update never triggers a Calendar sync.
     const { syncAppointmentToGoogleCalendar } =
       await import("@/integrations/google/calendar.server");
-    syncAppointmentToGoogleCalendar(id).catch(console.error);
+    await syncAppointmentToGoogleCalendar(id).catch(console.error);
 
     // Only notify the customer on a genuine change — re-saving the same
     // status (e.g. a duplicate submit) must not resend the email.
@@ -607,8 +711,9 @@ export const deleteAppointmentsAdmin = createServerFn({ method: "POST" })
       .map((a) => a.google_event_id)
       .filter((eventId): eventId is string => Boolean(eventId));
     if (eventIds.length > 0) {
+      // Awaited — see the comment on the same pattern in deleteAppointment.
       const { deleteGoogleCalendarEvent } = await import("@/integrations/google/calendar.server");
-      Promise.all(eventIds.map((eventId) => deleteGoogleCalendarEvent(eventId))).catch(
+      await Promise.all(eventIds.map((eventId) => deleteGoogleCalendarEvent(eventId))).catch(
         console.error,
       );
     }
