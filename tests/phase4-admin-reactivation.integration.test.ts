@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { jerusalemTodayStr } from "@/lib/jerusalem-time";
+import { futureOpenDate, pastDateStr } from "./helpers/businessDate";
 
 // REAL Postgres/Supabase integration tests — nothing in this file is
 // mocked. Requires a local, disposable Supabase stack (Docker) started
@@ -73,23 +75,11 @@ describe.skipIf(!stackUp)("Phase 4 — admin_update_appointment_status (real Pos
   let nonAdminAccessToken: string;
   const createdAppointmentIds: string[] = [];
 
-  // The Kth Sunday from now (per DEFAULT_WEEKLY, Sunday is open) — always
-  // 7 real days apart for consecutive K, so distinct test fixtures never
-  // alias onto the same calendar date (a plain "N days from now, then
-  // roll to the next Sunday" approach can alias: e.g. day 37 and day 38
-  // can both roll forward onto the identical Sunday).
-  function futureOpenDate(weekNumber: number): string {
-    const d = new Date();
-    const daysUntilSunday = (7 - d.getDay()) % 7 || 7; // always at least 1 day out
-    d.setDate(d.getDate() + daysUntilSunday + (weekNumber - 1) * 7);
-    return d.toISOString().slice(0, 10);
-  }
-
   // Reserved exclusively as an INSERT-time placeholder for past-dated
   // fixtures below (see insertRawAppointment) — never used as a "real"
   // target date by any test, so it can never collide with one.
   const PLACEHOLDER_DATE = futureOpenDate(1);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = jerusalemTodayStr();
 
   async function insertRawAppointment(opts: {
     date: string;
@@ -332,9 +322,7 @@ describe.skipIf(!stackUp)("Phase 4 — admin_update_appointment_status (real Pos
   });
 
   it("5. reactivating a past appointment fails", async () => {
-    const past = new Date();
-    past.setDate(past.getDate() - 5);
-    const pastDate = past.toISOString().slice(0, 10);
+    const pastDate = pastDateStr(5);
     const id = await insertRawAppointment({
       date: pastDate,
       time: "10:00:00",

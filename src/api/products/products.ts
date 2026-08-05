@@ -141,11 +141,16 @@ export const getAdminProducts = createServerFn({ method: "GET" })
   });
 
 // Emails everyone who favorited this product that it's available again.
-// Fire-and-forget from saveProduct — a failure here must never fail the
-// admin's actual save, so every step is wrapped and logged rather than
-// thrown. Runs one favoriter at a time (same pattern as
-// notifyCancelledAppointments in slots.ts) since sendMail has no built-in
-// batching and a partial failure shouldn't stop the rest from sending.
+// Awaited from saveProduct (Phase 9) rather than left as a dangling
+// fire-and-forget promise — Vercel's serverless runtime can freeze the
+// function right after the response is sent, which could silently drop
+// this entire notification pass before a single email went out. A
+// failure here must still never fail the admin's actual save, so every
+// step is wrapped and logged rather than thrown; the caller only awaits
+// this for delivery, never treats it as fatal. Runs one favoriter at a
+// time (same pattern as notifyCancelledAppointments in slots.ts) since
+// sendMail has no built-in batching and a partial failure shouldn't stop
+// the rest from sending.
 async function notifyRestockedFavoriters(
   supabaseAdmin: SupabaseAdmin,
   productId: string,
@@ -242,7 +247,7 @@ export const saveProduct = createServerFn({ method: "POST" })
     // not on first insert (there are no favorites for a product that
     // doesn't exist yet).
     if (id && (previousStockQuantity ?? 0) <= 0 && clean.stock_quantity > 0) {
-      notifyRestockedFavoriters(supabaseAdmin, id, clean.name, clean.image_url).catch((e) =>
+      await notifyRestockedFavoriters(supabaseAdmin, id, clean.name, clean.image_url).catch((e) =>
         console.error("[saveProduct] restock notification pass failed", e),
       );
     }

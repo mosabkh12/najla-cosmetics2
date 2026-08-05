@@ -24,6 +24,16 @@ const STATUS_LABEL: Record<AppointmentStatus, string> = {
 // https://developers.google.com/calendar/api/v3/reference/colors
 const COMPLETED_COLOR_ID = "8";
 
+// gaxios (the HTTP layer under @googleapis/calendar) has NO timeout by
+// default — a hung Google API call would otherwise hang this function
+// indefinitely, and since every caller in appointments.ts now awaits
+// this sync (Phase 2, for Vercel-freeze safety), that could hang the
+// whole booking/cancellation/reschedule request along with it. Bounded
+// here instead so a Calendar-side outage degrades to "sync failed,
+// recorded for retry" within a fixed window rather than an unbounded
+// hang.
+const CALENDAR_API_TIMEOUT_MS = 10_000;
+
 interface CalendarClient {
   calendar: calendar_v3.Calendar;
   calendarId: string;
@@ -124,11 +134,10 @@ async function upsertGoogleEvent(
 
   if (existingEventId) {
     try {
-      const res = await calendar.events.update({
-        calendarId,
-        eventId: existingEventId,
-        requestBody: eventBody,
-      });
+      const res = await calendar.events.update(
+        { calendarId, eventId: existingEventId, requestBody: eventBody },
+        { timeout: CALENDAR_API_TIMEOUT_MS },
+      );
       if (res.data.id) return res.data.id;
     } catch (err: unknown) {
       const status = (err as { code?: number; status?: number })?.code ?? undefined;
@@ -138,7 +147,10 @@ async function upsertGoogleEvent(
     }
   }
 
-  const res = await calendar.events.insert({ calendarId, requestBody: eventBody });
+  const res = await calendar.events.insert(
+    { calendarId, requestBody: eventBody },
+    { timeout: CALENDAR_API_TIMEOUT_MS },
+  );
   if (!res.data.id) throw new Error("Google Calendar did not return an event id");
   return res.data.id;
 }
@@ -146,7 +158,10 @@ async function upsertGoogleEvent(
 async function deleteGoogleEventIfExists(client: CalendarClient, eventId: string | null) {
   if (!eventId) return;
   try {
-    await client.calendar.events.delete({ calendarId: client.calendarId, eventId });
+    await client.calendar.events.delete(
+      { calendarId: client.calendarId, eventId },
+      { timeout: CALENDAR_API_TIMEOUT_MS },
+    );
   } catch (err: unknown) {
     const status = (err as { code?: number })?.code;
     // Already gone (deleted manually, or a retry after a previous

@@ -159,7 +159,11 @@ function ProfilePage() {
   const filteredAppts = appts
     .filter((a) => {
       if (apptFilter === "upcoming") return isUpcoming(a);
-      if (apptFilter === "completed") return a.status === "completed" || (["pending", "confirmed"].includes(a.status) && a.appointment_date < todayStr);
+      if (apptFilter === "completed")
+        return (
+          a.status === "completed" ||
+          (["pending", "confirmed"].includes(a.status) && a.appointment_date < todayStr)
+        );
       if (apptFilter === "cancelled") return a.status === "cancelled";
       return true;
     })

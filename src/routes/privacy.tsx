@@ -36,7 +36,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
     title: "מדיניות פרטיות ועוגיות",
     lastUpdated: "עודכן לאחרונה: יולי 2026",
     intro: [
-      "מדיניות זו מסבירה אילו נתונים {business} (\"אנחנו\") אוספת ממך בעת השימוש באתר, כיצד אנו משתמשים בהם, ואילו עוגיות ואחסון מקומי (local storage) פועלים בדפדפן שלך — בדיוק כפי שהם מיושמים באתר הזה, ולא כרשימה כללית.",
+      'מדיניות זו מסבירה אילו נתונים {business} ("אנחנו") אוספת ממך בעת השימוש באתר, כיצד אנו משתמשים בהם, ואילו עוגיות ואחסון מקומי (local storage) פועלים בדפדפן שלך — בדיוק כפי שהם מיושמים באתר הזה, ולא כרשימה כללית.',
     ],
     sections: [
       {
@@ -45,7 +45,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "בעת יצירת חשבון: שם מלא, כתובת אימייל וטלפון.",
           "בעת ביצוע הזמנת מוצרים: פרטי המשלוח, פרטי יצירת קשר, ורשימת הפריטים שהוזמנו.",
           "בעת קביעת תור: שם, טלפון, מועד ושעת התור, שם השירות, והערות שבחרת להוסיף.",
-          "מוצרים ששמרת ב\"מועדפים\", והעדפת שפת התצוגה שלך (עברית/ערבית/אנגלית).",
+          'מוצרים ששמרת ב"מועדפים", והעדפת שפת התצוגה שלך (עברית/ערבית/אנגלית).',
           "אנו לא אוספים פרטי כרטיס אשראי ולא מעבדים תשלומים באתר עצמו.",
         ],
       },
@@ -57,7 +57,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "• תוכן עגלת הקניות שלך — נשמר במכשירך בלבד עד להשלמת ההזמנה.",
           "• שפת התצוגה המועדפת עליך.",
           "נכון להיום איננו משתמשים ב-Google Analytics, Facebook Pixel, או כל כלי מעקב/פרסום דומה. אם הדבר ישתנה בעתיד, מדיניות זו תעודכן בהתאם ותפורסם הודעה על כך.",
-          "בבאנר העוגיות תוכלו לבחור בין \"אישור הכל\" לבין \"חיוניים בלבד\". שתי הבחירות מפעילות היום בדיוק את אותו אחסון חיוני שתואר לעיל — הבחירה נשמרת בדפדפן שלכם ותשמש לניהול כלים נוספים, אם וכאשר יתווספו בעתיד.",
+          'בבאנר העוגיות תוכלו לבחור בין "אישור הכל" לבין "חיוניים בלבד". שתי הבחירות מפעילות היום בדיוק את אותו אחסון חיוני שתואר לעיל — הבחירה נשמרת בדפדפן שלכם ותשמש לניהול כלים נוספים, אם וכאשר יתווספו בעתיד.',
           "ניתן למחוק מידע זה בכל עת דרך הגדרות הדפדפן — פעולה זו תנתק אותך מהחשבון ותרוקן את העגלה השמורה.",
         ],
       },
@@ -88,7 +88,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
       {
         heading: "6. הזכויות שלך",
         body: [
-          "בהתאם לחוק הגנת הפרטיות, התשמ\"א-1981, הנך רשאי לעיין במידע השמור אודותיך ולבקש לתקן מידע שאינו נכון, שלם או מדויק. ניתן לפנות אלינו בפרטי הקשר שבתחתית עמוד זה.",
+          'בהתאם לחוק הגנת הפרטיות, התשמ"א-1981, הנך רשאי לעיין במידע השמור אודותיך ולבקש לתקן מידע שאינו נכון, שלם או מדויק. ניתן לפנות אלינו בפרטי הקשר שבתחתית עמוד זה.',
         ],
       },
       {
@@ -113,7 +113,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
     title: "سياسة الخصوصية وملفات تعريف الارتباط",
     lastUpdated: "آخر تحديث: يوليو 2026",
     intro: [
-      "توضح هذه السياسة ما هي البيانات التي تجمعها {business} (\"نحن\") عند استخدامك للموقع، وكيف نستخدمها، وما هي ملفات تعريف الارتباط والتخزين المحلي (local storage) الفعّالة فعليًا في متصفحك — وصفًا لما هو مطبّق في هذا الموقع تحديدًا، وليس قائمة عامة.",
+      'توضح هذه السياسة ما هي البيانات التي تجمعها {business} ("نحن") عند استخدامك للموقع، وكيف نستخدمها، وما هي ملفات تعريف الارتباط والتخزين المحلي (local storage) الفعّالة فعليًا في متصفحك — وصفًا لما هو مطبّق في هذا الموقع تحديدًا، وليس قائمة عامة.',
     ],
     sections: [
       {
@@ -122,7 +122,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "عند إنشاء حساب: الاسم الكامل، البريد الإلكتروني، ورقم الهاتف.",
           "عند تقديم طلب منتجات: تفاصيل التوصيل، معلومات التواصل، وقائمة العناصر المطلوبة.",
           "عند حجز موعد: الاسم، الهاتف، تاريخ ووقت الموعد، اسم الخدمة، وأي ملاحظات تختارين إضافتها.",
-          "المنتجات التي أضفتها إلى \"المفضلة\"، ولغة العرض المفضلة لديك (عبرية/عربية/إنجليزية).",
+          'المنتجات التي أضفتها إلى "المفضلة"، ولغة العرض المفضلة لديك (عبرية/عربية/إنجليزية).',
           "نحن لا نجمع بيانات بطاقات الائتمان ولا نعالج المدفوعات داخل الموقع نفسه.",
         ],
       },
@@ -134,7 +134,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "• محتوى سلة التسوق الخاصة بك — يُحفظ على جهازك فقط حتى إتمام الطلب.",
           "• لغة العرض المفضلة لديك.",
           "لا نستخدم حاليًا Google Analytics أو Facebook Pixel أو أي أداة تتبع/إعلانات مشابهة. إذا تغيّر ذلك مستقبلاً، سيتم تحديث هذه السياسة والإعلان عن ذلك.",
-          "في شريط ملفات تعريف الارتباط يمكنك الاختيار بين \"الموافقة على الكل\" و\"الضرورية فقط\". كلا الخيارين يفعّلان اليوم بالضبط نفس التخزين الضروري الموصوف أعلاه — يُحفظ اختيارك في متصفحك ليُستخدم لإدارة أي أدوات إضافية إن وجدت مستقبلاً.",
+          'في شريط ملفات تعريف الارتباط يمكنك الاختيار بين "الموافقة على الكل" و"الضرورية فقط". كلا الخيارين يفعّلان اليوم بالضبط نفس التخزين الضروري الموصوف أعلاه — يُحفظ اختيارك في متصفحك ليُستخدم لإدارة أي أدوات إضافية إن وجدت مستقبلاً.',
           "يمكنك حذف هذه البيانات في أي وقت من إعدادات المتصفح — سيؤدي ذلك إلى تسجيل خروجك وإفراغ السلة المحفوظة.",
         ],
       },
@@ -190,7 +190,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
     title: "Privacy & Cookie Policy",
     lastUpdated: "Last updated: July 2026",
     intro: [
-      "This policy explains what data {business} (\"we\") collects when you use this site, how we use it, and exactly which cookies and local storage actually run in your browser — a description of what this specific site does, not a generic template.",
+      'This policy explains what data {business} ("we") collects when you use this site, how we use it, and exactly which cookies and local storage actually run in your browser — a description of what this specific site does, not a generic template.',
     ],
     sections: [
       {
@@ -211,7 +211,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "• Your shopping cart contents — kept on your device only until checkout is completed.",
           "• Your preferred display language.",
           "We do not currently use Google Analytics, Facebook Pixel, or any similar tracking/advertising tool. If that ever changes, this policy will be updated and the change announced.",
-          "In the cookie banner you can choose between \"Accept All\" and \"Necessary Only.\" Both options currently enable exactly the same essential storage described above — your choice is saved in your browser and will be used to manage any additional tools if and when they're added in the future.",
+          'In the cookie banner you can choose between "Accept All" and "Necessary Only." Both options currently enable exactly the same essential storage described above — your choice is saved in your browser and will be used to manage any additional tools if and when they\'re added in the future.',
           "You can clear this data at any time via your browser settings — doing so will sign you out and empty your saved cart.",
         ],
       },

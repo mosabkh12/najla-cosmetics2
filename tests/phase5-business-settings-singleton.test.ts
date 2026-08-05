@@ -268,6 +268,7 @@ describe("Phase 5 — business_settings singleton (mocked)", () => {
       expect.objectContaining({
         requestBody: expect.objectContaining({ location: "Nazareth, Israel" }),
       }),
+      expect.anything(), // Phase 9: gaxios timeout option, not under test here
     );
   });
 });

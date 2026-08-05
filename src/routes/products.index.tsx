@@ -326,7 +326,11 @@ function ConsultationCta({
   return (
     <div>
       <div className="aspect-[3/4] overflow-hidden rounded-2xl mb-5 max-w-sm mx-auto lg:max-w-none">
-        <img src={imageUrl ?? "/images/brand/about.png"} alt="" className="h-full w-full object-cover" />
+        <img
+          src={imageUrl ?? "/images/brand/about.png"}
+          alt=""
+          className="h-full w-full object-cover"
+        />
       </div>
       <p className="font-display text-[22px] italic text-center mb-2">{t("book_appointment")}?</p>
       <p className="text-[14px] text-muted-foreground text-center mb-5 leading-relaxed max-w-sm mx-auto lg:max-w-none">

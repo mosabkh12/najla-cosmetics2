@@ -1,0 +1,40 @@
+-- =============================================
+-- Fix: legacy per-service UNIQUE constraint blocked a legitimate rebook
+--
+-- appointments carried UNIQUE (service_id, appointment_date,
+-- appointment_time) since the very first migration, from before
+-- create_appointment()/reschedule_appointment() existed as the
+-- authoritative conflict-prevention mechanism (see
+-- 20260704180000_secure_appointment_booking.sql and
+-- 20260719120000_fix_appointment_conflict_detection_and_user_race.sql).
+-- Those RPCs now do a strictly more correct check themselves: same
+-- date, time-range overlap (+ buffer), across ALL services (a
+-- single-operator salon is one shared resource, not one per service),
+-- excluding cancelled rows.
+--
+-- The legacy constraint is not scoped by status, so it still counts
+-- cancelled rows. Confirmed directly against a real local Postgres
+-- instance while investigating this: cancel an appointment, then try to
+-- book the exact same service/date/time again (a completely ordinary
+-- "I changed my mind, let me rebook the same slot" action) — the INSERT
+-- inside create_appointment() raises a raw
+-- "duplicate key value violates unique constraint
+-- appointments_service_id_appointment_date_appointment_time_key"
+-- error. appointments.ts's error mapping doesn't recognize it (it's not
+-- one of the RPC's own RAISE EXCEPTION codes), so the customer sees a
+-- generic "booking failed" for a request that should have succeeded —
+-- the raw error itself never reaches the browser (server-only
+-- console.error), but the booking is still wrongly rejected.
+--
+-- Fix: drop the legacy constraint outright. It protects nothing the
+-- RPC-level check doesn't already cover more correctly — every ACTIVE
+-- (non-cancelled) double-booking is already prevented by the
+-- cross-service overlap check inside create_appointment()/
+-- reschedule_appointment(), which is unchanged by this migration.
+-- Cancelled appointments no longer "reserve" their old slot identity,
+-- matching how every other conflict/availability check in this project
+-- already treats them.
+-- =============================================
+
+ALTER TABLE public.appointments
+  DROP CONSTRAINT IF EXISTS appointments_service_id_appointment_date_appointment_time_key;

@@ -40,10 +40,7 @@ export function CookieConsentBanner() {
       style={{ boxShadow: "0 -8px 30px -12px rgba(45, 45, 45, 0.15)" }}
     >
       <div className="mx-auto flex max-w-[1400px] flex-col items-center gap-4 px-5 py-5 sm:flex-row sm:gap-6 sm:px-10 md:px-20">
-        <Cookie
-          className="hidden h-6 w-6 shrink-0 text-primary sm:block"
-          aria-hidden="true"
-        />
+        <Cookie className="hidden h-6 w-6 shrink-0 text-primary sm:block" aria-hidden="true" />
         <p className="flex-1 text-center text-[13px] leading-relaxed text-secondary-foreground sm:text-start">
           {t("cookie_notice_text")}{" "}
           <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">

@@ -18,7 +18,14 @@ const ORDER_STATUS_LABELS: Record<string, { he: string; ar: string; en: string; 
 
 const FIELD_LABELS: Record<
   Lang,
-  { orderNumber: string; orderDate: string; items: string; delivery: string; address: string; total: string }
+  {
+    orderNumber: string;
+    orderDate: string;
+    items: string;
+    delivery: string;
+    address: string;
+    total: string;
+  }
 > = {
   he: {
     orderNumber: "מספר הזמנה",
@@ -102,7 +109,9 @@ function orderTable(
   const labels = FIELD_LABELS[lang];
   const itemCount = items.reduce((sum, it) => sum + it.quantity, 0);
   const itemRows = items
-    .map((it, i) => row(`${i + 1}. ${escapeHtml(it.productName)} × ${it.quantity}`, `₪${it.totalPrice}`))
+    .map((it, i) =>
+      row(`${i + 1}. ${escapeHtml(it.productName)} × ${it.quantity}`, `₪${it.totalPrice}`),
+    )
     .join("");
 
   const deliveryValue =
@@ -223,10 +232,7 @@ interface OrderStatusUpdateDetails {
   total?: number;
 }
 
-const ORDER_STATUS_UPDATE_COPY: Record<
-  Lang,
-  { title: string; subjectPrefix: string }
-> = {
+const ORDER_STATUS_UPDATE_COPY: Record<Lang, { title: string; subjectPrefix: string }> = {
   he: { title: "עדכון הזמנה", subjectPrefix: "ההזמנה" },
   ar: { title: "تحديث الطلب", subjectPrefix: "الطلب" },
   en: { title: "Order Update", subjectPrefix: "Order" },

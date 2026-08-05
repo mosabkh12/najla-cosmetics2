@@ -182,7 +182,9 @@ async function findConflictingAppointments(
   // accompanying migration).
   const { data } = await supabaseAdmin
     .from("appointments")
-    .select("id, user_id, customer_name, appointment_date, appointment_time, duration_minutes, service_name")
+    .select(
+      "id, user_id, customer_name, appointment_date, appointment_time, duration_minutes, service_name",
+    )
     .in("status", ["pending", "confirmed"])
     .gte("appointment_date", jerusalemTodayStr());
 

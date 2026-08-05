@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { futureOpenDate } from "./helpers/businessDate";
 
 // REAL Postgres/Supabase integration tests — nothing in this file is
 // mocked. Requires a local, disposable Supabase stack (Docker) started
@@ -58,17 +59,6 @@ describe.skipIf(!stackUp)("Phase 7 — appointment idempotency (real Postgres)",
   let serviceId2: string;
   const createdAppointmentIds: string[] = [];
   const createdUserIds: string[] = [];
-
-  // The Kth Sunday from now (per DEFAULT_WEEKLY, Sunday is open) — always
-  // 7 real days apart for consecutive K, so distinct test fixtures never
-  // alias onto the same calendar date. Mirrors the same helper in the
-  // Phase 4 integration suite.
-  function futureOpenDate(weekNumber: number): string {
-    const d = new Date();
-    const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
-    d.setDate(d.getDate() + daysUntilSunday + (weekNumber - 1) * 7);
-    return d.toISOString().slice(0, 10);
-  }
 
   // A fresh user per test that needs a clean "0 active appointments"
   // slate — create_appointment's MAX_APPOINTMENTS_REACHED cap (2 active

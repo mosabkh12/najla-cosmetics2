@@ -158,6 +158,7 @@ describe("Phase 2 — calendar.server.ts compare-and-swap correctness", () => {
 
     expect(events.update).toHaveBeenCalledWith(
       expect.objectContaining({ eventId: "old-event-id" }),
+      expect.anything(), // Phase 9: gaxios timeout option, not under test here
     );
     expect(events.insert).not.toHaveBeenCalled();
 
@@ -188,6 +189,31 @@ describe("Phase 2 — calendar.server.ts compare-and-swap correctness", () => {
     // touches whatever the winning call wrote to google_event_id.
     expect(events.delete).toHaveBeenCalledWith(
       expect.objectContaining({ eventId: "our-own-orphaned-event" }),
+      expect.anything(), // Phase 9: gaxios timeout option, not under test here
     );
+  });
+
+  it("12. every Google Calendar API call is bounded by an explicit finite timeout (Phase 9)", async () => {
+    const mock = await getMock();
+    mock.queueFrom("appointments", () => ok({ ...BASE_APPT, google_event_id: null }));
+    mock.queueFrom("profiles", () => ok({ email: "customer@example.com" }));
+    mock.queueFrom("business_settings", () => ok({ address: "123 Main St" }));
+    mock.queueFrom("appointments", () => ok({ id: "appt-1" }));
+
+    const events = await getGoogleEvents();
+    events.insert.mockResolvedValue({ data: { id: "new-google-event-id" } });
+
+    const { syncAppointmentToGoogleCalendar } =
+      await import("@/integrations/google/calendar.server");
+    await syncAppointmentToGoogleCalendar("appt-1");
+
+    expect(events.insert).toHaveBeenCalledTimes(1);
+    const [, options] = events.insert.mock.calls[0]!;
+    expect(options).toBeDefined();
+    expect(typeof (options as { timeout?: number }).timeout).toBe("number");
+    expect((options as { timeout: number }).timeout).toBeGreaterThan(0);
+    // gaxios has no default timeout at all — a hung request would
+    // otherwise hang this (now-awaited, per Phase 2) call indefinitely.
+    expect((options as { timeout: number }).timeout).toBeLessThanOrEqual(30_000);
   });
 });

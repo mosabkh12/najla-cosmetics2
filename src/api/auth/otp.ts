@@ -185,9 +185,25 @@ export const verifyOtp = createServerFn({ method: "POST" })
     return { success: true, verificationToken: token };
   });
 
+// Deliberately unauthenticated: called immediately after
+// supabase.auth.signInWithPassword() succeeds, to decide whether to
+// route into the OTP re-verification screen — requiring a session here
+// would add a race against that session actually being established.
+// Rate-limited by IP instead, matching sendOtp/verifyOtp above, since an
+// unauthenticated endpoint with no throttling at all is a DB-hammering
+// vector regardless of how little it reveals (the response shape is
+// identical for "unverified" and "no such user," so it isn't a user-id
+// enumeration oracle either way).
 export const checkVerified = createServerFn({ method: "GET" })
   .validator((d: { userId: string }) => d)
   .handler(async ({ data: { userId } }) => {
+    await enforceRateLimit({
+      action: "check_verified",
+      identifier: getClientIp(),
+      windowSeconds: 10 * 60,
+      max: 30,
+    });
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("profiles")

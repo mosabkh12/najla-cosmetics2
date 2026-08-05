@@ -21,6 +21,15 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { pickLocalized } from "@/lib/pick-localized";
 import { getErrorMessage } from "@/lib/utils";
+import {
+  clearPersistedAttempt,
+  clearPersistedDraft,
+  computeCheckoutFingerprint,
+  loadPersistedAttempt,
+  loadPersistedDraft,
+  savePersistedAttempt,
+  saveDraft,
+} from "@/lib/checkout-idempotency";
 import { toast } from "sonner";
 import {
   Check,
@@ -47,6 +56,12 @@ const ORDER_ERROR_MAP: Record<string, string> = {
   INVALID_ORDER: "order_invalid",
   ORDER_CREATION_FAILED: "order_creation_failed",
   RATE_LIMITED: "err_rate_limited",
+  // Only reachable if a stale persisted idempotency key somehow survived
+  // a material payload change without being invalidated first (see
+  // checkout-idempotency.ts) — reuses the generic failure message
+  // rather than a dedicated translation string for an error the normal
+  // UI flow shouldn't be able to produce.
+  IDEMPOTENCY_PAYLOAD_MISMATCH: "order_creation_failed",
 };
 
 // OUT_OF_STOCK/PRODUCT_NOT_AVAILABLE come back as "CODE|product name" (see
@@ -83,12 +98,138 @@ function CheckoutPage() {
     street?: string;
   }>({});
 
-  // One key per checkout-page visit (a fresh mount — e.g. navigating away
-  // and back — gets a new one), sent unchanged on every submit/retry of
-  // this same attempt so the server can recognize and no-op a duplicate
-  // order instead of double-charging/double-deducting stock.
-  const idempotencyKeyRef = useRef<string | null>(null);
-  if (!idempotencyKeyRef.current) idempotencyKeyRef.current = crypto.randomUUID();
+  // The active checkout idempotency key, persisted (with a fingerprint of
+  // the payload it belongs to) via checkout-idempotency.ts — reused across
+  // a reload/retry as long as the material payload hasn't changed, so a
+  // lost response can't turn into a second real order. State rather than
+  // a plain ref because it can legitimately change while the page stays
+  // mounted (cart/delivery/customer edits rotate it), not just once per
+  // mount like the old ref-based version.
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+
+  // Guards the fingerprint effect below against running while
+  // name/phone/notes/delivery fields are still at their empty/default
+  // React initial values, immediately after mount and before restoration
+  // (draft or profile prefill) has had a chance to run. Without this, the
+  // very first fingerprint computed after a reload would be computed
+  // against that empty state, would not match the persisted attempt, and
+  // would silently overwrite it with a new key — destroying the original
+  // attempt before the real payload was ever restored. See the combined
+  // restoration effect immediately below, which is the ONLY thing
+  // allowed to flip this to true.
+  const [hydrated, setHydrated] = useState(false);
+
+  // Single, ordered restoration pass, run once per authenticated user:
+  //   1. A valid persisted checkout draft (see checkout-idempotency.ts)
+  //      always wins outright — it reflects exactly what this specific
+  //      in-progress checkout attempt had, which supersedes the user's
+  //      general saved profile for this one order (e.g. ordering for
+  //      someone else). This is the explicit rule for the
+  //      draft-vs-profile conflict: draft present and valid -> profile
+  //      prefill is skipped entirely, not merged field-by-field.
+  //   2. Otherwise, fall back to the existing profile-prefill behavior
+  //      (name/phone only — notes/delivery have no profile equivalent).
+  // Only after this resolves does `hydrated` become true, which is what
+  // the fingerprint effect below waits for.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const draft = loadPersistedDraft();
+      if (draft) {
+        setName(draft.customer_name);
+        setPhone(draft.customer_phone);
+        setNotes(draft.notes ?? "");
+        setDeliveryMethod(draft.delivery_method === "delivery" ? "delivery" : "pickup");
+        setDeliveryAreaId(draft.delivery_area_id);
+        setStreet(draft.delivery_street ?? "");
+      } else {
+        const profile = await getProfile();
+        if (cancelled) return;
+        if (profile) {
+          setName(profile.full_name ?? "");
+          setPhone(profile.phone ?? "");
+        }
+      }
+      if (!cancelled) setHydrated(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Depends on the user's id, not the `user` object reference itself:
+    // useAuth's context value can legitimately be reconstructed on
+    // re-renders without the logical signed-in user actually changing,
+    // and re-running this whole restoration/prefill pass on every such
+    // render would keep re-applying the persisted draft over whatever
+    // the user has since typed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    // The empty-cart case is handled entirely by the reset effect below
+    // (clears both records outright) — this effect must never run
+    // against an empty cart itself, or it would immediately mint and
+    // persist a fresh, meaningless "empty order" attempt/draft right
+    // after a reset (e.g. right after clear() runs in the success
+    // handler below, since `items` becoming [] is itself one of this
+    // effect's own dependencies).
+    if (!hydrated || items.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const payload = {
+        customer_name: name,
+        customer_phone: phone,
+        notes: notes || null,
+        delivery_method: deliveryMethod,
+        delivery_area_id: deliveryMethod === "delivery" ? deliveryAreaId : null,
+        delivery_street: deliveryMethod === "delivery" ? street : null,
+      };
+      const fingerprint = await computeCheckoutFingerprint({
+        ...payload,
+        items: items.map((it) => ({ product_id: it.product_id, quantity: it.quantity })),
+      });
+      if (cancelled) return;
+      const persisted = loadPersistedAttempt();
+      if (persisted && persisted.fingerprint === fingerprint) {
+        setIdempotencyKey(persisted.key);
+      } else {
+        // No persisted attempt, or it belongs to a materially different
+        // payload (different cart/delivery/customer details, or simply
+        // expired/corrupt) — this is a genuinely new attempt. Only
+        // reachable post-hydration, so this never fires merely because
+        // fields haven't finished initializing.
+        const newKey = crypto.randomUUID();
+        savePersistedAttempt(newKey, fingerprint);
+        setIdempotencyKey(newKey);
+      }
+      // Kept in sync with exactly the fields the fingerprint above was
+      // computed from, so a later reload restores precisely what this
+      // attempt was for.
+      saveDraft(payload);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, name, phone, notes, deliveryMethod, deliveryAreaId, street, items]);
+
+  // The cart becoming empty (all items removed) is the closest thing this
+  // page has to an explicit "cancel checkout" action — nothing left to
+  // resume, so any in-progress attempt is invalidated rather than left to
+  // expire on its own. Guarded on `everHadItems` because useCart's own
+  // `items` starts as `[]` for one render before its localStorage-load
+  // effect populates it — without this guard, that transient empty
+  // render (not a real reset) would wipe the persisted draft/attempt
+  // before restoration ever got a chance to use them.
+  const everHadItemsRef = useRef(false);
+  useEffect(() => {
+    if (items.length > 0) everHadItemsRef.current = true;
+  }, [items.length]);
+  useEffect(() => {
+    if (items.length === 0 && everHadItemsRef.current) {
+      clearPersistedAttempt();
+      clearPersistedDraft();
+    }
+  }, [items.length]);
 
   // Belt-and-suspenders alongside disabled={busy}: a ref is synchronous,
   // so it also blocks a second click that lands in the gap before React
@@ -178,15 +319,6 @@ function CheckoutPage() {
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
-  useEffect(() => {
-    if (user)
-      getProfile().then((data) => {
-        if (data) {
-          setName(data.full_name ?? "");
-          setPhone(data.phone ?? "");
-        }
-      });
-  }, [user]);
 
   if (!user) return null;
   if (items.length === 0)
@@ -208,6 +340,12 @@ function CheckoutPage() {
     setErrors(e);
     if (Object.keys(e).length > 0) return;
     if (mismatches.length > 0) return;
+    // The async fingerprint computation hasn't resolved into a key yet
+    // (a brief window right after mount or right after a material
+    // change) — wait rather than submit without one, which would send
+    // idempotency_key: null and lose duplicate protection entirely for
+    // this attempt.
+    if (!idempotencyKey) return;
     if (submittingRef.current) return;
     submittingRef.current = true;
     setBusy(true);
@@ -224,10 +362,16 @@ function CheckoutPage() {
             product_id: it.product_id,
             quantity: it.quantity,
           })),
-          idempotency_key: idempotencyKeyRef.current,
+          idempotency_key: idempotencyKey,
         },
       });
       toast.success(t("order_success"));
+      // Cleared in this order deliberately: the persisted attempt and
+      // draft are gone before the cart is, so nothing can observe an
+      // in-between state where an empty cart still points at a
+      // (now-fulfilled) idempotency key or stale draft.
+      clearPersistedAttempt();
+      clearPersistedDraft();
       clear();
       navigate({ to: "/profile" });
     } catch (e: unknown) {
@@ -576,7 +720,7 @@ function CheckoutPage() {
           <button
             type="button"
             onClick={placeOrder}
-            disabled={busy || mismatches.length > 0 || revalidatingInitial}
+            disabled={busy || mismatches.length > 0 || revalidatingInitial || !idempotencyKey}
             aria-busy={busy}
             className="w-full bg-foreground text-background h-[48px] rounded-full text-[11px] font-semibold uppercase tracking-[0.1em] hover:opacity-90 transition-opacity disabled:opacity-40 mt-4 flex items-center justify-center gap-2"
           >

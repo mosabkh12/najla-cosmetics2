@@ -291,6 +291,7 @@ export type Database = {
           idempotency_key: string | null;
           notes: string | null;
           order_number: string;
+          payload_fingerprint: string | null;
           payment_method: string;
           status: Database["public"]["Enums"]["order_status"];
           subtotal: number;
@@ -312,6 +313,7 @@ export type Database = {
           idempotency_key?: string | null;
           notes?: string | null;
           order_number?: string;
+          payload_fingerprint?: string | null;
           payment_method?: string;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal?: number;
@@ -333,6 +335,7 @@ export type Database = {
           idempotency_key?: string | null;
           notes?: string | null;
           order_number?: string;
+          payload_fingerprint?: string | null;
           payment_method?: string;
           status?: Database["public"]["Enums"]["order_status"];
           subtotal?: number;

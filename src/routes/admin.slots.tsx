@@ -515,7 +515,10 @@ function Page() {
                     className="flex items-center gap-2 text-[13px] font-medium text-foreground"
                     dir="ltr"
                   >
-                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground/60" aria-hidden="true" />
+                    <CalendarDays
+                      className="h-3.5 w-3.5 text-muted-foreground/60"
+                      aria-hidden="true"
+                    />
                     {d}
                   </span>
                   <button
