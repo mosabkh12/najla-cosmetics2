@@ -175,10 +175,15 @@
 }
 
 @utility btn-gold {
-  background-color: var(--gold);
-  color: var(--gold-foreground);
+  /* Uses --primary (the site's actual gold accent — same tone as prices,
+     icons, links, and focus rings) rather than --gold, a separate,
+     brighter "container" token that reads as a different, more generic
+     yellow than the rest of the UI's gold branding. Same pairing already
+     established for the default button variant (see button.tsx). */
+  background-color: var(--primary);
+  color: var(--primary-foreground);
   font-weight: 500;
-  &:hover { background-color: var(--gold-muted); color: var(--gold-deep); }
+  &:hover { background-color: var(--gold-deep); color: var(--primary-foreground); }
 }
 @utility btn-outline-ivory {
   background-color: transparent;
