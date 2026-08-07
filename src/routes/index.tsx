@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   MapPin,
@@ -20,14 +20,33 @@ import { getSettings } from "@/api/settings/settings";
 import { getAvailabilitySettings } from "@/api/slots/slots";
 import { ServiceCard, type Service } from "@/components/services/ServiceCard";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
-import { BookingDialog } from "@/components/services/BookingDialog";
 import { useI18n } from "@/lib/i18n";
 import { Reveal, StaggerGrid } from "@/components/ScrollReveal";
 import { getMapEmbedSrc, getGoogleMapsDirectionsUrl, getWazeUrl } from "@/lib/location";
 import { formatWeeklyHours } from "@/lib/business-hours";
+import { vercelImageUrl, vercelImageSrcSet } from "@/lib/vercel-image";
+
+// Rendered widths: the hero is always full viewport width; the about
+// photo is ~half the 1400px content width on desktop (roughly 600px) and
+// full-width on mobile. Both lists are a subset of vercel.json's
+// `images.sizes` — see vercel-image.ts.
+const HERO_WIDTHS = [640, 828, 1080, 1600, 1920, 2560] as const;
+const ABOUT_WIDTHS = [480, 640, 828, 1080] as const;
+
+// Statically importing BookingDialog here used to pull react-day-picker
+// (and everything else it drags in) into the homepage's initial JS —
+// weight paid by every visitor even though the dialog is only ever needed
+// after a "Book" click. `lazy()` defers that import to the click itself
+// (see `everBooked` below, which mounts this for the first time only once
+// clicked, then leaves it mounted exactly like before — no change to its
+// open/close or internal-state behavior once opened).
+const BookingDialog = lazy(() =>
+  import("@/components/services/BookingDialog").then((m) => ({ default: m.BookingDialog })),
+);
+
+const DEFAULT_HERO_IMAGE = "/images/brand/hero.png";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Najla Cosmetics — בית" }] }),
   // Warms these four query keys before the route finishes navigating, so
   // the SSR HTML already contains the real hero/services/products/hours
   // instead of shipping an empty shell that only fills in after the client
@@ -36,7 +55,7 @@ export const Route = createFileRoute("/")({
   // caching issue (query keys below match the useQuery calls in Home()
   // exactly, so this is a genuine warm cache hit, not a duplicate fetch).
   loader: async ({ context }) => {
-    await Promise.all([
+    const [, , settings] = await Promise.all([
       context.queryClient.ensureQueryData({
         queryKey: ["services", "active"],
         queryFn: async () => (await getServices()) as Service[],
@@ -54,6 +73,32 @@ export const Route = createFileRoute("/")({
         queryFn: () => getAvailabilitySettings(),
       }),
     ]);
+    // Captured here (not read from the component) purely so head() below
+    // can preload/preconnect the exact hero image this request will
+    // render — the loader already fetches it for the cache either way.
+    return { heroImageUrl: settings?.hero_image_url || DEFAULT_HERO_IMAGE };
+  },
+  head: ({ loaderData }) => {
+    const heroImageUrl = loaderData?.heroImageUrl || DEFAULT_HERO_IMAGE;
+    // No manual <link rel="preload"> here — React 19 already auto-generates
+    // one (deriving it from the hero <img>'s own fetchPriority="high" +
+    // srcSet/sizes below) the moment that element renders during SSR.
+    // Adding a second, hand-built preload produced two separate <link>
+    // tags in the actual page output (confirmed by rendering the built
+    // server function directly) since React couldn't tell they were meant
+    // to be the same hint — so this now only adds what React doesn't
+    // already cover: preconnect (only meaningful for the admin-uploaded
+    // case, an external Supabase URL), which removes the DNS/TLS handshake
+    // from that image fetch's critical path.
+    const links: { rel: string; href: string }[] = [];
+    if (/^https?:\/\//.test(heroImageUrl)) {
+      try {
+        links.push({ rel: "preconnect", href: new URL(heroImageUrl).origin });
+      } catch {
+        // Malformed URL — nothing to add here either way.
+      }
+    }
+    return { meta: [{ title: "Najla Cosmetics — בית" }], links };
   },
   component: Home,
 });
@@ -61,6 +106,15 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t, lang } = useI18n();
   const [bookingService, setBookingService] = useState<Service | null>(null);
+  // Gates the lazy BookingDialog's very first mount to the first actual
+  // "Book" click (see the lazy() import above) — once true it stays true,
+  // so every open/close after the first behaves exactly as before
+  // (same mounted instance, toggled via the `open` prop).
+  const [everBooked, setEverBooked] = useState(false);
+  const openBooking = (s: Service) => {
+    setEverBooked(true);
+    setBookingService(s);
+  };
   const heroRef = useRef<HTMLElement>(null);
   const [heroOffset, setHeroOffset] = useState(0);
 
@@ -119,10 +173,19 @@ function Home() {
       >
         <div className="absolute inset-0 overflow-hidden">
           <img
-            src={settings?.hero_image_url || "/images/brand/hero.png"}
+            src={vercelImageUrl(settings?.hero_image_url || DEFAULT_HERO_IMAGE, 1080)}
+            srcSet={vercelImageSrcSet(settings?.hero_image_url || DEFAULT_HERO_IMAGE, [
+              ...HERO_WIDTHS,
+            ])}
+            sizes="100vw"
             alt=""
             className="h-[120%] w-full object-cover"
             style={{ transform: `translate3d(0, ${heroOffset}px, 0)` }}
+            // This is the page's LCP element — explicitly eager (never
+            // lazy) and high priority so the browser fetches it as early
+            // as possible, matching the preload hint in head() above.
+            loading="eager"
+            fetchPriority="high"
           />
         </div>
         <div className="absolute inset-0 bg-black/20" />
@@ -179,7 +242,7 @@ function Home() {
         </Reveal>
         <StaggerGrid className="grid grid-cols-2 lg:grid-cols-3 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-14">
           {services.slice(0, 6).map((s) => (
-            <ServiceCard key={s.id} service={s} onBook={setBookingService} />
+            <ServiceCard key={s.id} service={s} onBook={openBooking} />
           ))}
         </StaggerGrid>
       </section>
@@ -227,9 +290,15 @@ function Home() {
                 style={{ boxShadow: "0 30px 60px -15px rgba(45, 45, 45, 0.12)" }}
               >
                 <img
-                  src={settings?.about_image_url ?? "/images/brand/about.png"}
+                  src={vercelImageUrl(settings?.about_image_url ?? "/images/brand/about.png", 640)}
+                  srcSet={vercelImageSrcSet(
+                    settings?.about_image_url ?? "/images/brand/about.png",
+                    [...ABOUT_WIDTHS],
+                  )}
+                  sizes="(min-width: 768px) 600px, 100vw"
                   alt=""
                   className="h-full w-full object-cover"
+                  loading="lazy"
                 />
               </div>
               <div
@@ -404,11 +473,15 @@ function Home() {
         </div>
       </section>
 
-      <BookingDialog
-        service={bookingService}
-        open={!!bookingService}
-        onOpenChange={(b) => !b && setBookingService(null)}
-      />
+      {everBooked && (
+        <Suspense fallback={null}>
+          <BookingDialog
+            service={bookingService}
+            open={!!bookingService}
+            onOpenChange={(b) => !b && setBookingService(null)}
+          />
+        </Suspense>
+      )}
     </>
   );
 }
