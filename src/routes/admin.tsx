@@ -11,6 +11,7 @@ import { getAvailabilitySettings } from "@/api/slots/slots";
 import { getAdminOrders } from "@/api/orders/orders";
 import { getAdminDeliveryAreas } from "@/api/delivery-areas/delivery-areas";
 import { getSettings } from "@/api/settings/settings";
+import { getAdminCustomers } from "@/api/admin/customers";
 import {
   LayoutDashboard,
   Scissors,
@@ -23,6 +24,7 @@ import {
   Menu,
   LogOut,
   ChevronLeft,
+  Users,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -69,6 +71,7 @@ function AdminLayout() {
       queryFn: () => getAdminDeliveryAreas(),
     });
     qc.prefetchQuery({ queryKey: ["admin-settings"], queryFn: () => getSettings() });
+    qc.prefetchQuery({ queryKey: ["admin-customers"], queryFn: () => getAdminCustomers() });
   }, [loading, user, isAdmin, qc]);
 
   if (loading || !user || !isAdmin) {
@@ -92,6 +95,7 @@ function AdminLayout() {
     },
     { to: "/admin/slots", icon: Clock, label: L("זמינות", "التوفر", "Availability") },
     { to: "/admin/orders", icon: ShoppingCart, label: L("הזמנות", "الطلبات", "Orders") },
+    { to: "/admin/customers", icon: Users, label: L("לקוחות", "العملاء", "Customers") },
     {
       to: "/admin/delivery-areas",
       icon: Truck,
@@ -184,8 +188,12 @@ function AdminLayout() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)]">
-      {/* Mobile header bar */}
-      <div className="md:hidden sticky top-20 z-30 bg-background/95 backdrop-blur-md border-b border-border/30">
+      {/* Mobile header bar. `fixed` (not `sticky`) deliberately — the
+          site-wide `overflow-x: hidden` on <body> (see styles.css) turns
+          <body> into its own scroll container, which breaks `sticky`
+          descendants. `fixed` is immune to that, matching how the site's
+          own top header (Header.tsx) already stays pinned on scroll. */}
+      <div className="md:hidden fixed top-20 inset-x-0 z-30 bg-background/95 backdrop-blur-md border-b border-border/30">
         <div className="flex items-center justify-between px-4 h-14">
           <button
             type="button"
@@ -210,6 +218,10 @@ function AdminLayout() {
           </Avatar>
         </div>
       </div>
+      {/* Spacer: `fixed` above takes the bar out of document flow, so this
+          reserves the same height it used to occupy in flow — otherwise
+          the content below would render underneath it. */}
+      <div className="md:hidden h-14" aria-hidden="true" />
 
       {/* Mobile sheet */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

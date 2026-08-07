@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Instagram, Facebook, Mail } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { getSettings } from "@/api/settings/settings";
+import { reopenCookieBanner } from "@/lib/cookie-consent";
 
 export function Footer() {
   const { t } = useI18n();
@@ -136,12 +137,21 @@ export function Footer() {
             © {new Date().getFullYear()} {settings?.business_name || "Najla Cosmetics"}.{" "}
             {t("rights_reserved")}
           </p>
-          <Link
-            to="/privacy"
-            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {t("privacy_policy")}
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link
+              to="/privacy"
+              className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t("privacy_policy")}
+            </Link>
+            <button
+              type="button"
+              onClick={() => reopenCookieBanner()}
+              className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t("cookie_settings")}
+            </button>
+          </div>
         </div>
       </div>
     </footer>

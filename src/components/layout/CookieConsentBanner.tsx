@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Cookie } from "lucide-react";
+import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import {
+  getCookieConsent,
+  setCookieConsent,
+  onReopenCookieBanner,
+  type CookieConsent,
+} from "@/lib/cookie-consent";
 
 // Recorded so that if a non-essential cookie/tracker (analytics, ads) is
 // ever added later, that code has something to check before loading —
 // "necessary" must stay functionally equivalent to "all" until that day,
 // since today there is nothing non-essential to withhold. Do not read this
 // value to gate anything that doesn't exist yet; wire it up when it does.
-const CONSENT_KEY = "najla:cookie-consent";
-type Consent = "all" | "necessary";
 
 // Deliberately starts hidden on both the server and the client's first
 // render (before this effect runs) — matching state means nothing here can
@@ -19,16 +24,29 @@ type Consent = "all" | "necessary";
 export function CookieConsentBanner() {
   const { t, dir } = useI18n();
   const [visible, setVisible] = useState(false);
+  // A first-time choice is its own feedback (the banner just disappears).
+  // Reopening via "Cookie Settings" to change an existing choice needs an
+  // explicit confirmation instead, since nothing else on screen changes —
+  // this flag is what distinguishes the two so only the latter toasts.
+  const [isRevisit, setIsRevisit] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(CONSENT_KEY) == null) setVisible(true);
+    if (getCookieConsent() == null) setVisible(true);
+    return onReopenCookieBanner(() => {
+      setIsRevisit(true);
+      setVisible(true);
+    });
   }, []);
 
   if (!visible) return null;
 
-  const choose = (consent: Consent) => {
-    localStorage.setItem(CONSENT_KEY, consent);
+  const choose = (consent: CookieConsent) => {
+    setCookieConsent(consent);
     setVisible(false);
+    if (isRevisit) {
+      toast.success(t("cookie_preference_saved"));
+      setIsRevisit(false);
+    }
   };
 
   return (

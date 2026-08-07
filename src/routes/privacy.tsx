@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getSettings } from "@/api/settings/settings";
 import { useI18n, type Lang } from "@/lib/i18n";
+import { reopenCookieBanner } from "@/lib/cookie-consent";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({ meta: [{ title: "Privacy Policy — Najla Cosmetics" }] }),
@@ -34,7 +35,7 @@ interface PolicyContent {
 const CONTENT: Record<Lang, PolicyContent> = {
   he: {
     title: "מדיניות פרטיות ועוגיות",
-    lastUpdated: "עודכן לאחרונה: יולי 2026",
+    lastUpdated: "עודכן לאחרונה: אוגוסט 2026",
     intro: [
       'מדיניות זו מסבירה אילו נתונים {business} ("אנחנו") אוספת ממך בעת השימוש באתר, כיצד אנו משתמשים בהם, ואילו עוגיות ואחסון מקומי (local storage) פועלים בדפדפן שלך — בדיוק כפי שהם מיושמים באתר הזה, ולא כרשימה כללית.',
     ],
@@ -55,6 +56,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "האתר משתמש אך ורק באחסון מקומי (local storage) חיוני לתפעולו, ולא בעוגיות פרסום, מעקב או ניתוח סטטיסטי של צד שלישי:",
           "• אסימון ההתחברות שלך (session) — שומר אותך מחוברים בין ביקורים, מנוהל על ידי ספק האימות שלנו (Supabase).",
           "• תוכן עגלת הקניות שלך — נשמר במכשירך בלבד עד להשלמת ההזמנה.",
+          "• פרטי טופס ההזמנה שלא הושלמה (שם, טלפון, הערות ופרטי משלוח) — נשמרים זמנית במכשירך למשך עד 24 שעות כדי שלא תצטרך למלא אותם מחדש אם הדף נטען מחדש, ולמניעת יצירת הזמנה כפולה בשוגג.",
           "• שפת התצוגה המועדפת עליך.",
           "נכון להיום איננו משתמשים ב-Google Analytics, Facebook Pixel, או כל כלי מעקב/פרסום דומה. אם הדבר ישתנה בעתיד, מדיניות זו תעודכן בהתאם ותפורסם הודעה על כך.",
           'בבאנר העוגיות תוכלו לבחור בין "אישור הכל" לבין "חיוניים בלבד". שתי הבחירות מפעילות היום בדיוק את אותו אחסון חיוני שתואר לעיל — הבחירה נשמרת בדפדפן שלכם ותשמש לניהול כלים נוספים, אם וכאשר יתווספו בעתיד.',
@@ -111,7 +113,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
   },
   ar: {
     title: "سياسة الخصوصية وملفات تعريف الارتباط",
-    lastUpdated: "آخر تحديث: يوليو 2026",
+    lastUpdated: "آخر تحديث: أغسطس 2026",
     intro: [
       'توضح هذه السياسة ما هي البيانات التي تجمعها {business} ("نحن") عند استخدامك للموقع، وكيف نستخدمها، وما هي ملفات تعريف الارتباط والتخزين المحلي (local storage) الفعّالة فعليًا في متصفحك — وصفًا لما هو مطبّق في هذا الموقع تحديدًا، وليس قائمة عامة.',
     ],
@@ -132,6 +134,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "يستخدم الموقع فقط تخزينًا محليًا ضروريًا لتشغيله، وليس ملفات تعريف ارتباط إعلانية أو تتبعية أو تحليلية من طرف ثالث:",
           "• رمز تسجيل دخولك (الجلسة) — يبقيك مسجلاً بين الزيارات، ويُدار بواسطة مزوّد المصادقة لدينا (Supabase).",
           "• محتوى سلة التسوق الخاصة بك — يُحفظ على جهازك فقط حتى إتمام الطلب.",
+          "• بيانات نموذج الطلب غير المكتمل (الاسم، الهاتف، الملاحظات وتفاصيل التوصيل) — تُحفظ مؤقتًا على جهازك لمدة تصل إلى 24 ساعة حتى لا تُضطر لإعادة تعبئتها إذا أُعيد تحميل الصفحة، ولمنع إنشاء طلب مكرر عن طريق الخطأ.",
           "• لغة العرض المفضلة لديك.",
           "لا نستخدم حاليًا Google Analytics أو Facebook Pixel أو أي أداة تتبع/إعلانات مشابهة. إذا تغيّر ذلك مستقبلاً، سيتم تحديث هذه السياسة والإعلان عن ذلك.",
           'في شريط ملفات تعريف الارتباط يمكنك الاختيار بين "الموافقة على الكل" و"الضرورية فقط". كلا الخيارين يفعّلان اليوم بالضبط نفس التخزين الضروري الموصوف أعلاه — يُحفظ اختيارك في متصفحك ليُستخدم لإدارة أي أدوات إضافية إن وجدت مستقبلاً.',
@@ -188,7 +191,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
   },
   en: {
     title: "Privacy & Cookie Policy",
-    lastUpdated: "Last updated: July 2026",
+    lastUpdated: "Last updated: August 2026",
     intro: [
       'This policy explains what data {business} ("we") collects when you use this site, how we use it, and exactly which cookies and local storage actually run in your browser — a description of what this specific site does, not a generic template.',
     ],
@@ -209,6 +212,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
           "This site only uses local storage that's essential to its operation — not advertising, tracking, or third-party analytics cookies:",
           "• Your sign-in session token — keeps you logged in between visits, managed by our authentication provider (Supabase).",
           "• Your shopping cart contents — kept on your device only until checkout is completed.",
+          "• Your unfinished checkout form details (name, phone, notes, and delivery details) — kept on your device for up to 24 hours so you don't have to re-enter them if the page reloads, and to prevent accidentally creating a duplicate order.",
           "• Your preferred display language.",
           "We do not currently use Google Analytics, Facebook Pixel, or any similar tracking/advertising tool. If that ever changes, this policy will be updated and the change announced.",
           'In the cookie banner you can choose between "Accept All" and "Necessary Only." Both options currently enable exactly the same essential storage described above — your choice is saved in your browser and will be used to manage any additional tools if and when they\'re added in the future.',
@@ -266,7 +270,7 @@ const CONTENT: Record<Lang, PolicyContent> = {
 };
 
 function PrivacyPage() {
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
   const { data: settings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: () => getSettings(),
@@ -309,6 +313,15 @@ function PrivacyPage() {
                   </p>
                 )}
               </div>
+              {s.heading.startsWith("2.") && (
+                <button
+                  type="button"
+                  onClick={() => reopenCookieBanner()}
+                  className="mt-4 inline-flex items-center rounded-full border border-foreground px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground transition-colors hover:bg-foreground hover:text-background"
+                >
+                  {t("cookie_settings")}
+                </button>
+              )}
             </div>
           ))}
         </div>
